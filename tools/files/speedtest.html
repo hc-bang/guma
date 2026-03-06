@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NETSPEED — 인터넷 속도 측정</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+/* ══ THEME ══ */
+:root,[data-theme="dark"]{
+  --bg:#05070f;--bg2:#080c1a;--panel:#0c1124;--border:#1a2240;
+  --text:#c8d8f0;--text2:#5a6f99;--text3:#8a9fc0;
+  --accent:#00f0c0;--accent2:#0af;--warn:#f5c400;--bad:#ff4060;
+  --grid:rgba(0,240,192,.025);--shadow:0 0 24px rgba(0,240,192,.28);
+}
+[data-theme="light"]{
+  --bg:#f0f4f8;--bg2:#e4eaf2;--panel:#ffffff;--border:#c8d8ec;
+  --text:#1a2a40;--text2:#5a6f8a;--text3:#7a90a8;
+  --accent:#009978;--accent2:#0077bb;--warn:#c08800;--bad:#cc0025;
+  --grid:rgba(0,140,110,.04);--shadow:0 0 24px rgba(0,150,120,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;
+  min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.wrap{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:32px 20px 56px}
+
+/* ── header ── */
+header{text-align:center;margin-bottom:36px}
+.logo{font-size:11px;letter-spacing:6px;color:var(--accent);font-family:'Space Mono',monospace;opacity:.7;margin-bottom:8px}
+h1{
+  font-size:clamp(1.7rem,5vw,2.6rem);font-weight:800;letter-spacing:-1px;
+  background:linear-gradient(135deg,var(--text) 30%,var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.subtitle{margin-top:6px;color:var(--text2);font-size:12px;letter-spacing:1px}
+
+/* ── gauge ── */
+.gauge-wrap{display:flex;justify-content:center;margin-bottom:8px}
+.gauge-outer{position:relative;width:240px;height:240px}
+svg.dial{width:100%;height:100%;transform:rotate(-220deg)}
+.g-bg {fill:none;stroke:var(--border);stroke-width:10;stroke-linecap:round;transition:stroke .3s}
+.g-arc{
+  fill:none;stroke:var(--accent);stroke-width:10;stroke-linecap:round;
+  stroke-dasharray:320;stroke-dashoffset:320;
+  transition:stroke-dashoffset .1s linear,stroke .2s,filter .2s;
+}
+.g-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.g-val  {font-family:'Space Mono',monospace;font-size:2.9rem;font-weight:700;color:var(--text);line-height:1;letter-spacing:-3px;transition:color .3s}
+.g-unit {font-size:11px;color:var(--accent);letter-spacing:4px;font-family:'Space Mono',monospace;margin-top:3px}
+.g-phase{font-size:13px;color:var(--text);font-weight:600;margin-top:3px;letter-spacing:.5px;transition:color .3s}
+.g-sub  {font-size:9px;color:var(--text2);letter-spacing:2px;font-family:'Space Mono',monospace;margin-top:1px;min-height:11px}
+.pulse-ring{position:absolute;inset:-14px;border-radius:50%;border:1.5px solid var(--accent);opacity:0}
+.pulse-ring.on{animation:pls 1.6s ease-out infinite}
+@keyframes pls{0%{transform:scale(.95);opacity:.5}100%{transform:scale(1.1);opacity:0}}
+
+.gbar{height:3px;width:240px;margin:4px auto 20px;background:var(--border);border-radius:99px;overflow:hidden;transition:background .3s}
+.gbar-f{height:100%;background:var(--accent);width:0%;transition:width .1s linear,background .3s;border-radius:99px}
+
+/* ── steps ── */
+.steps{display:flex;justify-content:center;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.step{
+  display:flex;align-items:center;gap:5px;padding:5px 12px;
+  border:1px solid var(--border);font-size:10px;letter-spacing:2px;
+  font-family:'Space Mono',monospace;color:var(--text2);transition:all .2s;text-transform:uppercase;
+}
+.step.on  {border-color:var(--accent);color:var(--accent);background:rgba(0,240,192,.06)}
+.step.done{border-color:var(--accent2);color:var(--accent2)}
+.sdot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.step.on .sdot{animation:bl .8s ease infinite alternate}
+@keyframes bl{from{opacity:1}to{opacity:.1}}
+
+/* ── status ── */
+.status-box{text-align:center;margin-bottom:16px;min-height:30px}
+#status-main{font-family:'Space Mono',monospace;font-size:11px;color:var(--text2);letter-spacing:2px}
+#status-live{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);opacity:.6;letter-spacing:1px;margin-top:3px;min-height:13px}
+
+/* ── button ── */
+#btn{
+  display:block;margin:0 auto 28px;padding:13px 48px;
+  background:transparent;border:1.5px solid var(--accent);color:var(--accent);
+  font-family:'Space Mono',monospace;font-size:12px;letter-spacing:4px;
+  cursor:pointer;transition:all .18s;text-transform:uppercase;
+  position:relative;overflow:hidden;
+}
+#btn::before{content:'';position:absolute;inset:0;background:var(--accent);transform:translateX(-100%);transition:transform .18s;z-index:-1}
+#btn:hover{color:var(--bg);box-shadow:var(--shadow)}
+#btn:hover::before{transform:translateX(0)}
+#btn:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
+
+/* ── cards ── */
+.cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:36px}
+@media(max-width:540px){
+  .cards{grid-template-columns:1fr 1fr}
+  .card:first-child{grid-column:span 2}
+}
+.card{
+  background:var(--panel);border:1px solid var(--border);
+  padding:18px 20px;position:relative;overflow:hidden;
+  transition:border-color .3s,background .3s,box-shadow .3s;
+}
+.card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .5s,background .3s;
+}
+.card.filled::after{transform:scaleX(1)}
+.card.filled{border-color:rgba(0,220,180,.22);box-shadow:0 2px 16px rgba(0,200,160,.05)}
+[data-theme="light"] .card.filled{box-shadow:0 2px 16px rgba(0,140,110,.07)}
+
+.c-icon{font-size:17px;margin-bottom:6px;color:var(--text3)}
+.c-label-ko{font-size:15px;font-weight:700;color:var(--text);margin-bottom:2px;transition:color .3s}
+.c-label-en{font-size:9px;letter-spacing:3px;color:var(--text2);font-family:'Space Mono',monospace;text-transform:uppercase;margin-bottom:10px}
+.c-val{font-family:'Space Mono',monospace;font-size:2.2rem;font-weight:700;color:var(--text);line-height:1;transition:color .3s}
+.c-unit{font-size:10px;color:var(--accent);letter-spacing:2px;margin-top:3px;font-family:'Space Mono',monospace}
+.badge{position:absolute;top:12px;right:12px;font-size:9px;letter-spacing:1px;padding:2px 8px;font-family:'Space Mono',monospace;border-radius:2px}
+.good{background:rgba(0,200,160,.14);color:var(--accent)}
+.ok  {background:rgba(210,165,0,.14);color:var(--warn)}
+.bad {background:rgba(220,0,40,.14);color:var(--bad)}
+
+/* wave + progress */
+.wave{margin-top:10px;height:20px;display:flex;align-items:flex-end;gap:2px;opacity:0;transition:opacity .2s}
+.wave.on{opacity:1}
+.wb{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:3px;opacity:.4;animation:wa .7s ease infinite}
+@keyframes wa{0%,100%{transform:scaleY(.2)}50%{transform:scaleY(1)}}
+.c-prog{height:2px;background:var(--border);margin-top:8px;border-radius:99px;overflow:hidden}
+.c-prog-f{height:100%;background:var(--accent);width:0%;transition:width .1s linear;border-radius:99px}
+
+/* ── info ── */
+.info{border-top:1px solid var(--border);padding-top:28px;transition:border-color .3s}
+.info-title{font-size:10px;letter-spacing:4px;color:var(--text2);font-family:'Space Mono',monospace;text-transform:uppercase;margin-bottom:16px;text-align:center}
+.igrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:600px){.igrid{grid-template-columns:1fr}}
+.ic{background:var(--bg2);border:1px solid var(--border);padding:14px 16px;transition:background .3s,border-color .3s}
+.ic-hd{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.ic-ico{font-size:14px;color:var(--text3)}
+.ic-name{font-weight:700;font-size:13px;color:var(--text);transition:color .3s}
+.ic-desc{font-size:11px;color:var(--text2);line-height:1.65;margin-bottom:9px}
+.tiers{display:flex;gap:4px;flex-wrap:wrap}
+.tier{font-family:'Space Mono',monospace;font-size:9px;padding:2px 6px;letter-spacing:.5px}
+.tg{background:rgba(0,200,160,.1);color:var(--accent)}
+.to{background:rgba(210,165,0,.1);color:var(--warn)}
+.tb{background:rgba(220,0,40,.1);color:var(--bad)}
+
+footer{text-align:center;margin-top:28px;font-family:'Space Mono',monospace;font-size:9px;color:var(--text2);opacity:.35;letter-spacing:2px}
+@keyframes popIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.pop{animation:popIn .22s ease forwards}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">// NETSPEED TEST //</div>
+    <h1>인터넷 속도 측정</h1>
+    <p class="subtitle">Cloudflare Open Server · 외부 라이브러리 없음</p>
+  </header>
+
+  <div class="gauge-wrap">
+    <div class="gauge-outer">
+      <div class="pulse-ring" id="pulse"></div>
+      <svg class="dial" viewBox="0 0 120 120">
+        <circle class="g-bg"  cx="60" cy="60" r="50" stroke-dasharray="320"/>
+        <circle class="g-arc" id="garc" cx="60" cy="60" r="50"/>
+      </svg>
+      <div class="g-center">
+        <div class="g-val"   id="gval">—</div>
+        <div class="g-unit"  id="gunit">Mbps</div>
+        <div class="g-phase" id="gphase">대기 중</div>
+        <div class="g-sub"   id="gsub"></div>
+      </div>
+    </div>
+  </div>
+  <div class="gbar"><div class="gbar-f" id="gbarf"></div></div>
+
+  <div class="steps">
+    <div class="step" id="s0"><div class="sdot"></div>지연</div>
+    <div class="step" id="s1"><div class="sdot"></div>지터</div>
+    <div class="step" id="s2"><div class="sdot"></div>다운로드</div>
+  </div>
+
+  <div class="status-box">
+    <div id="status-main">시작 버튼을 눌러 측정을 시작하세요</div>
+    <div id="status-live"></div>
+  </div>
+
+  <button id="btn">▶ 측정 시작</button>
+
+  <div class="cards">
+    <div class="card" id="cd">
+      <div class="c-icon">↓</div>
+      <div class="c-label-ko">다운로드</div>
+      <div class="c-label-en">Download</div>
+      <div class="c-val" id="vd">—</div>
+      <div class="c-unit">Mbps</div>
+      <div class="c-prog"><div class="c-prog-f" id="progd"></div></div>
+      <div class="wave" id="waved">
+        <div class="wb" style="animation-delay:.00s"></div>
+        <div class="wb" style="animation-delay:.11s"></div>
+        <div class="wb" style="animation-delay:.22s"></div>
+        <div class="wb" style="animation-delay:.06s"></div>
+        <div class="wb" style="animation-delay:.17s"></div>
+        <div class="wb" style="animation-delay:.28s"></div>
+        <div class="wb" style="animation-delay:.08s"></div>
+        <div class="wb" style="animation-delay:.19s"></div>
+      </div>
+    </div>
+    <div class="card" id="cl">
+      <div class="c-icon">◈</div>
+      <div class="c-label-ko">지연 시간</div>
+      <div class="c-label-en">Latency (Ping)</div>
+      <div class="c-val" id="vl">—</div>
+      <div class="c-unit">ms</div>
+    </div>
+    <div class="card" id="cj">
+      <div class="c-icon">∿</div>
+      <div class="c-label-ko">지터</div>
+      <div class="c-label-en">Jitter</div>
+      <div class="c-val" id="vj">—</div>
+      <div class="c-unit">ms</div>
+    </div>
+  </div>
+
+  <div class="info">
+    <div class="info-title">— 측정 항목 가이드 —</div>
+    <div class="igrid">
+      <div class="ic">
+        <div class="ic-hd"><div class="ic-ico">↓</div><div class="ic-name">다운로드</div></div>
+        <div class="ic-desc">인터넷에서 데이터를 받는 속도. 스트리밍·파일 다운로드·웹 로딩에 영향.</div>
+        <div class="tiers">
+          <span class="tier tg">좋음 ≥100</span>
+          <span class="tier to">보통 25–99</span>
+          <span class="tier tb">나쁨 &lt;25</span>
+        </div>
+      </div>
+      <div class="ic">
+        <div class="ic-hd"><div class="ic-ico">◈</div><div class="ic-name">지연 시간</div></div>
+        <div class="ic-desc">패킷 왕복 시간(핑). 온라인 게임·화상회의·반응형 서비스에 중요.</div>
+        <div class="tiers">
+          <span class="tier tg">좋음 ≤20ms</span>
+          <span class="tier to">보통 21–80</span>
+          <span class="tier tb">나쁨 &gt;80</span>
+        </div>
+      </div>
+      <div class="ic">
+        <div class="ic-hd"><div class="ic-ico">∿</div><div class="ic-name">지터</div></div>
+        <div class="ic-desc">지연 시간의 변동폭. 낮을수록 안정적 연결 — VoIP·게임 끊김과 직결.</div>
+        <div class="tiers">
+          <span class="tier tg">좋음 ≤5ms</span>
+          <span class="tier to">보통 6–20</span>
+          <span class="tier tb">나쁨 &gt;20</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>speed.cloudflare.com · XHR state-2 timing · parallel streams · no CDN</footer>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   핵심 수정 사항
+
+   [지연/지터 정확도 문제 원인]
+   fetch().then() 방식의 타이밍은 다음 오버헤드를 포함:
+     • Promise 마이크로태스크 큐 대기: 평균 ~10–40ms
+     • fetch API 내부 처리: ~5–15ms
+   → 실제 36ms 핑이 79ms로 측정됨
+
+   [해결: XHR readyState 2 = HEADERS_RECEIVED 타이밍]
+   xhr.onreadystatechange에서 readyState===2 순간을 잡으면
+   Promise 큐 없이 즉시 콜백 → 오버헤드 최소화
+   0-byte 응답이므로 HEADERS_RECEIVED ≈ 서버 첫 바이트 도착
+   = TCP keep-alive 재사용 후 순수 네트워크 RTT에 가장 근접
+
+   [지터 계산 버그 수정]
+   이전: sorted 배열에서 평균 편차 → 왜곡
+   수정: 원본 순서 유지 샘플의 연속 차이 평균
+         jitter = mean( |t[i] - t[i-1]| ) for i in 1..N
+         이것이 RFC 3550 (RTP) 표준 jitter 정의에 가장 가까움
+══════════════════════════════════════════════════════════════ */
+
+const CF = 'https://speed.cloudflare.com';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const $ = id => document.getElementById(id);
+
+function fmt(v) {
+  if (v == null || isNaN(+v)) return '—';
+  if (v >= 100) return String(Math.round(v));
+  if (v >= 10)  return v.toFixed(1);
+  return v.toFixed(2);
+}
+
+/* ── theme (postMessage only, no button) ── */
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  try { window.parent.postMessage({ type: 'netspeed-theme', theme: t }, '*'); } catch(e){}
+}
+// 초기: OS 테마 감지
+applyTheme(
+  window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+);
+window.addEventListener('message', e => {
+  const d = e.data;
+  if (!d) return;
+  const t = typeof d === 'string' ? d : (d.theme || d.type);
+  if (t === 'light' || t === 'dark') applyTheme(t);
+});
+
+/* ── gauge ── */
+const garc = $('garc');
+function setG(val, max, unit, phase, sub, color) {
+  color = color || 'var(--accent)';
+  const p = Math.min(Math.max(+val || 0, 0) / max, 1);
+  garc.style.strokeDashoffset = 320 - p * 320;
+  garc.style.stroke = color;
+  garc.style.filter = `drop-shadow(0 0 9px ${color})`;
+  $('gval').textContent   = (val == null || isNaN(+val)) ? '—' : fmt(val);
+  $('gunit').textContent  = unit;
+  $('gphase').textContent = phase;
+  $('gsub').textContent   = sub || '';
+  $('gbarf').style.width  = (p * 100) + '%';
+}
+function resetG() {
+  garc.style.strokeDashoffset = 320;
+  $('gval').textContent   = '—'; $('gunit').textContent = 'Mbps';
+  $('gphase').textContent = '대기 중'; $('gsub').textContent = '';
+  $('gbarf').style.width  = '0%';
+}
+
+const SIDS = ['s0','s1','s2'];
+function setStep(i) {
+  SIDS.forEach((s,j) => { $(s).className = 'step' + (j < i ? ' done' : ''); });
+  if (i < SIDS.length) $(SIDS[i]).classList.add('on');
+}
+function allDone() { SIDS.forEach(s => $(s).className = 'step done'); }
+
+function fillCard(cId, vId, val, bText, bClass) {
+  const card=$(cId), el=$(vId);
+  card.classList.add('filled');
+  el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  el.textContent = fmt(val);
+  let b = card.querySelector('.badge');
+  if (!b) { b = document.createElement('div'); card.appendChild(b); }
+  b.textContent = bText; b.className = 'badge ' + bClass;
+}
+function setStatus(main, live) {
+  $('status-main').textContent = main || '';
+  $('status-live').textContent  = live || '';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   XHR TTFB 핑 — readyState 2 (HEADERS_RECEIVED)
+
+   왜 이 방식이 fetch보다 정확한가:
+   - XHR.onreadystatechange는 동기 이벤트 루프에서 즉시 호출
+   - fetch.then()은 microtask queue를 통해 지연됨 (보통 10~40ms)
+   - readyState 2 = 서버가 첫 바이트(헤더)를 전송한 시점
+   - 0-byte 응답이므로 TTFB ≈ RTT (서버처리 < 0.1ms)
+══════════════════════════════════════════════════════════════ */
+function xhrPing(url) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    let t0, headerTime;
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 1) {        // OPENED → send() 직전
+        t0 = performance.now();
+      } else if (xhr.readyState === 2) { // HEADERS_RECEIVED → 핵심 측정 지점
+        headerTime = performance.now();
+      } else if (xhr.readyState === 4) {
+        if (headerTime && t0) resolve(headerTime - t0);
+        else reject(new Error('타이밍 측정 실패'));
+      }
+    };
+    xhr.onerror   = () => reject(new Error('XHR 오류'));
+    xhr.ontimeout = () => reject(new Error('XHR 타임아웃'));
+    xhr.timeout = 5000;
+    xhr.open('GET', url);
+    // t0을 OPENED 이벤트 대신 send() 직전에 잡으면 더 정확
+    t0 = performance.now();
+    xhr.send();
+  });
+}
+
+async function measureLatencyJitter(onTick) {
+  // 10회 워밍업: TCP 소켓 풀 확보, DNS/TLS 캐시
+  setStatus('지연 측정 준비 중...', 'TCP 소켓 워밍업 (10회)');
+  const warmupPromises = [];
+  for (let i = 0; i < 10; i++) {
+    warmupPromises.push(
+      xhrPing(`${CF}/__down?bytes=0&w=${i}&_=${Date.now()}`).catch(() => {})
+    );
+    await sleep(20);
+  }
+  await Promise.allSettled(warmupPromises);
+  await sleep(100); // 소켓 안정화
+
+  // 30회 측정 (나중에 트림)
+  const N = 30;
+  const raw = []; // 원본 순서 유지 (jitter 계산용)
+  for (let i = 0; i < N; i++) {
+    try {
+      const t = await xhrPing(`${CF}/__down?bytes=0&i=${i}&_=${Date.now()}`);
+      raw.push(t);
+      if (onTick) onTick(t, raw.length);
+    } catch(e) {
+      // 실패 샘플 무시
+    }
+    await sleep(50);
+  }
+
+  if (raw.length < 5) throw new Error('지연 측정 샘플 부족');
+
+  /* ── latency: 하위 20% 평균 (최소 RTT 근사)
+     상위 80%는 큐잉·OS 스케줄링 노이즈 → 제거 */
+  const sorted = [...raw].sort((a, b) => a - b);
+  const lowCount = Math.max(3, Math.ceil(sorted.length * 0.2));
+  const latency = sorted.slice(0, lowCount).reduce((a,b)=>a+b,0) / lowCount;
+
+  /* ── jitter: 원본 순서 유지, 연속 샘플 절대 차이 평균
+     RFC 3550 정의: J(i) = J(i-1) + (|D(i-1,i)| - J(i-1))/16
+     단순화: mean( |t[i] - t[i-1]| )
+     중요: sorted 배열이 아닌 raw 배열 사용 */
+  const jitter = raw.slice(1).reduce((acc, v, i) =>
+    acc + Math.abs(v - raw[i]), 0) / (raw.length - 1);
+
+  return { latency, jitter, samples: raw.length };
+}
+
+/* ══════════════════════════════════════════════════════════════
+   병렬 스트림 다운로드
+   4개 병렬 연결로 TCP 혼잡 제어 한계 극복
+   각 스트림의 수신 바이트를 합산해 총 대역폭 계산
+══════════════════════════════════════════════════════════════ */
+const DL_ROUNDS = [
+  { bytes: 5e5,  streams: 2 },   // 워밍업
+  { bytes: 4e6,  streams: 4 },
+  { bytes: 1.5e7,streams: 4 },
+  { bytes: 3e7,  streams: 4 },
+];
+
+async function measureDownload(onProgress) {
+  let peak = 0;
+  const budget = 14000;
+  const tStart = performance.now();
+
+  for (const { bytes, streams } of DL_ROUNDS) {
+    if (peak > 0 && performance.now() - tStart > budget) break;
+
+    const loaded = new Array(streams).fill(0);
+    const t0 = performance.now();
+
+    const readers = await Promise.all(
+      Array.from({ length: streams }, (_, si) =>
+        fetch(`${CF}/__down?bytes=${bytes}&s=${si}&_=${Date.now()}`, { cache: 'no-store' })
+          .then(r => r.body.getReader())
+          .catch(() => null)
+      )
+    );
+
+    const active = readers.filter(Boolean);
+    if (!active.length) continue;
+
+    await Promise.all(active.map((reader, si) =>
+      (async () => {
+        while (true) {
+          const { done, value } = await reader.read().catch(() => ({ done: true }));
+          if (done) break;
+          loaded[si] += value.length;
+          const sec = (performance.now() - t0) / 1000;
+          if (sec > 0.08) {
+            const total = loaded.reduce((a,b) => a+b, 0);
+            const mbps  = (total * 8) / (sec * 1e6);
+            if (mbps > peak) { peak = mbps; onProgress(peak, total, bytes * streams); }
+          }
+        }
+      })()
+    ));
+
+    // 라운드 최종
+    const sec = (performance.now() - t0) / 1000;
+    const total = loaded.reduce((a,b) => a+b, 0);
+    if (sec > 0) {
+      const mbps = (total * 8) / (sec * 1e6);
+      if (mbps > peak) { peak = mbps; onProgress(peak, total, bytes * streams); }
+    }
+  }
+
+  if (!peak) throw new Error('다운로드 측정 실패 — 서버 응답 없음');
+  return peak;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MAIN
+══════════════════════════════════════════════════════════════ */
+$('btn').addEventListener('click', async () => {
+  const btn = $('btn');
+  btn.disabled = true; btn.textContent = '측정 중...';
+  resetG(); setStatus('', '');
+  $('pulse').classList.add('on');
+  ['cd','cl','cj'].forEach(id => {
+    $(id).classList.remove('filled');
+    const b=$(id).querySelector('.badge'); if(b) b.remove();
+  });
+  ['vd','vl','vj'].forEach(id => $(id).textContent = '—');
+  $('progd').style.width = '0%';
+  $('waved').classList.remove('on');
+
+  try {
+    /* 1. 지연 */
+    setStep(0);
+    setG(0, 150, 'ms', '지연 측정 중', 'TCP 워밍업...', '#0af');
+
+    const { latency, jitter, samples } = await measureLatencyJitter((cur, n) => {
+      setG(cur, 150, 'ms', '지연 시간', `${n}/${30}회 측정`, '#0af');
+      $('vl').textContent = fmt(cur);
+      setStatus('지연 시간 측정 중 (XHR)...', `현재 ${fmt(cur)} ms`);
+    });
+
+    const latR = parseFloat(latency.toFixed(1));
+    const jitR = parseFloat(jitter.toFixed(2));
+    setG(latR, 150, 'ms', '지연 시간', `하위 20% 평균 · ${samples}샘플`, '#0af');
+
+    /* 2. 지터 */
+    setStep(1);
+    setStatus('지터 계산 완료', `지연 ${latR} ms · 지터 ${jitR} ms`);
+    setG(jitR, 30, 'ms', '지터', '연속 샘플 편차', '#f5c400');
+    await sleep(350);
+
+    fillCard('cl','vl', latR,
+      latR<=20?'좋음':latR<=80?'보통':'나쁨',
+      latR<=20?'good':latR<=80?'ok':'bad');
+    fillCard('cj','vj', jitR,
+      jitR<=5?'좋음':jitR<=20?'보통':'나쁨',
+      jitR<=5?'good':jitR<=20?'ok':'bad');
+
+    /* 3. 다운로드 */
+    setStep(2);
+    $('waved').classList.add('on');
+    setG(0, 500, 'Mbps', '다운로드', '병렬 4스트림...', 'var(--accent)');
+    setStatus('다운로드 속도 측정 중...', '4개 병렬 스트림');
+
+    const dl = await measureDownload((mbps, loaded, total) => {
+      setG(mbps, 500, 'Mbps', '다운로드',
+        `${(loaded/1e6).toFixed(1)} / ${(total/1e6).toFixed(0)} MB`, 'var(--accent)');
+      $('vd').textContent = fmt(mbps);
+      $('progd').style.width = Math.min((loaded/total)*100,100) + '%';
+      setStatus('다운로드 속도 측정 중...', `${fmt(mbps)} Mbps`);
+    });
+
+    $('waved').classList.remove('on');
+    fillCard('cd','vd', dl,
+      dl>=100?'좋음':dl>=25?'보통':'나쁨',
+      dl>=100?'good':dl>=25?'ok':'bad');
+    $('progd').style.width = '100%';
+
+    /* 완료 */
+    allDone();
+    $('pulse').classList.remove('on');
+    setG(dl, 500, 'Mbps', '측정 완료', `↓ ${fmt(dl)} Mbps  ·  핑 ${latR} ms`, 'var(--accent)');
+    $('gbarf').style.width = '100%';
+    setStatus('✓ 측정 완료',
+      `다운로드 ${fmt(dl)} Mbps · 지연 ${latR} ms · 지터 ${jitR} ms`);
+
+  } catch(err) {
+    $('pulse').classList.remove('on');
+    resetG();
+    setStatus('⚠ 오류: ' + err.message, '');
+    console.error(err);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '▶ 다시 측정';
+});
+</script>
+</body>
+</html>

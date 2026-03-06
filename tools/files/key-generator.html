@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Key Generator - GUMA™</title>
+  <link rel="icon" href="../../favicon.svg" />
+  <link rel="stylesheet" href="../tool.css" />
+  <style>
+    .key-gen-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px 14px;
+    }
+
+    .key-gen-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .key-gen-title {
+      font-size: 28px;
+      font-weight: 800;
+      margin: 0 0 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .key-gen-subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .key-gen-section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0 0 12px;
+      padding-left: 2px;
+    }
+
+    .input-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    @media (max-width: 600px) {
+      .input-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+    }
+
+    .input-label {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .input-field {
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .input-field:focus {
+      border-color: rgba(var(--accent-rgb), 0.42);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+    }
+
+    .input-field.small {
+      max-width: 120px;
+    }
+
+    select.input-field {
+      cursor: pointer;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .key-btn:hover {
+      background: rgba(var(--accent-rgb), 0.26);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 20%, transparent);
+    }
+
+    .key-btn:active {
+      transform: translateY(0);
+    }
+
+    .key-btn.secondary {
+      background: var(--btn);
+      border-color: var(--border);
+    }
+
+    .key-btn.secondary:hover {
+      background: var(--btnHover);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .output-section {
+      position: relative;
+    }
+
+    .output-box {
+      background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+      border: 2px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+      border-radius: 12px;
+      padding: 16px;
+      font-family: ui-monospace, monospace;
+      font-size: 13px;
+      word-break: break-all;
+      min-height: 80px;
+      line-height: 1.6;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      position: relative;
+    }
+
+    .output-box.has-value {
+      justify-content: flex-start;
+      text-align: left;
+    }
+
+    .output-placeholder {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .notification {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--panel);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .notification.success {
+      border-color: color-mix(in srgb, #10b981 50%, var(--border));
+      background: color-mix(in srgb, #10b981 10%, var(--panel));
+    }
+
+    .notification.error {
+      border-color: color-mix(in srgb, #ef4444 50%, var(--border));
+      background: color-mix(in srgb, #ef4444 10%, var(--panel));
+    }
+
+    .key-stats {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--btn);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .stat-value {
+      font-weight: 700;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <div class="key-gen-container">
+    <div class="key-gen-header">
+      <h1 class="key-gen-title">
+        <span>🔐</span>
+        <span>Key Generator</span>
+      </h1>
+      <p class="key-gen-subtitle">보안 키를 안전하게 생성하세요. 모든 키는 브라우저 내에서만 생성되며 서버로 전송되지 않습니다.</p>
+    </div>
+
+    <div class="panel">
+      <div class="key-gen-section">
+        <h2 class="section-title">설정</h2>
+        <div class="input-grid">
+          <div class="input-row">
+            <label class="input-label">키 길이</label>
+            <input type="number" id="length" class="input-field small" value="48" min="8" max="256">
+          </div>
+
+          <div class="input-row">
+            <label class="input-label">Prefix (선택)</label>
+            <input type="text" id="prefix" class="input-field" placeholder="예: sk-, llm_, master-">
+          </div>
+
+          <div class="input-row">
+            <label class="input-label">생성 타입</label>
+            <select id="type" class="input-field">
+              <option value="master">Strong Master Key</option>
+              <option value="api">API Key (sk-xxxx 형식)</option>
+              <option value="hex">HEX Key</option>
+              <option value="base64">Base64 Key</option>
+              <option value="uuid">UUID v4</option>
+              <option value="pattern">Custom Pattern 포함</option>
+            </select>
+          </div>
+
+          <div class="input-row">
+            <label class="input-label">Custom Pattern</label>
+            <input type="text" id="pattern" class="input-field" placeholder="예: ADMIN-XXXX-9999">
+          </div>
+        </div>
+      </div>
+
+      <div class="key-gen-section">
+        <div class="button-group">
+          <button class="key-btn" onclick="generateKey()">
+            <span>🔑</span>
+            <span>Generate Key</span>
+          </button>
+          <button class="key-btn secondary" onclick="copyKey()">
+            <span>📋</span>
+            <span>Copy to Clipboard</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="key-gen-section output-section">
+        <h2 class="section-title">생성된 키</h2>
+        <div id="output" class="output-box">
+          <span class="output-placeholder">키를 생성하려면 위의 Generate Key 버튼을 클릭하세요</span>
+        </div>
+        <div id="keyStats" class="key-stats" style="display: none;">
+          <div class="stat-item">
+            <span>길이:</span>
+            <span class="stat-value" id="statLength">0</span>
+          </div>
+          <div class="stat-item">
+            <span>타입:</span>
+            <span class="stat-value" id="statType">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="notification" class="notification">
+    <span id="notificationIcon"></span>
+    <span id="notificationText"></span>
+  </div>
+
+  <script>
+    // 테마 자동 적용
+    function applyTheme() {
+      if(localStorage.getItem('theme') === 'dark'){
+        document.body.classList.add('dark');
+      } else {
+        document.body.classList.remove('dark');
+      }
+    }
+
+    // 초기 테마 적용
+    applyTheme();
+
+    // localStorage 변경 감지 (다른 탭에서 테마 변경 시)
+    window.addEventListener('storage', function(e) {
+      if (e.key === 'theme') {
+        applyTheme();
+      }
+    });
+
+    // postMessage를 통한 부모 창으로부터의 테마 변경 감지 (같은 페이지 내 iframe)
+    window.addEventListener('message', function(e) {
+      if (e.data && e.data.type === 'themeChange') {
+        applyTheme();
+      }
+    });
+
+    // 알림 표시
+    function showNotification(message, type = 'success') {
+      const notification = document.getElementById('notification');
+      const icon = document.getElementById('notificationIcon');
+      const text = document.getElementById('notificationText');
+      
+      icon.textContent = type === 'success' ? '✓' : '✗';
+      text.textContent = message;
+      notification.className = `notification ${type} show`;
+      
+      setTimeout(() => {
+        notification.classList.remove('show');
+      }, 3000);
+    }
+
+    // 키 생성 함수들
+    function secureRandomBytes(length) {
+      const array = new Uint8Array(length);
+      crypto.getRandomValues(array);
+      return array;
+    }
+
+    function randomFromCharset(length, charset) {
+      const bytes = secureRandomBytes(length);
+      return Array.from(bytes)
+        .map(b => charset[b % charset.length])
+        .join('');
+    }
+
+    function generateMasterKey(length) {
+      const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}<>?";
+      return randomFromCharset(length, charset);
+    }
+
+    function generateHexKey(length) {
+      const bytes = secureRandomBytes(length / 2);
+      return Array.from(bytes)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    function generateBase64Key(length) {
+      const bytes = secureRandomBytes(length);
+      return btoa(String.fromCharCode(...bytes)).slice(0, length);
+    }
+
+    function generateUUID() {
+      const bytes = secureRandomBytes(16);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0'));
+      return `${hex.slice(0,4).join('')}-${hex.slice(4,6).join('')}-${hex.slice(6,8).join('')}-${hex.slice(8,10).join('')}-${hex.slice(10,16).join('')}`;
+    }
+
+    function generateAPIKey(length) {
+      return "sk-" + generateHexKey(length);
+    }
+
+    function generatePatternKey(pattern) {
+      const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      return pattern.replace(/X/g, () => charset[Math.floor(Math.random() * charset.length)])
+                    .replace(/9/g, () => Math.floor(Math.random() * 10));
+    }
+
+    function getTypeName(type) {
+      const types = {
+        'master': 'Strong Master Key',
+        'api': 'API Key',
+        'hex': 'HEX Key',
+        'base64': 'Base64 Key',
+        'uuid': 'UUID v4',
+        'pattern': 'Custom Pattern'
+      };
+      return types[type] || type;
+    }
+
+    function generateKey() {
+      const length = parseInt(document.getElementById("length").value);
+      const type = document.getElementById("type").value;
+      const prefix = document.getElementById("prefix").value;
+      const pattern = document.getElementById("pattern").value;
+
+      let key = "";
+
+      switch(type) {
+        case "master":
+          key = generateMasterKey(length);
+          break;
+        case "hex":
+          key = generateHexKey(length);
+          break;
+        case "base64":
+          key = generateBase64Key(length);
+          break;
+        case "uuid":
+          key = generateUUID();
+          break;
+        case "api":
+          key = generateAPIKey(length);
+          break;
+        case "pattern":
+          key = generatePatternKey(pattern || "XXXX-9999-XXXX");
+          break;
+      }
+
+      const fullKey = prefix + key;
+      const outputBox = document.getElementById("output");
+      outputBox.textContent = fullKey;
+      outputBox.classList.add('has-value');
+
+      // 통계 업데이트
+      document.getElementById('statLength').textContent = fullKey.length;
+      document.getElementById('statType').textContent = getTypeName(type);
+      document.getElementById('keyStats').style.display = 'flex';
+
+      showNotification('키가 생성되었습니다!', 'success');
+    }
+
+    function copyKey() {
+      const text = document.getElementById("output").textContent;
+      
+      if(!text || text.includes('키를 생성하려면')){
+        showNotification('먼저 키를 생성하세요!', 'error');
+        return;
+      }
+      
+      navigator.clipboard.writeText(text).then(() => {
+        showNotification('클립보드에 복사되었습니다!', 'success');
+      }).catch(() => {
+        showNotification('복사에 실패했습니다!', 'error');
+      });
+    }
+  </script>
+</body>
+</html>

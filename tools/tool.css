@@ -1,0 +1,216 @@
+/**
+ * GUMA™ Tool Base Styles
+ * 각 도구 페이지(iframe)에서 사용하는 공통 CSS 변수 및 기본 스타일
+ */
+
+/* ── CSS Variables ─────────────────────────────────────── */
+:root {
+  --bg:         #f8f9fa;
+  --text:       #111827;
+  --muted:      #6b7280;
+  --panel:      #ffffff;
+  --border:     rgba(17, 24, 39, 0.22);
+  --btn:        #eef2f7;
+  --btnHover:   #e2e8f0;
+  --btn-hover:  #e2e8f0;
+  --accent:     #2563eb;
+  --accent-rgb: 37, 99, 235;
+  --input-bg:   #ffffff;
+  --danger:     #dc2626;
+  --dangerHover:#b91c1c;
+  --shadow:     0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+body.dark {
+  --bg:         #16181f;
+  --text:       #e2e8f0;
+  --muted:      #8b96a9;
+  --panel:      #1e2130;
+  --border:     rgba(255, 255, 255, 0.20);
+  --btn:        #272c3d;
+  --btnHover:   #323854;
+  --btn-hover:  #323854;
+  --accent:     #60a5fa;
+  --accent-rgb: 96, 165, 250;
+  --input-bg:   #1a1e2e;
+  --danger:     #ef4444;
+  --dangerHover:#dc2626;
+  --shadow:     0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Base ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Noto Sans KR", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* ── Panel / Card ───────────────────────────────────────── */
+.panel {
+  background: var(--panel);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+
+/* ── Form Elements ──────────────────────────────────────── */
+/* !important used to beat per-tool inline <style> overrides */
+input, textarea, select {
+  background: var(--input-bg) !important;
+  color: var(--text) !important;
+  border: 1.5px solid var(--border) !important;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(var(--accent-rgb), 0.70) !important;
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.18) !important;
+  background: var(--panel) !important;
+}
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.8; }
+select { cursor: pointer; }
+
+/* ── Buttons ────────────────────────────────────────────── */
+/* !important required to override inline button styles */
+.custom-btn, .key-btn, .input-field {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border) !important;
+  background: var(--btn) !important;
+  color: var(--text) !important;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  font-family: inherit;
+  transition: background 0.18s, border-color 0.18s, transform 0.15s, box-shadow 0.18s;
+}
+.custom-btn:hover, .key-btn:hover {
+  background: var(--btnHover) !important;
+  border-color: rgba(var(--accent-rgb), 0.40) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+.custom-btn:active, .key-btn:active { transform: translateY(0); }
+
+/* Primary / accent variant */
+.custom-btn:not(.secondary), .key-btn:not(.secondary) {
+  background: rgba(var(--accent-rgb), 0.15) !important;
+  border-color: rgba(var(--accent-rgb), 0.45) !important;
+  color: var(--text) !important;
+}
+.custom-btn:not(.secondary):hover, .key-btn:not(.secondary):hover {
+  background: rgba(var(--accent-rgb), 0.28) !important;
+  border-color: rgba(var(--accent-rgb), 0.65) !important;
+}
+
+/* Secondary variant */
+.custom-btn.secondary, .key-btn.secondary {
+  background: var(--btn) !important;
+  border-color: var(--border) !important;
+}
+.custom-btn.secondary:hover, .key-btn.secondary:hover {
+  background: var(--btnHover) !important;
+}
+
+/* ── Status Boxes ───────────────────────────────────────── */
+.status-box {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+}
+.status-box.success {
+  background: rgba(16, 185, 129, 0.10);
+  border-color: rgba(16, 185, 129, 0.40);
+  color: #059669;
+}
+body.dark .status-box.success { color: #34d399; }
+
+.status-box.error {
+  background: rgba(239, 68, 68, 0.10);
+  border-color: rgba(239, 68, 68, 0.40);
+  color: #dc2626;
+}
+body.dark .status-box.error { color: #f87171; }
+
+/* ── Output Boxes ───────────────────────────────────────── */
+.output-box {
+  background: rgba(var(--accent-rgb), 0.05);
+  border: 1px solid rgba(var(--accent-rgb), 0.20);
+  border-radius: 10px;
+  padding: 14px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  word-break: break-all;
+  min-height: 60px;
+  color: var(--text);
+}
+
+/* ── Monospace ──────────────────────────────────────────── */
+.mono, code, pre {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+}
+pre {
+  background: var(--btn);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  overflow: auto;
+  font-size: 12.5px;
+}
+
+/* ── Notification ───────────────────────────────────────── */
+.notification {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 18px;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: all 0.3s;
+  pointer-events: none;
+  z-index: 1000;
+}
+.notification.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.notification.success { border-color: rgba(16,185,129,0.45); background: rgba(16,185,129,0.08); }
+.notification.error   { border-color: rgba(239,68,68,0.45);  background: rgba(239,68,68,0.08); }
+
+/* ── Section Labels ─────────────────────────────────────── */
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 0 0 10px;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }

@@ -1,0 +1,19 @@
+{
+  "nav": [
+    {
+      "label": "환경설정",
+      "href": "config/",
+      "icon": "settings"
+    },
+    {
+      "label": "문서",
+      "href": "posts/",
+      "icon": "document"
+    },
+    {
+      "label": "도구",
+      "href": "tools/",
+      "icon": "tool"
+    }
+  ]
+}

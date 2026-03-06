@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GUMA™ 문서</title>
+  <link rel="icon" href="../favicon.svg" />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../config/config.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="title"><span class="title-icon icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span>문서</h1>
+    </div>
+    <div class="topbar-right">
+      <a class="btn icon-btn" href="../" aria-label="홈으로"><span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg></span></a>
+      <button id="themeToggle" class="btn icon-btn" type="button" aria-label="모드 토글"><span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span></button>
+      <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴"><span class="icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span></button>
+    </div>
+  </header>
+
+  <div id="sidepanelOverlay" class="sidepanel-overlay"></div>
+  <aside id="sidepanel" class="sidepanel" aria-label="메뉴">
+    <div class="sidepanel-title">메뉴</div>
+    <div id="sidepanel-nav" class="sidepanel-actions"></div>
+  </aside>
+
+  <main class="container docs">
+    <aside class="panel docs-left" aria-label="문서 목록">
+      <div class="docs-left-title">
+        <span class="docs-left-title-icon icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="docs-left-title-text">목록</span>
+      </div>
+      <div id="postContainer" class="post-list">
+        <p class="tree-loading">목록을 불러오는 중...</p>
+      </div>
+    </aside>
+
+    <section class="panel docs-right">
+      <article id="md" class="markdown-body viewer-markdown">
+        <p class="hint">문서를 선택하세요.</p>
+      </article>
+    </section>
+  </main>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.6.1/github-markdown.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" />
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+
+  <script>
+    const container = document.getElementById('postContainer');
+    const mdEl = document.getElementById('md');
+
+    // ── 유틸 ───────────────────────────────────────────────
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, '&#039;');
+    }
+
+    function setTitle(file) {
+      const name = (file || '').split('/').pop().replace(/\.md$/i, '').replace(/[-_]+/g, ' ').trim() || '문서';
+      document.title = `GUMA™ 문서 - ${name}`;
+    }
+
+    function getFileParam() {
+      return new URLSearchParams(location.search).get('file') || '';
+    }
+
+    function setFileParam(file) {
+      const u = new URL(location.href);
+      if (file) u.searchParams.set('file', file);
+      else u.searchParams.delete('file');
+      history.pushState({ file }, '', u);
+    }
+
+    // ── Marked 설정 ────────────────────────────────────────
+    function setupMarked() {
+      if (!window.marked) return;
+      marked.setOptions({
+        gfm: true,
+        breaks: false,
+        headerIds: true,
+        mangle: false,
+        highlight(code, lang) {
+          try {
+            if (window.hljs) {
+              if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
+              return hljs.highlightAuto(code).value;
+            }
+          } catch (e) {}
+          return escapeHtml(code);
+        }
+      });
+    }
+
+    // ── MD 로드 & 렌더 ─────────────────────────────────────
+    async function loadMd(file) {
+      if (!mdEl) return;
+      if (!file) {
+        mdEl.innerHTML = '<p class="hint">문서를 선택하세요.</p>';
+        setTitle('');
+        return;
+      }
+
+      setTitle(file);
+      mdEl.innerHTML = '<p class="hint">불러오는 중...</p>';
+
+      try {
+        const rawUrl = `./${file}`;
+        const res = await fetch(rawUrl, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+
+        if (!window.marked) {
+          mdEl.innerHTML = `<pre>${escapeHtml(text)}</pre>`;
+          return;
+        }
+
+        setupMarked();
+        mdEl.innerHTML = marked.parse(text);
+
+        try {
+          if (window.hljs) {
+            mdEl.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
+          }
+        } catch (e) {}
+
+        mdEl.querySelectorAll('a[href]').forEach(a => {
+          if (/^https?:\/\//i.test(a.getAttribute('href') || '')) {
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+          }
+        });
+
+        // 뷰어 내 스크롤만 맨 위로 (페이지 스크롤 변경 없음)
+        mdEl.parentElement.scrollTop = 0;
+
+      } catch (e) {
+        mdEl.innerHTML = `
+          <h2>문서를 불러올 수 없습니다</h2>
+          <p>파일: <code>${escapeHtml(file)}</code></p>
+          <p style="opacity:.75">에러: ${escapeHtml(e?.message || String(e))}</p>`;
+      }
+    }
+
+    // ── 활성 항목 표시 ─────────────────────────────────────
+    function setActive(file) {
+      container.querySelectorAll('a.tree-file').forEach(a => {
+        a.classList.toggle('active', a.dataset.file === file);
+      });
+    }
+
+    /* Normalize index.json entries to { file, display, group } (object-only) */
+    function normalizeIndexFiles(raw) {
+      if (!raw || !Array.isArray(raw.files)) return [];
+      return raw.files.map(item => {
+        return {
+          file: String(item.file || ''),
+          display: item.display || undefined,
+          group: item.group || undefined
+        };
+      }).filter(e => e.file);
+    }
+
+    /* Build tree from entries array of { file, display, group }.
+       Group is used as the top-level node; files are listed directly under their group.
+       - group may contain '/' to indicate nested groups.
+       - file and display MUST NOT create extra path segments in the menu; only group defines menu hierarchy.
+       - We place each file as a leaf under its group using the file basename as the node key, and store display in __meta for labeling. */
+    function buildTree(entries) {
+      const root = {};
+
+      function ensureNodeMap(parent, key) {
+        if (!parent[key]) parent[key] = { __children: {}, __isFile: false, __meta: null };
+        return parent[key];
+      }
+
+      entries.forEach(entry => {
+        const groupRaw = String(entry.group || '기타');
+        const groupParts = groupRaw.split('/').filter(Boolean);
+        if (groupParts.length === 0) groupParts.push('기타');
+
+        // traverse/create group containers; group nodes are stored directly under root
+        let parent = root;
+        groupParts.forEach(gp => {
+          const node = ensureNodeMap(parent, gp);
+          parent = node.__children;
+        });
+
+        // determine file basename (last segment of entry.file)
+        const fileParts = String(entry.file || '').split('/').filter(Boolean);
+        const baseName = fileParts.length ? fileParts[fileParts.length - 1] : String(entry.file || '');
+
+        // create leaf node directly under the group (do not split by '/')
+        if (!parent[baseName]) parent[baseName] = { __children: {}, __isFile: false, __meta: null };
+        parent[baseName].__isFile = true;
+        parent[baseName].__meta = {
+          file: entry.file,
+          display: entry.display,
+          group: entry.group
+        };
+      });
+
+      return root;
+    }
+
+    // ── 트리 렌더링 ────────────────────────────────────────
+    function renderTree(node, parentPath = '', depth = 0) {
+      const ul = document.createElement('ul');
+      ul.className = 'tree-ul';
+
+      // 폴더 먼저, 파일 나중 정렬
+      const keys = Object.keys(node).sort((a, b) => {
+        const aIsFile = node[a].__isFile && Object.keys(node[a].__children).length === 0;
+        const bIsFile = node[b].__isFile && Object.keys(node[b].__children).length === 0;
+        if (aIsFile !== bIsFile) return aIsFile ? 1 : -1;
+        return a.localeCompare(b, 'ko');
+      });
+
+      keys.forEach(key => {
+        const item = node[key];
+        const li = document.createElement('li');
+        li.className = 'tree-li';
+        const isLeafFile = item.__isFile && Object.keys(item.__children).length === 0;
+
+        if (isLeafFile) {
+          const meta = item.__meta || {};
+          const filePath = meta.file || (parentPath + key);
+          const label = (meta.display && String(meta.display)) || key.replace(/\.md$/i, '');
+          const a = document.createElement('a');
+          a.className = 'tree-file';
+          a.dataset.file = filePath;
+          a.href = `?file=${encodeURIComponent(filePath)}`;
+          a.title = label;
+          a.style.paddingLeft = `${8 + depth * 16}px`;
+
+          const icon = document.createElement('span');
+          icon.className = 'tree-icon';
+          icon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13,2 13,9 20,9"/></svg>';
+          icon.setAttribute('aria-hidden', 'true');
+
+          const text = document.createElement('span');
+          text.className = 'tree-label';
+          text.textContent = label;
+
+          a.appendChild(icon);
+          a.appendChild(text);
+
+          a.onclick = (e) => {
+            e.preventDefault();
+            const targetFile = a.dataset.file;
+            setFileParam(targetFile);
+            setActive(targetFile);
+            loadMd(targetFile);
+          };
+
+          li.appendChild(a);
+        } else {
+          const btn = document.createElement('button');
+          btn.className = 'tree-folder';
+          btn.type = 'button';
+          btn.style.paddingLeft = `${8 + depth * 16}px`;
+          btn.title = key;
+
+          const arrow = document.createElement('span');
+          arrow.className = 'tree-arrow';
+          arrow.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="8,5 18,12 8,19"/></svg>';
+          arrow.setAttribute('aria-hidden', 'true');
+
+          const icon = document.createElement('span');
+          icon.className = 'tree-icon';
+          icon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
+          icon.setAttribute('aria-hidden', 'true');
+
+          const text = document.createElement('span');
+          text.className = 'tree-label';
+          text.textContent = key;
+
+          btn.appendChild(arrow);
+          btn.appendChild(icon);
+          btn.appendChild(text);
+
+          const childUl = renderTree(item.__children, parentPath + key + '/', depth + 1);
+          childUl.classList.add('tree-collapsed');
+
+          btn.onclick = () => {
+            const collapsed = childUl.classList.toggle('tree-collapsed');
+            arrow.innerHTML = collapsed ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="8,5 18,12 8,19"/></svg>' : '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,8 19,8 12,18"/></svg>';
+            icon.innerHTML = collapsed ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="2,10 12,10 22,10"/></svg>';
+          };
+
+          li.appendChild(btn);
+          li.appendChild(childUl);
+        }
+
+        ul.appendChild(li);
+      });
+
+      return ul;
+    }
+
+    // ── 초기 로드(인덱스 JSON 우선 사용, 이후 실패 시 에러 표시) ──────────────────────────────────────────
+    async function fetchPosts() {
+      try {
+        let files = [];
+
+        // 1) 로컬 인덱스 파일 시도
+        try {
+          const jsonRes = await fetch('./index.json', { cache: 'no-store' });
+          if (jsonRes.ok) {
+            const j = await jsonRes.json();
+            if (j) {
+              const entries = normalizeIndexFiles(j);
+              files = Array.isArray(entries) ? entries.slice() : [];
+            }
+          }
+        } catch (e) {
+          // 로컬 인덱스 로드 실패 — 의도적으로 무시하고 이후 처리로 넘어감
+          files = [];
+        }
+
+        // 2) index.json에 유효한 항목이 없으면 목록이 비어있다고 처리
+        if (!files || files.length === 0) {
+          container.innerHTML = '<p class="tree-empty">등록된 문서가 없습니다.</p>';
+          return;
+        }
+
+        // 트리 빌드 및 렌더링
+        const tree = buildTree(files);
+        container.innerHTML = '';
+        container.appendChild(renderTree(tree));
+
+        const initial = getFileParam();
+        if (initial) {
+          setActive(initial);
+          await loadMd(initial);
+
+          // 초기 파일의 상위 폴더 펼치기
+          container.querySelectorAll('a.tree-file').forEach(a => {
+            if (a.dataset.file === initial) {
+              let parent = a.closest('li.tree-li')?.parentElement;
+              while (parent && parent.classList.contains('tree-ul')) {
+                if (parent.classList.contains('tree-collapsed')) {
+                  parent.classList.remove('tree-collapsed');
+                  const btn = parent.previousElementSibling;
+                  if (btn) {
+                    const arr = btn.querySelector('.tree-arrow');
+                    const ico = btn.querySelector('.tree-icon');
+                    if (arr) arr.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,8 19,8 12,18"/></svg>';
+                    if (ico) ico.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="2,10 12,10 22,10"/></svg>';
+                  }
+                }
+                parent = parent.closest('li.tree-li')?.parentElement;
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `
+          <p class="tree-empty tree-error">
+            <strong>오류:</strong> ${escapeHtml(err.message || '문서 목록을 불러올 수 없습니다.')}
+          </p>`;
+      }
+    }
+
+    window.addEventListener('popstate', (e) => {
+      const f = (e.state && e.state.file) ? e.state.file : getFileParam();
+      setActive(f);
+      loadMd(f);
+    });
+
+    fetchPosts();
+  </script>
+
+
+
+  <style>
+    /* ── 레이아웃 ───────────────────────────────────────── */
+    .container.docs {
+      max-width: 100%;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+    @media (max-width: 900px) {
+      .container.docs { grid-template-columns: 1fr; }
+    }
+
+    .docs-left {
+      position: sticky;
+      top: 56px;
+      max-height: calc(100dvh - 72px);
+      overflow: auto;
+      padding: 10px;
+    }
+    @media (max-width: 900px) {
+      .docs-left { position: static; max-height: none; }
+    }
+
+    .docs-left-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 2px 2px 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+      font-weight: 800;
+      letter-spacing: .2px;
+      font-size: 13px;
+      user-select: none;
+    }
+    .docs-left-title-icon {
+      width: 18px; height: 18px;
+      display: inline-flex;
+      align-items: center; justify-content: center;
+      font-size: 16px; line-height: 1;
+    }
+
+    .docs-right {
+      min-height: calc(100dvh - 110px);
+      padding: 14px;
+    }
+
+    /* ── 트리 ─────────────────────────────────────────── */
+    .post-list { margin: 0; padding: 0; width: 100%; }
+
+    .tree-ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .tree-ul.tree-collapsed { display: none; }
+
+    .tree-li { margin: 1px 0; }
+
+    /* 공통: 파일 링크, 폴더 버튼 */
+    .tree-file,
+    .tree-folder {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      width: 100%;
+      box-sizing: border-box;
+      padding-top: 6px;
+      padding-bottom: 6px;
+      padding-right: 8px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.3;
+      text-decoration: none;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.14s;
+    }
+    .tree-file:hover,
+    .tree-folder:hover {
+      background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+    }
+    .tree-file.active {
+      background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+      border-left: 3px solid var(--accent);
+      font-weight: 600;
+    }
+
+    .tree-arrow {
+      font-size: 9px;
+      flex-shrink: 0;
+      width: 12px;
+      text-align: center;
+      opacity: 0.6;
+    }
+    .tree-icon {
+      flex-shrink: 0;
+      font-size: 13px;
+      line-height: 1;
+    }
+    .tree-label {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tree-loading,
+    .tree-empty {
+      font-size: 12px;
+      color: var(--text);
+      opacity: 0.6;
+      padding: 8px 4px;
+    }
+
+    /* ── 뷰어 ─────────────────────────────────────────── */
+    .viewer-markdown.markdown-body {
+      color: var(--text);
+      background: transparent;
+    }
+    .viewer-markdown { padding: 0; }
+    .viewer-markdown pre {
+      border-radius: 12px;
+      padding: 14px;
+      overflow: auto;
+    }
+    .viewer-markdown code { border-radius: 8px; }
+  </style>
+  <script>window.GUMA = { root: '../', page: 'posts' };</script>
+  <script src="../shared/topbar.js" defer></script>
+</body>
+</html>

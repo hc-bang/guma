@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>JSON Formatter - GUMA™</title>
+  <link rel="icon" href="../../favicon.svg" />
+  <link rel="stylesheet" href="../tool.css" />
+  <style>
+    .container { max-width: 800px; margin: 0 auto; padding: 20px 14px; }
+    .header { text-align: center; margin-bottom: 32px; }
+    .title { font-size: 28px; font-weight: 800; margin: 0 0 8px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+    .subtitle { color: var(--muted); font-size: 14px; margin: 0; }
+    .section { margin-bottom: 24px; }
+    .section-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px; padding-left: 2px; }
+    textarea { width: 100%; height: 300px; background: var(--input-bg); color: var(--text); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13px; outline: none; transition: all 0.2s; resize: vertical; font-family: ui-monospace, monospace; }
+    textarea:focus { border-color: rgba(var(--accent-rgb), 0.42); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
+    .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .status-box { margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; }
+    .status-box.success { background: color-mix(in srgb, #10b981 10%, var(--panel)); border: 1px solid color-mix(in srgb, #10b981 40%, var(--border)); color: #10b981; }
+    .status-box.error { background: color-mix(in srgb, #ef4444 10%, var(--panel)); border: 1px solid color-mix(in srgb, #ef4444 40%, var(--border)); color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="title">
+        <span>&#x1F52D;</span>
+        <span>JSON Formatter & Validator</span>
+      </h1>
+      <p class="subtitle">JSON 데이터를 포매팅하고 유효성을 검사합니다.</p>
+    </div>
+
+    <div class="panel">
+      <div class="section">
+        <h2 class="section-title">JSON 입력</h2>
+        <textarea id="input" placeholder="여기에 JSON 데이터를 붙여넣으세요..."></textarea>
+        <div id="status" class="status-box" style="display: none;"></div>
+      </div>
+
+      <div class="section">
+        <div class="button-group">
+          <button class="custom-btn" onclick="formatJSON()">Format / Beautify</button>
+          <button class="custom-btn" onclick="minifyJSON()">Minify / Compress</button>
+          <button class="custom-btn secondary" onclick="copyResult()">Copy</button>
+          <button class="custom-btn secondary" onclick="clearAll()">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Theme management
+    function applyTheme() {
+      if(localStorage.getItem('theme') === 'dark'){
+        document.body.classList.add('dark');
+      } else {
+        document.body.classList.remove('dark');
+      }
+    }
+    applyTheme();
+    window.addEventListener('storage', (e) => (e.key === 'theme') && applyTheme());
+    window.addEventListener('message', (e) => (e.data && e.data.type === 'themeChange') && applyTheme());
+
+    const input = document.getElementById('input');
+    const statusBox = document.getElementById('status');
+
+    function validateJSON(jsonString) {
+      try {
+        const obj = JSON.parse(jsonString);
+        statusBox.textContent = '✓ Valid JSON';
+        statusBox.className = 'status-box success';
+        statusBox.style.display = 'block';
+        return obj;
+      } catch (e) {
+        statusBox.textContent = '✗ Invalid JSON: ' + e.message;
+        statusBox.className = 'status-box error';
+        statusBox.style.display = 'block';
+        return null;
+      }
+    }
+    
+    function formatJSON() {
+      if(!input.value) return;
+      const obj = validateJSON(input.value);
+      if (obj) {
+        input.value = JSON.stringify(obj, null, 2);
+      }
+    }
+
+    function minifyJSON() {
+      if(!input.value) return;
+      const obj = validateJSON(input.value);
+      if (obj) {
+        input.value = JSON.stringify(obj);
+      }
+    }
+    
+    function copyResult() {
+      if (!input.value) return;
+      navigator.clipboard.writeText(input.value)
+        .then(() => alert('클립보드에 복사되었습니다.'))
+        .catch(() => alert('복사에 실패했습니다.'));
+    }
+    
+    function clearAll(){
+        input.value = '';
+        statusBox.style.display = 'none';
+    }
+    
+    input.addEventListener('input', () => {
+        statusBox.style.display = 'none';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+{
+  "top": [
+    { "name": "네이버", "url": "https://www.naver.com" },
+    { "name": "구글", "url": "https://www.google.com" },
+    { "name": "Gmail", "url": "https://mail.google.com" },
+    { "name": "카카오", "url": "https://www.kakao.com" },
+    { "name": "유튜브", "url": "https://www.youtube.com" },
+
+    {
+      "name": "지도",
+      "items": [
+        { "name": "네이버지도", "url": "https://map.naver.com" },
+        { "name": "카카오맵", "url": "https://map.kakao.com" },
+        { "name": "구글맵", "url": "https://www.google.com/maps" }
+      ]
+    },
+
+    {
+      "name": "금융",
+      "items": [
+        { "name": "토스", "url": "https://toss.im" },
+        { "name": "카뱅", "url": "https://www.kakaobank.com" },
+        { "name": "KB", "url": "https://www.kbstar.com" },
+        { "name": "신한", "url": "https://www.shinhan.com" },
+        { "name": "국세청", "url": "https://www.hometax.go.kr" }
+      ]
+    },
+
+    {
+      "name": "쇼핑",
+      "items": [
+        { "name": "쿠팡", "url": "https://www.coupang.com" },
+        { "name": "11번가", "url": "https://www.11st.co.kr" },
+        { "name": "G마켓", "url": "https://www.gmarket.co.kr" },
+        { "name": "네이버쇼핑", "url": "https://shopping.naver.com" },
+        { "name": "당근", "url": "https://www.daangn.com" }
+      ]
+    },
+
+    {
+      "name": "정부",
+      "items": [
+        { "name": "정부24", "url": "https://www.gov.kr" },
+        { "name": "국민건강", "url": "https://www.nhis.or.kr" },
+        { "name": "국민연금", "url": "https://www.nps.or.kr" }
+      ]
+    },
+
+    {
+      "name": "업무",
+      "items": [
+        { "name": "드라이브", "url": "https://drive.google.com" },
+        { "name": "캘린더", "url": "https://calendar.google.com" },
+        { "name": "노션", "url": "https://www.notion.so" },
+        { "name": "슬랙", "url": "https://slack.com" },
+        { "name": "줌", "url": "https://zoom.us" }
+      ]
+    },
+
+    {
+      "name": "AI/개발",
+      "items": [
+        { "name": "ChatGPT", "url": "https://chatgpt.com" },
+        { "name": "GitHub", "url": "https://github.com" },
+        { "name": "StackOvf", "url": "https://stackoverflow.com" },
+        { "name": "MDN", "url": "https://developer.mozilla.org" }
+      ]
+    },
+
+    {
+      "name": "콘텐츠",
+      "items": [
+        { "name": "넷플", "url": "https://www.netflix.com" },
+        { "name": "웨이브", "url": "https://www.wavve.com" },
+        { "name": "티빙", "url": "https://www.tving.com" },
+        { "name": "멜론", "url": "https://www.melon.com" }
+      ]
+    }
+  ]
+}

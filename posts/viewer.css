@@ -1,0 +1,89 @@
+/* posts/viewer.html 전용 스타일 (홈 스타일과 조화) */
+
+/* editor(환경설정) 페이지와 유사한 레이아웃 */
+.viewer-topbar-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.viewer-title{
+  /* editor.css의 .title(아이콘+텍스트) 스타일과 공존 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(70vw, 760px);
+}
+
+/* container/panel은 style.css의 것을 활용하고,
+   viewer 쪽은 spacing만 조정 */
+.viewer-container{
+  padding-top: 16px;
+}
+
+.viewer-panel{
+  padding: 14px;
+}
+
+/* github-markdown-css 기본은 배경/텍스트 색을 강하게 갖고 있어
+   우리 테마 변수 기반으로 자연스럽게 맞춤 */
+.viewer-markdown.markdown-body{
+  color: var(--text);
+  background: transparent;
+}
+
+/* Markdown 테이블 스타일: 라이트 모드에서 셀 배경/텍스트 대비가 낮아 식별 불가능한 문제 해결
+   - 기본적으로 테이블 셀에 경계와 적당한 배경을 주어 읽기 쉽게 만듭니다.
+   - 다크/라이트 모드 모두 var(--panel), var(--text), var(--border) 변수를 사용해 일관성 유지. */
+.viewer-markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.6em 0;
+}
+.viewer-markdown th,
+.viewer-markdown td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  /* 기본적으로 panel 기반의 연한 배경을 제공해 텍스트가 보이도록 함 */
+  background: color-mix(in srgb, var(--panel) 92%, white);
+  color: var(--text);
+  vertical-align: top;
+  text-align: left;
+}
+
+/* 다크 모드에서는 panel을 기준으로 어둡게, 라이트 모드에서는 밝게 보이도록 보완 */
+body.dark .viewer-markdown th,
+body.dark .viewer-markdown td {
+  background: color-mix(in srgb, var(--panel) 88%, black);
+}
+
+body:not(.dark) .viewer-markdown th,
+body:not(.dark) .viewer-markdown td {
+  background: color-mix(in srgb, var(--panel) 96%, white);
+}
+
+/* markdown 내부 여백을 panel에 맡기고, article은 가볍게 */
+.viewer-markdown{
+  padding: 4px 2px;
+}
+
+/* 코드블록 라운딩/여백 */
+.viewer-markdown pre{
+  border-radius: 12px;
+  padding: 14px;
+  overflow: auto;
+}
+
+/* 인라인 코드 */
+.viewer-markdown code{
+  border-radius: 8px;
+}
+
+/* 로딩 텍스트 */
+.viewer-loading{
+  margin: 0;
+  color: rgba(0,0,0,0.55);
+}
+body.dark .viewer-loading{
+  color: rgba(255,255,255,0.70);
+}

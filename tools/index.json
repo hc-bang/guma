@@ -1,0 +1,10 @@
+{
+  "files": [
+    { "group": "생성", "file": "files/ascii-art-generator.html", "display": "ASCII Art Generator" },
+    { "group": "생성", "file": "files/key-generator.html", "display": "Key Generator" },
+    { "group": "변환", "file": "files/json-base64-converter.html", "display": "JSON <> Base64" },
+    { "group": "변환", "file": "files/json-formatter.html", "display": "JSON Formatter" },
+    { "group": "변환", "file": "files/jwt-debugger.html", "display": "JWT Debugger" },
+    { "group": "변환", "file": "files/url-encoder.html", "display": "URL Encoder / Decoder" }
+  ]
+}

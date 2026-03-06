@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GUMA™</title>
+<link rel="icon" href="favicon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <div id="topBookmarks" class="top-bookmarks" aria-label="상단 즐겨찾기"></div>
+  </div>
+  <div class="actions">
+    <button id="themeToggleTop" class="btn icon-btn" type="button" aria-label="모드 토글">
+      <span class="icon-svg" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </span>
+    </button>
+    <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴">
+      <span class="icon-svg" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </span>
+    </button>
+  </div>
+</header>
+
+<div id="sidepanelOverlay" class="sidepanel-overlay"></div>
+<aside id="sidepanel" class="sidepanel" aria-label="메뉴">
+  <div class="sidepanel-title">메뉴</div>
+  <div id="sidepanel-nav" class="sidepanel-actions"></div>
+</aside>
+
+<main class="center">
+  <h1 class="logo"><img src="favicon.svg" class="logo-icon" alt="guma icon">guma</h1>
+
+  <div class="search-row">
+    <div class="engine-dropdown-wrap">
+      <button id="engineBtn" class="engine-btn" aria-label="검색 엔진 선택">
+        <img id="engineIcon" src="" alt="" class="engine-icon">
+      </button>
+      <div id="engineMenu" class="engine-menu hidden" role="listbox" aria-label="검색 엔진">
+        <button class="engine-item active" data-engine="naver" role="option">
+          <img src="https://www.google.com/s2/favicons?domain=naver.com&sz=32" class="engine-item-icon" alt="">네이버
+        </button>
+        <button class="engine-item" data-engine="daum" role="option">
+          <img src="https://www.google.com/s2/favicons?domain=daum.net&sz=32" class="engine-item-icon" alt="">다음
+        </button>
+        <button class="engine-item" data-engine="google" role="option">
+          <img src="https://www.google.com/s2/favicons?domain=google.com&sz=32" class="engine-item-icon" alt="">구글
+        </button>
+        <button class="engine-item" data-engine="bing" role="option">
+          <img src="https://www.google.com/s2/favicons?domain=bing.com&sz=32" class="engine-item-icon" alt="">빙
+        </button>
+        <button class="engine-item" data-engine="youtube" role="option">
+          <img src="https://www.google.com/s2/favicons?domain=youtube.com&sz=32" class="engine-item-icon" alt="">유튜브
+        </button>
+        <button class="engine-item" data-engine="github" role="option">
+          <img src="https://www.google.com/s2/favicons?domain=github.com&sz=32" class="engine-item-icon" alt="">GitHub
+        </button>
+        <button class="engine-item" data-engine="wiki" role="option">
+          <img src="https://www.google.com/s2/favicons?domain=wikipedia.org&sz=32" class="engine-item-icon" alt="">위키백과
+        </button>
+      </div>
+    </div>
+    <form id="searchForm">
+      <input id="searchInput" type="text" placeholder="검색어를 입력하세요" autocomplete="off">
+    </form>
+  </div>
+
+  <div id="bookmarks" class="bookmarks"></div>
+</main>
+
+<div id="modalOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <h2 class="modal-title" id="modalTitle">바로가기 추가</h2>
+    <label class="modal-label">이름
+      <input id="modalName" class="modal-input" type="text" placeholder="예: 네이버">
+    </label>
+    <label class="modal-label">URL
+      <input id="modalUrl" class="modal-input" type="text" placeholder="https://example.com">
+    </label>
+    <div class="modal-actions">
+      <button id="modalCancel" class="modal-btn cancel">취소</button>
+      <button id="modalConfirm" class="modal-btn confirm">완료</button>
+    </div>
+  </div>
+</div>
+
+<script>window.GUMA = { root: './', page: '' };</script>
+<script src="shared/topbar.js" defer></script>
+<script src="script.js"></script>
+</body>
+</html>

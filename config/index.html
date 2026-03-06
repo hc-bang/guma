@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GUMA™ 환경설정</title>
+  <link rel="icon" href="../favicon.svg" />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="./config.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="title">
+        <span class="title-icon icon-svg" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </span>
+        환경설정
+      </h1>
+    </div>
+    <div class="topbar-right">
+      <a class="btn icon-btn" href="../" aria-label="홈으로">
+        <span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg></span>
+      </a>
+      <button id="themeToggle" class="btn icon-btn" type="button" aria-label="모드 토글">
+        <span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+      </button>
+      <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴">
+        <span class="icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span>
+      </button>
+    </div>
+  </header>
+
+  <div id="sidepanelOverlay" class="sidepanel-overlay"></div>
+  <aside id="sidepanel" class="sidepanel" aria-label="메뉴">
+    <div class="sidepanel-title">메뉴</div>
+    <div id="sidepanel-nav" class="sidepanel-actions"></div>
+  </aside>
+
+  <main class="container">
+    <section class="tabs" aria-label="편집 섹션">
+      <button class="tab active" type="button" data-tab="top">북마크</button>
+      <button class="tab" type="button" data-tab="shortcuts">바로가기</button>
+    </section>
+
+    <section class="panel" data-panel="top">
+      <p class="hint">
+        우선순위: <code>localStorage(topBookmarks)</code> → 없으면 <code>bookmarks.json</code> (기본값).<br />
+        "적용"을 누르면 홈 화면 상단 메뉴에 즉시 반영됩니다.
+      </p>
+      <div class="mode-row">
+        <label class="mode"><input type="radio" name="topMode" value="tree" checked> 트리 편집</label>
+        <label class="mode"><input type="radio" name="topMode" value="json"> JSON 편집</label>
+      </div>
+      <div class="actions">
+        <button class="btn" type="button" id="topLoad">리로드</button>
+        <button class="btn" type="button" id="topApply">적용</button>
+        <button class="btn" type="button" id="topExport">내보내기</button>
+        <label class="btn file">불러오기 <input id="topImport" type="file" accept="application/json" /></label>
+        <button class="btn danger" type="button" id="topReset">초기화</button>
+      </div>
+      <div id="topTree" class="tree"></div>
+      <label class="label" id="topJsonLabel">top-bookmarks.json / bookmarks.json 형식(JSON)</label>
+      <textarea id="topJson" class="editor hidden" spellcheck="false"></textarea>
+    </section>
+
+    <section class="panel hidden" data-panel="shortcuts">
+      <p class="hint">
+        하단 바로가기는 최대 15개입니다. URL은 <code>http(s)://</code>가 없으면 자동으로 <code>https://</code>를 붙입니다.
+      </p>
+      <div class="mode-row">
+        <label class="mode"><input type="radio" name="scMode" value="list" checked> 리스트 편집</label>
+        <label class="mode"><input type="radio" name="scMode" value="json"> JSON 편집</label>
+      </div>
+      <div class="actions">
+        <button class="btn" type="button" id="scLoad">리로드</button>
+        <button class="btn" type="button" id="scApply">적용</button>
+        <button class="btn" type="button" id="scExport">내보내기</button>
+        <label class="btn file">불러오기 <input id="scImport" type="file" accept="application/json" /></label>
+        <button class="btn" type="button" id="scNormalize">URL 정리</button>
+      </div>
+      <div id="scList" class="list"></div>
+      <label class="label" id="scJsonLabel">shortcuts.json 형식(JSON)</label>
+      <textarea id="scJson" class="editor hidden" spellcheck="false"></textarea>
+    </section>
+  </main>
+
+  <script>window.GUMA = { root: '../', page: 'config' };</script>
+  <script src="../shared/topbar.js" defer></script>
+  <script src="./config.js"></script>
+</body>
+</html>

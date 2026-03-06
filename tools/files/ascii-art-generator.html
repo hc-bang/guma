@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASCII 아트 생성기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Nanum+Gothic+Coding:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/figlet@1.7.0/lib/figlet.js"></script>
+  <style>
+    :root {
+      --green: #00ff41;
+      --green-dim: #00c832;
+      --green-glow: rgba(0, 255, 65, 0.15);
+      --bg: #0a0a0a;
+      --panel: #0f0f0f;
+      --border: #1a3a1a;
+    }
+    [data-theme="light"] {
+      --green: #1a7a1a;
+      --green-dim: #2a9a2a;
+      --green-glow: rgba(26, 122, 26, 0.12);
+      --bg: #f4f6f4;
+      --panel: #ffffff;
+      --border: #b8d8b8;
+    }
+    [data-theme="light"] body::before { display: none; }
+    [data-theme="light"] body::after  { display: none; }
+    [data-theme="light"] pre#output   { text-shadow: none; }
+    [data-theme="light"] .logo-blink  { box-shadow: none; }
+    [data-theme="light"] header h1    { text-shadow: none; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--green);
+      font-family: 'Nanum Gothic Coding', 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px);
+      pointer-events: none;
+      z-index: 9999;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.55) 100%);
+      pointer-events: none;
+      z-index: 9998;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 40px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(180deg, rgba(0,255,65,0.05) 0%, transparent 100%);
+    }
+    .logo-blink {
+      width: 11px; height: 20px;
+      background: var(--green);
+      animation: blink 1s step-end infinite;
+      box-shadow: 0 0 8px var(--green);
+      flex-shrink: 0;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    header h1 {
+      font-family: 'Orbitron', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-shadow: 0 0 12px var(--green);
+    }
+    .header-sub { font-size: 11px; color: color-mix(in srgb, var(--green) 40%, transparent); letter-spacing: 1px; margin-top: 2px; }
+    .status { margin-left: auto; font-size: 11px; color: color-mix(in srgb, var(--green) 60%, transparent); letter-spacing: 2px; text-align: right; }
+    .status span { color: var(--green); animation: blink 2s step-end infinite; }
+    main { max-width: 1200px; margin: 0 auto; padding: 28px 40px; }
+    .mode-toggle {
+      display: flex;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+      width: fit-content;
+    }
+    .mode-btn {
+      background: transparent;
+      border: none;
+      border-right: 1px solid var(--border);
+      color: color-mix(in srgb, var(--green) 40%, transparent);
+      font-family: 'Nanum Gothic Coding', monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 10px 22px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .mode-btn:last-child { border-right: none; }
+    .mode-btn.active { background: var(--green-glow); color: var(--green); box-shadow: inset 0 0 12px var(--green-glow); }
+    .mode-btn:hover:not(.active) { background: color-mix(in srgb, var(--green) 5%, transparent); color: color-mix(in srgb, var(--green) 75%, transparent); }
+    label { display: block; font-size: 11px; letter-spacing: 2px; color: color-mix(in srgb, var(--green) 50%, transparent); margin-bottom: 7px; text-transform: uppercase; }
+    .input-section { margin-bottom: 20px; }
+    input[type="text"] {
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--green);
+      font-family: 'Nanum Gothic Coding', 'Share Tech Mono', monospace;
+      font-size: 18px;
+      padding: 13px 18px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="text"]:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 1px var(--green), inset 0 0 20px var(--green-glow);
+    }
+    input[type="text"]::placeholder { color: color-mix(in srgb, var(--green) 20%, transparent); }
+    #figletControls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+    #canvasControls { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+    .control-group { display: flex; flex-direction: column; gap: 7px; }
+    select {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--green);
+      font-family: 'Nanum Gothic Coding', 'Share Tech Mono', monospace;
+      font-size: 12px;
+      padding: 9px 30px 9px 12px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300ff41'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    select:hover { border-color: var(--green); }
+    .range-row { display: flex; align-items: center; gap: 8px; }
+    input[type="range"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      -webkit-appearance: none;
+      padding: 8px 0;
+      cursor: ew-resize;
+    }
+    input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: var(--border); }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      cursor: ew-resize;
+      margin-top: -6px;
+    }
+    .range-val { font-size: 11px; color: var(--green); min-width: 30px; text-align: right; }
+    .actions { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+    button {
+      background: transparent;
+      border: 1px solid var(--green-dim);
+      color: var(--green);
+      font-family: 'Nanum Gothic Coding', 'Share Tech Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+    button:hover { border-color: var(--green); box-shadow: 0 0 10px var(--green-glow); }
+    button:active { transform: scale(0.97); }
+    button.primary {
+      background: var(--green);
+      color: #000;
+      border-color: var(--green);
+      font-weight: bold;
+      box-shadow: 0 0 14px var(--green-glow);
+    }
+    button.primary:hover { box-shadow: 0 0 22px rgba(0,255,65,0.4); }
+    .output-wrapper { border: 1px solid var(--border); background: var(--panel); }
+    .output-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,255,65,0.03);
+    }
+    .output-header-left { display: flex; align-items: center; gap: 7px; font-size: 11px; letter-spacing: 1px; color: color-mix(in srgb, var(--green) 50%, transparent); }
+    .dot { width:8px; height:8px; border-radius:50%; }
+    .dot.r { background: #ff5f57; box-shadow: 0 0 4px #ff5f57; }
+    .dot.y { background: #febc2e; box-shadow: 0 0 4px #febc2e; }
+    .dot.g { background: #28c840; box-shadow: 0 0 4px #28c840; }
+    .output-meta { display: flex; gap: 14px; font-size: 11px; color: color-mix(in srgb, var(--green) 35%, transparent); }
+    pre#output {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      line-height: 1.2;
+      color: var(--green);
+      padding: 24px;
+      min-height: 180px;
+      white-space: pre;
+      overflow-x: auto;
+      text-shadow: 0 0 5px var(--green-glow);
+      transition: opacity 0.2s;
+    }
+    pre#output.rendering { opacity: 0.2; }
+    pre#output::-webkit-scrollbar { height: 5px; }
+    pre#output::-webkit-scrollbar-track { background: var(--bg); }
+    pre#output::-webkit-scrollbar-thumb { background: var(--border); }
+    .gallery-header { display: flex; align-items: center; gap: 12px; margin: 28px 0 14px; }
+    .gallery-header h2 { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 3px; color: color-mix(in srgb, var(--green) 45%, transparent); font-weight: 400; white-space: nowrap; }
+    .gallery-line { flex: 1; height: 1px; background: var(--border); }
+    .font-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+    .font-card {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      overflow: hidden;
+    }
+    .font-card:hover { border-color: var(--green-dim); box-shadow: 0 0 14px var(--green-glow); }
+    .font-card.active { border-color: var(--green); box-shadow: 0 0 18px var(--green-glow), inset 0 0 16px var(--green-glow); }
+    .font-card-name { font-size: 10px; letter-spacing: 2px; color: color-mix(in srgb, var(--green) 45%, transparent); margin-bottom: 8px; text-transform: uppercase; }
+    .font-card.active .font-card-name { color: var(--green); }
+    .font-card pre { font-family: 'Share Tech Mono', monospace; font-size: 8.5px; line-height: 1.1; color: color-mix(in srgb, var(--green) 60%, transparent); white-space: pre; overflow: hidden; max-height: 75px; }
+    .font-card.active pre { color: var(--green); text-shadow: 0 0 4px var(--green-glow); }
+    .info-box {
+      border: 1px solid var(--border);
+      background: var(--green-glow);
+      padding: 14px 18px;
+      font-size: 12px;
+      color: color-mix(in srgb, var(--green) 65%, transparent);
+      line-height: 1.8;
+    }
+    .info-box strong { color: var(--green); }
+    .hidden { display: none !important; }
+    .toast {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      background: var(--green);
+      color: #000;
+      font-family: 'Nanum Gothic Coding', monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 11px 22px;
+      transform: translateY(70px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 10000;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    @media (max-width: 768px) {
+      main { padding: 18px; }
+      header { padding: 14px 18px; }
+      #figletControls, #canvasControls { grid-template-columns: 1fr 1fr; }
+      .font-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-blink"></div>
+    <div>
+      <h1>ASCII ART GENERATOR</h1>
+      <div class="header-sub">한글 · 영문 · 이모지 지원</div>
+    </div>
+    <div class="status">모드: <span id="modeStatus">픽셀변환</span></div>
+  </header>
+
+  <main>
+
+    <div class="mode-toggle">
+      <button class="mode-btn" id="btnFiglet" onclick="switchMode('figlet')">
+        ◈ FIGlet 모드 &nbsp;<span style="font-size:10px;opacity:0.55">(영문 · 다양한 폰트)</span>
+      </button>
+      <button class="mode-btn active" id="btnCanvas" onclick="switchMode('canvas')">
+        ◈ 픽셀 변환 모드 &nbsp;<span style="font-size:10px;opacity:0.55">(한글 지원 · 블록 아트)</span>
+      </button>
+    </div>
+
+    <div class="input-section">
+      <label>// 텍스트 입력</label>
+      <input type="text" id="textInput" placeholder="한글 또는 영문 텍스트를 입력하세요..." value="안녕" maxlength="30">
+    </div>
+
+    <!-- FIGlet Controls -->
+    <div id="figletControls" class="hidden">
+      <div class="control-group">
+        <label>// 폰트 선택</label>
+        <select id="fontSelect">
+          <option value="Standard">Standard</option>
+          <option value="Big">Big</option>
+          <option value="Slant">Slant</option>
+          <option value="Banner">Banner</option>
+          <option value="Banner3">Banner3</option>
+          <option value="Block">Block</option>
+          <option value="Bubble">Bubble</option>
+          <option value="Digital">Digital</option>
+          <option value="Doom">Doom</option>
+          <option value="Epic">Epic</option>
+          <option value="Ghost">Ghost</option>
+          <option value="Larry 3D">Larry 3D</option>
+          <option value="Lean">Lean</option>
+          <option value="Mini">Mini</option>
+          <option value="Script">Script</option>
+          <option value="Shadow">Shadow</option>
+          <option value="Small">Small</option>
+          <option value="Speed">Speed</option>
+          <option value="Star Wars">Star Wars</option>
+          <option value="Varsity">Varsity</option>
+          <option value="Poison">Poison</option>
+          <option value="ANSI Shadow">ANSI Shadow</option>
+          <option value="Graffiti">Graffiti</option>
+          <option value="Calvin S">Calvin S</option>
+          <option value="Bloody">Bloody</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>// 가로 레이아웃</label>
+        <select id="hLayout">
+          <option value="default">기본값</option>
+          <option value="full">전체 너비</option>
+          <option value="fitted">밀착</option>
+          <option value="controlled smushing">제어 압축</option>
+          <option value="universal smushing">전체 압축</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>// 세로 레이아웃</label>
+        <select id="vLayout">
+          <option value="default">기본값</option>
+          <option value="full">전체 높이</option>
+          <option value="fitted">밀착</option>
+          <option value="controlled smushing">제어 압축</option>
+          <option value="universal smushing">전체 압축</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Canvas Controls -->
+    <div id="canvasControls">
+      <div class="control-group">
+        <label>// 폰트 크기</label>
+        <div class="range-row">
+          <input type="range" id="fontSize" min="20" max="120" value="60">
+          <span class="range-val" id="fontSizeVal">60</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>// 출력 너비 (컬럼)</label>
+        <div class="range-row">
+          <input type="range" id="outputWidth" min="40" max="200" value="100">
+          <span class="range-val" id="outputWidthVal">100</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>// 밝기 임계값</label>
+        <div class="range-row">
+          <input type="range" id="threshold" min="50" max="230" value="128">
+          <span class="range-val" id="thresholdVal">128</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>// 채움 문자</label>
+        <select id="fillChar">
+          <option value="block">█  블록</option>
+          <option value="hash">#  해시</option>
+          <option value="at">@  골뱅이</option>
+          <option value="star">*  별표</option>
+          <option value="plus">+  플러스</option>
+          <option value="shade">░▒▓  음영</option>
+          <option value="custom">✏  직접 입력</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Custom char (hidden by default) -->
+    <div id="customCharRow" class="hidden" style="margin-bottom:20px; max-width:200px;">
+      <div class="control-group">
+        <label>// 직접 입력 (1글자)</label>
+        <input type="text" id="customChar" placeholder="문자" maxlength="1" style="font-size:16px; padding:8px 12px;">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" onclick="renderArt()">▶ 생성</button>
+      <button onclick="copyToClipboard()">⊞ 복사</button>
+      <button onclick="downloadTxt()">↓ TXT 저장</button>
+      <button onclick="clearAll()">✕ 초기화</button>
+    </div>
+
+    <div class="output-wrapper">
+      <div class="output-header">
+        <div class="output-header-left">
+          <div class="dot r"></div>
+          <div class="dot y"></div>
+          <div class="dot g"></div>
+          <span style="margin-left:6px">출력 터미널</span>
+        </div>
+        <div class="output-meta">
+          <span id="charCount">0 글자</span>
+          <span id="lineCount">0 줄</span>
+        </div>
+      </div>
+      <pre id="output">_</pre>
+    </div>
+
+    <!-- FIGlet Gallery -->
+    <div id="figletGallery" class="hidden">
+      <div class="gallery-header">
+        <h2>폰트 갤러리</h2>
+        <div class="gallery-line"></div>
+      </div>
+      <div class="font-grid" id="fontGrid"></div>
+    </div>
+
+    <!-- Canvas Info -->
+    <div id="canvasInfo">
+      <div class="gallery-header">
+        <h2>픽셀 변환 모드 안내</h2>
+        <div class="gallery-line"></div>
+      </div>
+      <div class="info-box">
+        <strong>픽셀 변환 모드</strong>는 HTML Canvas에 텍스트를 렌더링한 뒤, 각 픽셀의 밝기를 분석하여 ASCII 문자로 변환합니다.<br>
+        <strong>한글, 한자, 일본어, 이모지</strong> 등 모든 유니코드 문자를 처리할 수 있습니다.<br>
+        <strong>폰트 크기</strong>를 크게 할수록 더 세밀한 출력이 만들어지며, <strong>출력 너비</strong>는 가로 문자 수를 결정합니다.<br>
+        복사 후 메모장이나 터미널 등 <strong>등폭(monospace) 환경</strong>에서 확인하면 정렬이 정확하게 보입니다.
+      </div>
+    </div>
+
+  </main>
+
+  <canvas id="renderCanvas" style="display:none"></canvas>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    figlet.defaults({ fontPath: 'https://unpkg.com/figlet@1.7.0/fonts' });
+
+    const GALLERY_FONTS = [
+      'Standard','Big','Slant','Doom','Block','Epic',
+      'Star Wars','Shadow','Script','Digital','Ghost','Larry 3D'
+    ];
+
+    let currentMode = 'canvas';
+    let currentOutput = '';
+    let renderTimer = null;
+
+    // ── Mode switch ────────────────────────────────────────
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById('btnFiglet').classList.toggle('active', mode === 'figlet');
+      document.getElementById('btnCanvas').classList.toggle('active', mode === 'canvas');
+      document.getElementById('figletControls').classList.toggle('hidden', mode !== 'figlet');
+      document.getElementById('canvasControls').classList.toggle('hidden', mode !== 'canvas');
+      document.getElementById('figletGallery').classList.toggle('hidden', mode !== 'figlet');
+      document.getElementById('canvasInfo').classList.toggle('hidden', mode !== 'canvas');
+      document.getElementById('modeStatus').textContent = mode === 'figlet' ? 'FIGlet' : '픽셀변환';
+
+      if (mode === 'figlet') {
+        document.getElementById('textInput').placeholder = '영문 텍스트를 입력하세요...';
+        const cur = document.getElementById('textInput').value;
+        if (/[^\x00-\x7F]/.test(cur)) document.getElementById('textInput').value = 'Hello';
+      } else {
+        document.getElementById('textInput').placeholder = '한글 또는 영문 텍스트를 입력하세요...';
+      }
+      renderArt();
+    }
+
+    // ── FIGlet ─────────────────────────────────────────────
+    function renderFiglet(text) {
+      const opts = {
+        font: document.getElementById('fontSelect').value,
+        horizontalLayout: document.getElementById('hLayout').value,
+        verticalLayout: document.getElementById('vLayout').value,
+      };
+      const pre = document.getElementById('output');
+      pre.classList.add('rendering');
+
+      figlet.text(text || ' ', opts, (err, result) => {
+        pre.classList.remove('rendering');
+        if (err) { setOutput(`[오류] ${err.message || '폰트를 불러올 수 없습니다'}`); return; }
+        setOutput(result || '');
+        document.querySelectorAll('.font-card').forEach(c =>
+          c.classList.toggle('active', c.dataset.font === opts.font)
+        );
+      });
+    }
+
+    // ── Canvas → ASCII ──────────────────────────────────────
+    function renderCanvas(text) {
+      const canvas  = document.getElementById('renderCanvas');
+      const ctx     = canvas.getContext('2d');
+      const fontSize    = parseInt(document.getElementById('fontSize').value);
+      const outputWidth = parseInt(document.getElementById('outputWidth').value);
+      const threshold   = parseInt(document.getElementById('threshold').value);
+      const fillMode    = document.getElementById('fillChar').value;
+
+      const scale    = 3;
+      const cFont    = fontSize * scale;
+      const charAspect = 0.55; // monospace char width/height ratio
+
+      // Measure
+      canvas.width = 10; canvas.height = 10;
+      ctx.font = `bold ${cFont}px 'Nanum Gothic Coding', 'Share Tech Mono', monospace`;
+      const textW = ctx.measureText(text).width;
+
+      const padH = cFont * 0.25;
+      const padV = cFont * 0.25;
+      canvas.width  = Math.ceil(textW + padH * 2);
+      canvas.height = Math.ceil(cFont * 1.4 + padV * 2);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#000000';
+      ctx.font = `bold ${cFont}px 'Nanum Gothic Coding', 'Share Tech Mono', monospace`;
+      ctx.textBaseline = 'top';
+      ctx.fillText(text, padH, padV);
+
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const pixels  = imgData.data;
+
+      const cols = outputWidth;
+      const rows = Math.round(cols * (canvas.height / canvas.width) * charAspect);
+      const cW = canvas.width  / cols;
+      const cH = canvas.height / rows;
+
+      const lines = [];
+      for (let r = 0; r < rows; r++) {
+        let line = '';
+        for (let c = 0; c < cols; c++) {
+          // average a small sample area
+          let lumSum = 0, samples = 0;
+          for (let dy = 0; dy < 2; dy++) {
+            for (let dx = 0; dx < 2; dx++) {
+              const px = Math.min(Math.floor(c * cW) + dx, canvas.width - 1);
+              const py = Math.min(Math.floor(r * cH) + dy, canvas.height - 1);
+              const i  = (py * canvas.width + px) * 4;
+              lumSum += 0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2];
+              samples++;
+            }
+          }
+          line += charForPixel(lumSum / samples, threshold, fillMode);
+        }
+        lines.push(line.trimEnd());
+      }
+
+      while (lines.length && !lines[0].trim())       lines.shift();
+      while (lines.length && !lines[lines.length-1].trim()) lines.pop();
+
+      setOutput(lines.join('\n'));
+    }
+
+    function charForPixel(lum, threshold, mode) {
+      const dark = lum < threshold;
+      if (!dark) return ' ';
+      switch (mode) {
+        case 'block':  return '█';
+        case 'hash':   return '#';
+        case 'at':     return '@';
+        case 'star':   return '*';
+        case 'plus':   return '+';
+        case 'shade':
+          if (lum < threshold * 0.25) return '█';
+          if (lum < threshold * 0.5)  return '▓';
+          if (lum < threshold * 0.75) return '▒';
+          return '░';
+        case 'custom': {
+          const c = document.getElementById('customChar').value;
+          return c || '#';
+        }
+        default: return '#';
+      }
+    }
+
+    // ── Master render ───────────────────────────────────────
+    function renderArt() {
+      const text = document.getElementById('textInput').value;
+      if (!text) { setOutput(''); return; }
+      if (currentMode === 'figlet') renderFiglet(text);
+      else renderCanvas(text);
+    }
+
+    function setOutput(text) {
+      currentOutput = text;
+      const el = document.getElementById('output');
+      el.textContent = text || '[빈 결과]';
+      const lines = text ? text.split('\n') : [];
+      document.getElementById('charCount').textContent = `${text.length.toLocaleString()} 글자`;
+      document.getElementById('lineCount').textContent = `${lines.length} 줄`;
+    }
+
+    // ── Actions ─────────────────────────────────────────────
+    function copyToClipboard() {
+      if (!currentOutput) { showToast('출력 결과가 없습니다'); return; }
+      navigator.clipboard.writeText(currentOutput)
+        .then(() => showToast('클립보드에 복사되었습니다'))
+        .catch(() => {
+          const ta = document.createElement('textarea');
+          ta.value = currentOutput;
+          document.body.appendChild(ta); ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          showToast('클립보드에 복사되었습니다');
+        });
+    }
+
+    function downloadTxt() {
+      if (!currentOutput) { showToast('출력 결과가 없습니다'); return; }
+      const blob = new Blob([currentOutput], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'ascii-art.txt';
+      a.click();
+      showToast('다운로드 중...');
+    }
+
+    function clearAll() {
+      document.getElementById('textInput').value = '';
+      setOutput('');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    // ── FIGlet Gallery ──────────────────────────────────────
+    function buildGallery() {
+      const grid = document.getElementById('fontGrid');
+      GALLERY_FONTS.forEach(fontName => {
+        const card = document.createElement('div');
+        card.className = 'font-card';
+        card.dataset.font = fontName;
+        card.innerHTML = `<div class="font-card-name">${fontName}</div><pre style="color:#00ff4130">로딩 중...</pre>`;
+        card.addEventListener('click', () => {
+          document.getElementById('fontSelect').value = fontName;
+          if (currentMode !== 'figlet') switchMode('figlet');
+          else renderArt();
+        });
+        grid.appendChild(card);
+
+        figlet.text('Hello', { font: fontName }, (err, result) => {
+          const pre = card.querySelector('pre');
+          pre.removeAttribute('style');
+          pre.textContent = err ? '[미리보기 불가]' : result;
+        });
+      });
+    }
+
+    // ── Event listeners ─────────────────────────────────────
+    document.getElementById('textInput').addEventListener('input', () => {
+      clearTimeout(renderTimer);
+      renderTimer = setTimeout(renderArt, 350);
+    });
+
+    ['fontSelect','hLayout','vLayout'].forEach(id =>
+      document.getElementById(id).addEventListener('change', renderArt)
+    );
+
+    ['fontSize','outputWidth','threshold'].forEach(id => {
+      const el  = document.getElementById(id);
+      const val = document.getElementById(id + 'Val');
+      el.addEventListener('input', () => {
+        val.textContent = el.value;
+        clearTimeout(renderTimer);
+        renderTimer = setTimeout(renderArt, 200);
+      });
+    });
+
+    document.getElementById('fillChar').addEventListener('change', function() {
+      document.getElementById('customCharRow').classList.toggle('hidden', this.value !== 'custom');
+      renderArt();
+    });
+
+    document.getElementById('customChar').addEventListener('input', () => {
+      clearTimeout(renderTimer);
+      renderTimer = setTimeout(renderArt, 200);
+    });
+
+    // ── Init ────────────────────────────────────────────────
+    buildGallery();
+    renderArt();
+
+    // ── Theme (postMessage from parent) ─────────────────────
+    (function() {
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme || 'dark');
+      }
+      // 초기 테마: localStorage에서 읽기
+      applyTheme(localStorage.getItem('theme') || 'dark');
+
+      window.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'themeChange') {
+          applyTheme(e.data.theme);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

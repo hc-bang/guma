@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>JSON <> Base64 - GUMA™</title>
+  <link rel="icon" href="../../favicon.svg" />
+  <link rel="stylesheet" href="../tool.css" />
+  <style>
+    .container { max-width: 800px; margin: 0 auto; padding: 20px 14px; }
+    .header { text-align: center; margin-bottom: 32px; }
+    .title { font-size: 28px; font-weight: 800; margin: 0 0 8px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+    .subtitle { color: var(--muted); font-size: 14px; margin: 0; }
+    .section { margin-bottom: 24px; }
+    .section-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px; padding-left: 2px; }
+    textarea { width: 100%; min-height: 150px; background: var(--input-bg); color: var(--text); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 13px; outline: none; transition: all 0.2s; resize: vertical; font-family: ui-monospace, monospace; }
+    textarea:focus { border-color: rgba(var(--accent-rgb), 0.42); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
+    .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="title">
+        <span>&#x1F4E6;</span>
+        <span>JSON <> Base64 Converter</span>
+      </h1>
+      <p class="subtitle">JSON 데이터를 Base64 문자열로 변환하거나 그 반대로 변환합니다.</p>
+    </div>
+
+    <div class="panel">
+      <div class="section">
+        <h2 class="section-title">입력</h2>
+        <textarea id="input" placeholder="JSON 또는 Base64 문자열을 입력하세요..."></textarea>
+      </div>
+
+      <div class="section">
+        <div class="button-group">
+          <button class="custom-btn" onclick="convertToBase64()">JSON → Base64</button>
+          <button class="custom-btn" onclick="convertFromBase64()">Base64 → JSON</button>
+          <button class="custom-btn secondary" onclick="copyResult()">Copy Result</button>
+          <button class="custom-btn secondary" onclick="clearAll()">Clear</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">결과</h2>
+        <textarea id="output" readonly placeholder="결과가 여기에 표시됩니다..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Theme management
+    function applyTheme() {
+      if(localStorage.getItem('theme') === 'dark'){
+        document.body.classList.add('dark');
+      } else {
+        document.body.classList.remove('dark');
+      }
+    }
+    applyTheme();
+    window.addEventListener('storage', (e) => (e.key === 'theme') && applyTheme());
+    window.addEventListener('message', (e) => (e.data && e.data.type === 'themeChange') && applyTheme());
+
+    const input = document.getElementById('input');
+    const output = document.getElementById('output');
+
+    // JSON to Base64
+    function convertToBase64() {
+      try {
+        // Validate if input is a valid JSON
+        JSON.parse(input.value);
+        // Convert string to base64
+        output.value = btoa(input.value);
+      } catch (e) {
+        output.value = 'Error: 유효하지 않은 JSON 형식입니다. ' + e.message;
+      }
+    }
+
+    // Base64 to JSON
+    function convertFromBase64() {
+      try {
+        const decoded = atob(input.value);
+        // Validate if decoded string is a valid JSON, then format it
+        const jsonObject = JSON.parse(decoded);
+        output.value = JSON.stringify(jsonObject, null, 2);
+      } catch (e) {
+        output.value = 'Error: 유효하지 않은 Base64 문자열이거나, 디코딩된 내용이 JSON이 아닙니다. ' + e.message;
+      }
+    }
+
+    function copyResult() {
+      if (!output.value || output.value.startsWith('Error:')) return;
+      navigator.clipboard.writeText(output.value)
+        .then(() => alert('결과가 클립보드에 복사되었습니다.'))
+        .catch(() => alert('복사에 실패했습니다.'));
+    }
+    
+    function clearAll(){
+        input.value = '';
+        output.value = '';
+    }
+  </script>
+</body>
+</html>

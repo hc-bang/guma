@@ -1,0 +1,9 @@
+{
+  "files": [
+    { "group": "GUMA™",  "file": "../README.md",                "display": "README" },
+    { "group": "문서",  "file": "files/Docker.md",                "display": "Docker" },
+    { "group": "문서",  "file": "files/Markdown.md",              "display": "Markdown 가이드" },
+    { "group": "문서",  "file": "files/Ollama.md",                "display": "Ollama" },
+    { "group": "시스템",    "file": "files/신뢰할수있는인증서등록.md",     "display": "신뢰할 수 있는 인증서 등록" }
+  ]
+}

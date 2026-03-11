@@ -45,8 +45,10 @@ body.dark {
 
 /* ── Base ───────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
+html { scroll-padding-top: 60px; }
 body {
   margin: 0;
+  padding-top: 52px;
   font-family: "Noto Sans KR", ui-sans-serif, system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
@@ -60,8 +62,8 @@ body {
   align-items: center;
   padding: 0 18px;
   height: 52px;
-  position: sticky;
-  top: 0;
+  position: fixed;
+  top: 0; left: 0; right: 0;
   z-index: 300;
   background: var(--bg-glass);
   backdrop-filter: blur(14px);
@@ -366,6 +368,13 @@ body.dark .top-folder-item-folder-icon::before { background: linear-gradient(#ff
   width: 50px; height: 50px;
   vertical-align: middle;
   filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));
+}
+.tm {
+  font-size: 0.4em;
+  font-weight: 400;
+  vertical-align: super;
+  margin-left: 2px;
+  color: var(--text-muted);
 }
 
 /* ── Search ─────────────────────────────────────────────── */

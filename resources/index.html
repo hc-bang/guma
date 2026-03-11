@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GUMA™ 자료실</title>
+  <link rel="icon" href="../favicon.svg" />
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../config/config.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="title"><span class="title-icon icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="21 8 21 21 3 21 3 8"/>
+      <rect x="1" y="3" width="22" height="5"/>
+      <line x1="10" y1="12" x2="14" y2="12"/>
+    </svg></span>자료실</h1>
+    </div>
+    <div class="topbar-right">
+      <a class="btn icon-btn" href="../" aria-label="홈으로"><span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg></span></a>
+      <button id="themeToggle" class="btn icon-btn" type="button" aria-label="모드 토글"><span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span></button>
+      <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴"><span class="icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span></button>
+    </div>
+  </header>
+
+  <div id="sidepanelOverlay" class="sidepanel-overlay"></div>
+  <aside id="sidepanel" class="sidepanel" aria-label="메뉴">
+    <div class="sidepanel-title">메뉴</div>
+    <div id="sidepanel-nav" class="sidepanel-actions"></div>
+  </aside>
+
+  <main class="container docs">
+    <aside class="panel docs-left" aria-label="문서 목록">
+      <div class="docs-left-title">
+        <span class="docs-left-title-icon icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="docs-left-title-text">목록</span>
+      </div>
+      <div id="postContainer" class="post-list">
+        <p class="tree-loading">목록을 불러오는 중...</p>
+      </div>
+    </aside>
+
+    <section class="panel docs-right">
+      <div id="cardContainer" class="card-grid">
+        <p class="hint">폴더(그룹)를 선택하세요.</p>
+      </div>
+    </section>
+  </main>
+
+  <style>
+    /* CSS for cards */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      padding: 10px 0;
+    }
+    .file-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .file-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border-color: var(--accent);
+    }
+    .file-card-icon {
+      font-size: 24px;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 4px;
+    }
+    .file-card-title {
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1.3;
+      color: var(--text);
+      word-break: break-word;
+    }
+    .file-card-desc {
+      font-size: 13px;
+      opacity: 0.75;
+      line-height: 1.4;
+      flex: 1;
+    }
+    .file-card-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+      color: var(--accent);
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      text-decoration: none;
+      transition: background 0.15s;
+      align-self: flex-start;
+      margin-top: 4px;
+    }
+    .file-card-btn:hover {
+      background: color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+  </style>
+
+  <script>
+    const container = document.getElementById('postContainer');
+    const cardEl = document.getElementById('cardContainer');
+    let allFiles = []; // loaded from index.json
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, '&#039;');
+    }
+
+    function setTitle(group) {
+      const name = group || '자료실';
+      document.title = `GUMA™ 자료실 - ${name}`;
+    }
+
+    function getGroupParam() {
+      return new URLSearchParams(location.search).get('group') || '';
+    }
+
+    function setGroupParam(group) {
+      const u = new URL(location.href);
+      if (group) u.searchParams.set('group', group);
+      else u.searchParams.delete('group');
+      history.pushState({ group }, '', u);
+    }
+
+    function setActive(group) {
+      container.querySelectorAll('a.tree-file').forEach(a => {
+        a.classList.toggle('active', a.dataset.group === group);
+      });
+    }
+
+    function loadGroup(group) {
+      if (!cardEl) return;
+      if (!group) {
+        cardEl.innerHTML = '<p class="hint">폴더(그룹)를 선택하세요.</p>';
+        setTitle('');
+        cardEl.classList.remove('card-grid');
+        return;
+      }
+
+      setTitle(group);
+      
+      const filtered = allFiles.filter(f => f.group === group);
+      if (filtered.length === 0) {
+        cardEl.innerHTML = '<p class="hint">선택한 그룹에 파일이 없습니다.</p>';
+        cardEl.classList.remove('card-grid');
+        return;
+      }
+
+      cardEl.classList.add('card-grid');
+      cardEl.innerHTML = '';
+
+      let hasValidFiles = false;
+
+      filtered.forEach(fileMeta => {
+        const filePath = fileMeta.file;
+        if (!filePath) return; // 파일 정보가 없는 빈 그룹 선언용 항목 무시
+        
+        hasValidFiles = true;
+        const displayName = fileMeta.display || filePath.split('/').pop();
+        const desc = fileMeta.desc || '';
+
+        const isExternal = /^https?:\/\//i.test(filePath);
+        const cardHref = isExternal ? escapeHtml(filePath) : `./${escapeHtml(filePath)}`;
+        const targetAttr = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
+
+        const card = document.createElement('div');
+        card.className = 'file-card';
+        card.innerHTML = `
+          <div class="file-card-icon icon-svg">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <div class="file-card-title">${escapeHtml(displayName)}</div>
+          ${desc ? `<div class="file-card-desc">${escapeHtml(desc)}</div>` : ''}
+          <a href="${cardHref}" class="file-card-btn" download${targetAttr}>다운로드</a>
+        `;
+        cardEl.appendChild(card);
+      });
+
+      if (!hasValidFiles) {
+        cardEl.innerHTML = '<p class="hint">그룹 내에 파일이 존재하지 않습니다.</p>';
+        cardEl.classList.remove('card-grid');
+      }
+
+      cardEl.parentElement.scrollTop = 0;
+    }
+
+    function buildGroupTree(files) {
+      const groups = new Set();
+      files.forEach(f => {
+        if (f.group) groups.add(f.group);
+      });
+
+      const root = {};
+      groups.forEach(groupRaw => {
+        const parts = groupRaw.split('/').filter(Boolean);
+        let parent = root;
+        parts.forEach((p, idx) => {
+          if (!parent[p]) parent[p] = { __children: {}, __isGroup: false, __fullPath: '' };
+          if (idx === parts.length - 1) {
+            parent[p].__isGroup = true;
+            parent[p].__fullPath = groupRaw;
+          }
+          parent = parent[p].__children;
+        });
+      });
+      return root;
+    }
+
+    function renderGroupTree(node, depth = 0) {
+      const ul = document.createElement('ul');
+      ul.className = 'tree-ul';
+
+      // index.json의 선언 순서(배열 순서)를 따름
+      const keys = Object.keys(node);
+
+      keys.forEach(key => {
+        const item = node[key];
+        const li = document.createElement('li');
+        li.className = 'tree-li';
+
+        const hasChildren = Object.keys(item.__children).length > 0;
+        const isGroupNode = item.__isGroup; // 이 노드가 파일들이 속한 그룹인지 여부
+
+        // 자식이 있는 중간 노드이면서 실제로 파일이 속한 그룹일 수도 있음.
+        // 현재는 "파일 목록을 구성하는 설정파일, 그룹 단위로"를 따르므로 모든 그룹 노드는 클릭 가능하도록 구현.
+
+        if (hasChildren) {
+          const btn = document.createElement('button');
+          btn.className = 'tree-folder';
+          btn.type = 'button';
+          btn.style.paddingLeft = `${8 + depth * 16}px`;
+          btn.title = key;
+
+          const arrow = document.createElement('span');
+          arrow.className = 'tree-arrow';
+          arrow.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="8,5 18,12 8,19"/></svg>';
+          arrow.setAttribute('aria-hidden', 'true');
+
+          const icon = document.createElement('span');
+          icon.className = 'tree-icon';
+          icon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
+          icon.setAttribute('aria-hidden', 'true');
+
+          const text = document.createElement('span');
+          text.className = 'tree-label';
+          text.textContent = key;
+
+          btn.appendChild(arrow);
+          btn.appendChild(icon);
+          btn.appendChild(text);
+
+          const childUl = renderGroupTree(item.__children, depth + 1);
+          childUl.classList.add('tree-collapsed');
+
+          btn.onclick = () => {
+            const collapsed = childUl.classList.toggle('tree-collapsed');
+            arrow.innerHTML = collapsed ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="8,5 18,12 8,19"/></svg>' : '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,8 19,8 12,18"/></svg>';
+            icon.innerHTML = collapsed ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="2,10 12,10 22,10"/></svg>';
+            // 그룹이 직접 파일을 가질 경우, 폴더 열 때 우측에 보여줌
+            if (isGroupNode && !collapsed) {
+                setGroupParam(item.__fullPath);
+                setActive(item.__fullPath);
+                loadGroup(item.__fullPath);
+            }
+          };
+
+          li.appendChild(btn);
+          li.appendChild(childUl);
+        } else {
+          // 리프 노드 (항상 클릭 가능한 그룹 항목)
+          const a = document.createElement('a');
+          a.className = 'tree-file';
+          a.dataset.group = item.__fullPath;
+          a.href = `?group=${encodeURIComponent(item.__fullPath)}`;
+          a.title = key;
+          a.style.paddingLeft = `${8 + depth * 16}px`;
+
+          const icon = document.createElement('span');
+          icon.className = 'tree-icon';
+          icon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
+          icon.setAttribute('aria-hidden', 'true');
+
+          const text = document.createElement('span');
+          text.className = 'tree-label';
+          text.textContent = key;
+
+          a.appendChild(icon);
+          a.appendChild(text);
+
+          a.onclick = (e) => {
+            e.preventDefault();
+            const targetGroup = a.dataset.group;
+            setGroupParam(targetGroup);
+            setActive(targetGroup);
+            loadGroup(targetGroup);
+          };
+
+          li.appendChild(a);
+        }
+
+        ul.appendChild(li);
+      });
+
+      return ul;
+    }
+
+    async function fetchFiles() {
+      try {
+        const jsonRes = await fetch('./index.json', { cache: 'no-store' });
+        if (!jsonRes.ok) throw new Error(`HTTP ${jsonRes.status}`);
+        const data = await jsonRes.json();
+        allFiles = data.files || [];
+
+        if (allFiles.length === 0) {
+          container.innerHTML = '<p class="tree-empty">등록된 문서가 없습니다.</p>';
+          return;
+        }
+
+        const tree = buildGroupTree(allFiles);
+        container.innerHTML = '';
+        container.appendChild(renderGroupTree(tree));
+
+        const initial = getGroupParam();
+        if (initial) {
+          setActive(initial);
+          loadGroup(initial);
+          
+          container.querySelectorAll('a.tree-file').forEach(a => {
+            if (a.dataset.group === initial) {
+              let parent = a.closest('li.tree-li')?.parentElement;
+              while (parent && parent.classList.contains('tree-ul')) {
+                if (parent.classList.contains('tree-collapsed')) {
+                  parent.classList.remove('tree-collapsed');
+                  const btn = parent.previousElementSibling;
+                  if (btn) {
+                    const arr = btn.querySelector('.tree-arrow');
+                    const ico = btn.querySelector('.tree-icon');
+                    if (arr) arr.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,8 19,8 12,18"/></svg>';
+                    if (ico) ico.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="2,10 12,10 22,10"/></svg>';
+                  }
+                }
+                parent = parent.closest('li.tree-li')?.parentElement;
+              }
+            }
+          });
+        }
+
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `
+          <p class="tree-empty tree-error">
+            <strong>오류:</strong> ${escapeHtml(err.message || '파일 목록을 불러올 수 없습니다.')}
+          </p>`;
+      }
+    }
+
+    window.addEventListener('popstate', (e) => {
+      const g = (e.state && e.state.group) ? e.state.group : getGroupParam();
+      setActive(g);
+      loadGroup(g);
+    });
+
+    fetchFiles();
+  </script>
+
+
+
+  <style>
+    /* ── 레이아웃 ───────────────────────────────────────── */
+    .container.docs {
+      max-width: 100%;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+    @media (max-width: 900px) {
+      .container.docs { grid-template-columns: 1fr; }
+    }
+
+    .docs-left {
+      position: sticky;
+      top: 56px;
+      max-height: calc(100dvh - 72px);
+      overflow: auto;
+      padding: 10px;
+    }
+    @media (max-width: 900px) {
+      .docs-left { position: static; max-height: none; }
+    }
+
+    .docs-left-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 2px 2px 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+      font-weight: 800;
+      letter-spacing: .2px;
+      font-size: 13px;
+      user-select: none;
+    }
+    .docs-left-title-icon {
+      width: 18px; height: 18px;
+      display: inline-flex;
+      align-items: center; justify-content: center;
+      font-size: 16px; line-height: 1;
+    }
+
+    .docs-right {
+      min-height: calc(100dvh - 110px);
+      padding: 14px;
+    }
+
+    /* ── 트리 ─────────────────────────────────────────── */
+    .post-list { margin: 0; padding: 0; width: 100%; }
+
+    .tree-ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .tree-ul.tree-collapsed { display: none; }
+
+    .tree-li { margin: 1px 0; }
+
+    /* 공통: 파일 링크, 폴더 버튼 */
+    .tree-file,
+    .tree-folder {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      width: 100%;
+      box-sizing: border-box;
+      padding-top: 6px;
+      padding-bottom: 6px;
+      padding-right: 8px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.3;
+      text-decoration: none;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.14s;
+    }
+    .tree-file:hover,
+    .tree-folder:hover {
+      background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+    }
+    .tree-file.active {
+      background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+      border-left: 3px solid var(--accent);
+      font-weight: 600;
+    }
+
+    .tree-arrow {
+      font-size: 9px;
+      flex-shrink: 0;
+      width: 12px;
+      text-align: center;
+      opacity: 0.6;
+    }
+    .tree-icon {
+      flex-shrink: 0;
+      font-size: 13px;
+      line-height: 1;
+    }
+    .tree-label {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tree-loading,
+    .tree-empty {
+      font-size: 12px;
+      color: var(--text);
+      opacity: 0.6;
+      padding: 8px 4px;
+    }
+
+    /* ── 뷰어 ─────────────────────────────────────────── */
+    .viewer-markdown.markdown-body {
+      color: var(--text);
+      background: transparent;
+    }
+    .viewer-markdown { padding: 0; }
+    .viewer-markdown pre {
+      border-radius: 12px;
+      padding: 14px;
+      overflow: auto;
+    }
+    .viewer-markdown code { border-radius: 8px; }
+  </style>
+  <script>window.GUMA = { root: '../', page: 'resources' };</script>
+  <script src="../shared/topbar.js" defer></script>
+</body>
+</html>

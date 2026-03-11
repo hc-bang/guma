@@ -90,9 +90,9 @@ form.addEventListener('submit', e => {
 });
 
 /* ── Bookmarks ──────────────────────────────────────────── */
-let bookmarks = (() => { try { return JSON.parse(localStorage.getItem('bookmarks') || '[]'); } catch { return []; } })();
+let bookmarks = (() => { try { return JSON.parse(localStorage.getItem('bookmarks') || 'null'); } catch { return null; } })();
 
-function saveBookmarks() { localStorage.setItem('bookmarks', JSON.stringify(bookmarks)); render(); }
+function saveBookmarks() { localStorage.setItem('bookmarks', JSON.stringify(bookmarks || [])); render(); }
 
 function render() {
   bookmarksDiv.innerHTML = '';
@@ -118,7 +118,7 @@ function render() {
     };
     bookmarksDiv.appendChild(div);
   });
-  if (bookmarks.length < 15) {
+  if (bookmarks && bookmarks.length < 15) {
     const wrap = document.createElement('div');
     wrap.className = 'add-wrap';
     const btn = document.createElement('button');
@@ -130,6 +130,19 @@ function render() {
     wrap.appendChild(btn); wrap.appendChild(lbl);
     bookmarksDiv.appendChild(wrap);
   }
+}
+
+async function loadShortcutsJson() {
+  if (bookmarks !== null) { render(); return; }
+  try {
+    const res = await fetch('./config/shortcuts.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    bookmarks = (Array.isArray(data.shortcuts) ? data.shortcuts : []).slice(0, 15);
+  } catch {
+    bookmarks = []; // fallback empty
+  }
+  render();
 }
 
 /* ── Modal ──────────────────────────────────────────────── */
@@ -248,7 +261,7 @@ async function loadBookmarksJson() {
   try {
     const stored = getTopFromLocalStorage();
     if (stored) { renderTopFolders(stored); return; }
-    const res = await fetch('./bookmarks.json', { cache: 'no-store' });
+    const res = await fetch('./config/bookmarks.json', { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     renderTopFolders(await res.json());
   } catch { if (topBookmarksDiv) topBookmarksDiv.innerHTML = ''; }
@@ -256,6 +269,6 @@ async function loadBookmarksJson() {
 
 document.addEventListener('click', () => document.querySelectorAll('.top-folder-menu').forEach(el => el.classList.add('hidden')));
 
-render();
+loadShortcutsJson();
 loadBookmarksJson();
 input.focus();

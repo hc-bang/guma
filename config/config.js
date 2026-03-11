@@ -66,8 +66,8 @@ function getTopFromLocalStorage(){
 }
 
 async function getTopDefaultFromFile(){
-  const res = await fetch('../bookmarks.json', { cache: 'no-store' });
-  if(!res.ok) throw new Error(`bookmarks.json 로드 실패 (HTTP ${res.status})`);
+  const res = await fetch('./bookmarks.json', { cache: 'no-store' });
+  if(!res.ok) throw new Error(`config/bookmarks.json 로드 실패 (HTTP ${res.status})`);
   const data = await res.json();
   validateTopData(data);
   return data;
@@ -76,12 +76,21 @@ async function getTopDefaultFromFile(){
 function getShortcutsFromLocalStorage(){
   try{
     const raw = localStorage.getItem(SHORTCUTS_STORAGE_KEY);
-    const arr = JSON.parse(raw || '[]');
-    if(!Array.isArray(arr)) return [];
+    if (!raw) return null;
+    const arr = JSON.parse(raw);
+    if(!Array.isArray(arr)) return null; // 로컬스토리지에 없으면 null 반환하여 json 로딩 유도
     return arr;
   }catch(e){
-    return [];
+    return null;
   }
+}
+
+async function getShortcutsDefaultFromFile(){
+  const res = await fetch('./shortcuts.json', { cache: 'no-store' });
+  if(!res.ok) throw new Error(`config/shortcuts.json 로드 실패 (HTTP ${res.status})`);
+  const data = await res.json();
+  const arr = fileFormatToShortcuts(data);
+  return arr;
 }
 
 function setEditorTab(tab){
@@ -529,16 +538,17 @@ $all('input[name="scMode"]').forEach((r)=>{
   });
 });
 
-function loadShortcutsIntoEditor(){
-  const arr = getShortcutsFromLocalStorage();
+async function loadShortcutsIntoEditor(){
+  const stored = getShortcutsFromLocalStorage();
+  const arr = stored || (await getShortcutsDefaultFromFile().catch(() => []));
   scData = arr;
   syncShortcutsJsonFromData();
   renderShortcutsList();
 }
 
-scLoad.addEventListener('click', ()=>{
+scLoad.addEventListener('click', async ()=>{
   try{
-    loadShortcutsIntoEditor();
+    await loadShortcutsIntoEditor();
   }catch(e){
     alert(String(e?.message || e));
   }
@@ -611,6 +621,17 @@ scImport.addEventListener('change', async ()=>{
     alert(`Import 실패: ${String(e?.message || e)}`);
   }finally{
     scImport.value = '';
+  }
+});
+
+$('#scReset').addEventListener('click', async ()=>{
+  try{
+    if(!confirm('localStorage(bookmarks)를 삭제하고 기본값(config/shortcuts.json)으로 되돌릴까요?')) return;
+    localStorage.removeItem(SHORTCUTS_STORAGE_KEY);
+    await loadShortcutsIntoEditor();
+    alert('초기화 완료: 하단 바로가기는 기본값(config/shortcuts.json)으로 표시됩니다.');
+  }catch(e){
+    alert(`초기화 실패: ${String(e?.message || e)}`);
   }
 });
 

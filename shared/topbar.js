@@ -41,8 +41,12 @@
     </svg>`,
     menu: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="3" y1="6" x2="21" y2="6"/>
-      <line x1="3" y1="12" x2="21" y2="12"/>
       <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>`,
+    archive: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="21 8 21 21 3 21 3 8"/>
+      <rect x="1" y="3" width="22" height="5"/>
+      <line x1="10" y1="12" x2="14" y2="12"/>
     </svg>`,
   };
 
@@ -52,9 +56,23 @@
   const PAGE  = cfg.page || '';
 
   /* ── 테마 ───────────────────────────────────────────── */
+  function syncMarkdownTheme(mode) {
+    const isDark = (mode === 'dark');
+    const mdLight = document.getElementById('theme-md-light');
+    const mdDark = document.getElementById('theme-md-dark');
+    const hlLight = document.getElementById('theme-hl-light');
+    const hlDark = document.getElementById('theme-hl-dark');
+    
+    if (mdLight) mdLight.disabled = isDark;
+    if (mdDark) mdDark.disabled = !isDark;
+    if (hlLight) hlLight.disabled = isDark;
+    if (hlDark) hlDark.disabled = !isDark;
+  }
+
   function setTheme(mode) {
     document.body.classList.toggle('dark', mode === 'dark');
     localStorage.setItem('theme', mode);
+    syncMarkdownTheme(mode);
     // 부모에서 테마 변경 시 모든 iframe에 알림 전송 (동일 출처 가정)
     try {
       document.querySelectorAll('iframe').forEach(iframe => {
@@ -70,7 +88,9 @@
     setTheme(document.body.classList.contains('dark') ? 'light' : 'dark');
   }
   // 저장된 테마 적용 (CSS 로드 전 깜박임 방지)
-  if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark');
+  const initialTheme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+  if (initialTheme === 'dark') document.body.classList.add('dark');
+  syncMarkdownTheme(initialTheme);
 
   /* ── 사이드패널 ─────────────────────────────────────── */
   function openSidepanel()  {
@@ -121,6 +141,7 @@
         { label: '환경설정', href: 'config/', icon: 'settings' },
         { label: '문서',     href: 'posts/',  icon: 'document'  },
         { label: '도구',     href: 'tools/',  icon: 'tool'      },
+        { label: '자료실',   href: 'resources/', icon: 'archive' },
       ]);
     }
   }

@@ -187,12 +187,8 @@
       const ul = document.createElement('ul');
       ul.className = 'tree-ul';
 
-      const keys = Object.keys(node).sort((a, b) => {
-        const aIsFile = node[a].__isFile && Object.keys(node[a].__children).length === 0;
-        const bIsFile = node[b].__isFile && Object.keys(node[b].__children).length === 0;
-        if (aIsFile !== bIsFile) return aIsFile ? 1 : -1;
-        return a.localeCompare(b, 'ko');
-      });
+      // index.json의 배열 선언 순서를 유지
+      const keys = Object.keys(node);
 
       keys.forEach(key => {
         const item = node[key];

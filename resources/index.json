@@ -1,0 +1,64 @@
+{
+  "files": [
+    {
+      "group": "설치/개발 도구",
+      "file": "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.1/npp.8.9.1.Installer.x64.exe",
+      "display": "Notepad++",
+      "desc": "Notepad++ v8.9.1"
+    },
+    {
+      "group": "설치/개발 도구",
+      "file": "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/1.20.5-5474622945755136/windows-x64/Antigravity.exe",
+      "display": "Antigravity",
+      "desc": "Antigravity x64"
+    },
+    {
+      "group": "설치/개발 도구",
+      "file": "https://code.visualstudio.com/Download",
+      "display": "Visual Studio Code",
+      "desc": "Visual Studio Code Download Page"
+    },
+    {
+      "group": "설치/개발 도구",
+      "file": "https://dbeaver.io/files/dbeaver-ce-latest-windows-x86_64.exe",
+      "display": "DBeaver",
+      "desc": "DBeaver Community Windows x86"
+    },
+    {
+      "group": "설치/개발 도구",
+      "file": "https://download.mobatek.net/2612026022582601/MobaXterm_Installer_v26.1.zip",
+      "display": "MobaXterm",
+      "desc": "MobaXterm Home Edition"
+    },
+    {
+      "group": "설치/개발 환경",
+      "file": "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe?utm_source=docker&utm_medium=webreferral&utm_campaign=dd-smartbutton&utm_location=module&_gl=1*ndpm0c*_gcl_au*MTI3NDI5NzAwMS4xNzcyNTE5Njk4*_ga*ODM3MjQzMTY5LjE3NzI1MTk2OTk.*_ga_XJWPQMJYHQ*czE3NzMyMDA1NDAkbzckZzEkdDE3NzMyMDA2MTEkajUyJGwwJGgw",
+      "display": "Docker Desktop",
+      "desc": "Docker Desktop Windows AMD64"
+    },
+    {
+      "group": "설치/개발 환경",
+      "file": "https://github.com/git-for-windows/git/releases/download/v2.53.0.windows.1/Git-2.53.0-64-bit.exe",
+      "display": "Git",
+      "desc": "Git for Windows/x64 Setup (2.53.0)"
+    },
+    {
+      "group": "설치/시스템",
+      "file": "https://github.com/pbatard/rufus/releases/download/v4.13/rufus-4.13.exe",
+      "display": "Rufus",
+      "desc": "부팅 USB 제작 Windows x64 (4.13)"
+    },
+    {
+      "group": "GUMA™/gallery_manager",
+      "file": "./files/exiftool-13.52_64.zip",
+      "display": "exiftool-13.52_64.zip",
+      "desc": "exiftool 13.52 64-bit Windows"
+    },
+    {
+      "group": "GUMA™/gallery_manager",
+      "file": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip",
+      "display": "ffmpeg-master-latest-win64-gpl-shared.zip",
+      "desc": "FFmpeg master latest win64 gpl shared"
+    }
+  ]
+}

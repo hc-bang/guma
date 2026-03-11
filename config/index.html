@@ -45,7 +45,7 @@
 
     <section class="panel" data-panel="top">
       <p class="hint">
-        우선순위: <code>localStorage(topBookmarks)</code> → 없으면 <code>bookmarks.json</code> (기본값).<br />
+        우선순위: <code>localStorage(topBookmarks)</code> → 없으면 <code>config/bookmarks.json</code> (기본값).<br />
         "적용"을 누르면 홈 화면 상단 메뉴에 즉시 반영됩니다.
       </p>
       <div class="mode-row">
@@ -60,13 +60,15 @@
         <button class="btn danger" type="button" id="topReset">초기화</button>
       </div>
       <div id="topTree" class="tree"></div>
-      <label class="label" id="topJsonLabel">top-bookmarks.json / bookmarks.json 형식(JSON)</label>
+      <label class="label" id="topJsonLabel">top-bookmarks.json / config/bookmarks.json 형식(JSON)</label>
       <textarea id="topJson" class="editor hidden" spellcheck="false"></textarea>
     </section>
 
     <section class="panel hidden" data-panel="shortcuts">
       <p class="hint">
-        하단 바로가기는 최대 15개입니다. URL은 <code>http(s)://</code>가 없으면 자동으로 <code>https://</code>를 붙입니다.
+        우선순위: <code>localStorage(bookmarks)</code> → 없으면 <code>config/shortcuts.json</code> (기본값).<br />
+        하단 바로가기는 최대 15개입니다. URL은 <code>http(s)://</code>가 없으면 자동으로 <code>https://</code>를 붙입니다.<br />
+        "적용"을 누르면 홈 화면에 즉시 반영됩니다.
       </p>
       <div class="mode-row">
         <label class="mode"><input type="radio" name="scMode" value="list" checked> 리스트 편집</label>
@@ -78,6 +80,7 @@
         <button class="btn" type="button" id="scExport">내보내기</button>
         <label class="btn file">불러오기 <input id="scImport" type="file" accept="application/json" /></label>
         <button class="btn" type="button" id="scNormalize">URL 정리</button>
+        <button class="btn danger" type="button" id="scReset">초기화</button>
       </div>
       <div id="scList" class="list"></div>
       <label class="label" id="scJsonLabel">shortcuts.json 형식(JSON)</label>

@@ -1,0 +1,267 @@
+{
+  "top": [
+    {
+      "name": "AI",
+      "items": [
+        {
+          "name": "OpenWebUI",
+          "url": "https://owui.fw-mgr.ivycomtech.com"
+        },
+        {
+          "name": "Genspark",
+          "url": "https://www.genspark.ai/agents?type=ai_chat"
+        },
+        {
+          "name": "Claude",
+          "url": "https://claude.ai"
+        },
+        {
+          "name": "grok",
+          "url": "https://grok.com/"
+        },
+        {
+          "name": "chatgpt",
+          "url": "https://chatgpt.com/"
+        },
+        {
+          "name": "gemini",
+          "url": "https://gemini.google.com"
+        },
+        {
+          "name": "copilot",
+          "url": "https://copilot.microsoft.com/"
+        },
+        {
+          "name": "NotebookLM",
+          "url": "https://notebooklm.google.com/"
+        },
+        {
+          "name": "Provider",
+          "items": [
+            {
+              "name": "claude docs",
+              "url": "https://platform.claude.com/docs/ko"
+            },
+            {
+              "name": "Google AI Studio",
+              "url": "https://aistudio.google.com/"
+            },
+            {
+              "name": "OpenAI Platform",
+              "url": "https://platform.openai.com/"
+            },
+            {
+              "name": "GroqCloud",
+              "url": "https://console.groq.com/"
+            },
+            {
+              "name": "Hugging Face",
+              "url": "https://huggingface.co/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "메일",
+      "items": [
+        {
+          "name": "Gmail",
+          "url": "https://mail.google.com/"
+        },
+        {
+          "name": "네이버 메일",
+          "url": "https://mail.naver.com/"
+        },
+        {
+          "name": "카카오메일",
+          "url": "https://mail.kakao.com/"
+        },
+        {
+          "name": "Outlook",
+          "url": "https://outlook.live.com/"
+        }
+      ]
+    },
+    {
+      "name": "IVY",
+      "items": [
+        {
+          "name": "웍스 홈",
+          "url": "https://ivycomtech.ncpworkplace.com/"
+        },
+        {
+          "name": "LiteLLM Admin",
+          "url": " https://llmgw.fw-mgr.ivycomtech.com/ui"
+        },
+        {
+          "name": "GitLab | Now",
+          "url": "https://gitlab.fw-mgr.ivycomtech.com/"
+        },
+        {
+          "name": "GitLab | Old",
+          "url": "http://192.168.1.236:32000/"
+        }
+      ]
+    },
+    {
+      "name": "자료",
+      "items": [
+        {
+          "name": "GitHub",
+          "url": "https://github.com/"
+        },
+        {
+          "name": "Docker Hub",
+          "url": "https://hub.docker.com/"
+        },
+        {
+          "name": "Maven Repository",
+          "url": "https://mvnrepository.com/"
+        },
+        {
+          "name": "공공데이터포털",
+          "url": "https://www.data.go.kr/"
+        }
+      ]
+    },
+    {
+      "name": "참고",
+      "items": [
+        {
+          "name": "AI 환경구축",
+          "items": [
+            {
+              "name": "LiteLLM",
+              "url": "https://www.litellm.ai/"
+            },
+            {
+              "name": "ollama",
+              "url": "https://ollama.com/"
+            },
+            {
+              "name": "OpenWebUI",
+              "url": "https://openwebui.com/"
+            },
+            {
+              "name": "SearXNG",
+              "url": "https://github.com/searxng/searxng"
+            },
+            {
+              "name": "OpenWebUI 이미지 다운로드",
+              "url": "https://lobehub.com/ko/icons"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "설치",
+      "items": [
+        {
+          "name": "Notepad++",
+          "url": "https://notepad-plus-plus.org/"
+        },
+        {
+          "name": "VS Code",
+          "url": "https://code.visualstudio.com/"
+        },
+        {
+          "name": "Eclipse",
+          "url": "https://www.eclipse.org/"
+        },
+        {
+          "name": "IntelliJ IDEA",
+          "url": "https://www.jetbrains.com/idea/download/other.html"
+        },
+        {
+          "name": "Git",
+          "url": "https://git-scm.com/"
+        },
+        {
+          "name": "Docker",
+          "url": "https://www.docker.com/"
+        },
+        {
+          "name": "DBeaver Community",
+          "url": "https://dbeaver.io/"
+        },
+        {
+          "name": "MobaXterm",
+          "url": "https://mobaxterm.mobatek.net/"
+        },
+        {
+          "name": "Postman",
+          "url": "https://www.postman.com/"
+        },
+        {
+          "name": "draw.io",
+          "url": "https://www.drawio.com/"
+        },
+        {
+          "name": "handbrake | 영상 변환",
+          "url": "https://handbrake.fr/"
+        },
+        {
+          "name": "digiKam | 사진 정리",
+          "url": "https://www.digikam.org/"
+        },
+        {
+          "name": "픽픽 | 캡처",
+          "url": "https://picpick.app/"
+        },
+        {
+          "name": "Rufus | 부팅 USB",
+          "url": "https://rufus.ie/ko/"
+        }
+      ]
+    },
+    {
+      "name": "놀이터",
+      "items": [
+        {
+          "name": "YouTube™",
+          "url": "https://youtube.com/"
+        },
+        {
+          "name": "쿠팡플레이",
+          "url": "https://www.coupangplay.com/"
+        },
+        {
+          "name": "사이트 순위",
+          "url": "https://rankers.info/"
+        }
+      ]
+    },
+    {
+      "name": "개인",
+      "items": [
+        {
+          "name": "공유기 | GW-ME6110",
+          "url": "http://192.168.45.1/"
+        },
+        {
+          "name": "네이버 메모",
+          "url": "https://memo.naver.com/"
+        }
+      ]
+    },
+    {
+      "name": "저장소",
+      "items": [
+        {
+          "name": "Google 드라이브",
+          "url": "https://drive.google.com/drive/"
+        },
+        {
+          "name": "네이버 MYBOX",
+          "url": "https://mybox.naver.com/"
+        },
+        {
+          "name": "OneDrive",
+          "url": "https://onedrive.live.com/"
+        }
+      ]
+    }
+  ]
+}

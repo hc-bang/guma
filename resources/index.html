@@ -7,6 +7,7 @@
   <link rel="icon" href="../favicon.svg" />
   <link rel="stylesheet" href="../style.css" />
   <link rel="stylesheet" href="../config/config.css" />
+  <link rel="stylesheet" href="../shared/tree.css" />
 </head>
 <body>
   <header class="topbar">
@@ -113,6 +114,7 @@
     }
   </style>
 
+  <script src="../shared/tree.js"></script>
   <script>
     const container = document.getElementById('postContainer');
     const cardEl = document.getElementById('cardContainer');
@@ -205,124 +207,32 @@
       cardEl.parentElement.scrollTop = 0;
     }
 
-    function buildGroupTree(files) {
-      const groups = new Set();
-      files.forEach(f => {
-        if (f.group) groups.add(f.group);
-      });
-
-      const root = {};
-      groups.forEach(groupRaw => {
-        const parts = groupRaw.split('/').filter(Boolean);
-        let parent = root;
-        parts.forEach((p, idx) => {
-          if (!parent[p]) parent[p] = { __children: {}, __isGroup: false, __fullPath: '' };
-          if (idx === parts.length - 1) {
-            parent[p].__isGroup = true;
-            parent[p].__fullPath = groupRaw;
-          }
-          parent = parent[p].__children;
-        });
-      });
-      return root;
-    }
-
-    function renderGroupTree(node, depth = 0) {
-      const ul = document.createElement('ul');
-      ul.className = 'tree-ul';
-
-      // index.json의 선언 순서(배열 순서)를 따름
-      const keys = Object.keys(node);
-
-      keys.forEach(key => {
-        const item = node[key];
-        const li = document.createElement('li');
-        li.className = 'tree-li';
-
-        const hasChildren = Object.keys(item.__children).length > 0;
-        const isGroupNode = item.__isGroup; // 이 노드가 파일들이 속한 그룹인지 여부
-
-        // 자식이 있는 중간 노드이면서 실제로 파일이 속한 그룹일 수도 있음.
-        // 현재는 "파일 목록을 구성하는 설정파일, 그룹 단위로"를 따르므로 모든 그룹 노드는 클릭 가능하도록 구현.
-
-        if (hasChildren) {
-          const btn = document.createElement('button');
-          btn.className = 'tree-folder';
-          btn.type = 'button';
-          btn.style.paddingLeft = `${8 + depth * 16}px`;
-          btn.title = key;
-
-          const arrow = document.createElement('span');
-          arrow.className = 'tree-arrow';
-          arrow.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="8,5 18,12 8,19"/></svg>';
-          arrow.setAttribute('aria-hidden', 'true');
-
-          const icon = document.createElement('span');
-          icon.className = 'tree-icon';
-          icon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
-          icon.setAttribute('aria-hidden', 'true');
-
-          const text = document.createElement('span');
-          text.className = 'tree-label';
-          text.textContent = key;
-
-          btn.appendChild(arrow);
-          btn.appendChild(icon);
-          btn.appendChild(text);
-
-          const childUl = renderGroupTree(item.__children, depth + 1);
-          childUl.classList.add('tree-collapsed');
-
-          btn.onclick = () => {
-            const collapsed = childUl.classList.toggle('tree-collapsed');
-            arrow.innerHTML = collapsed ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="8,5 18,12 8,19"/></svg>' : '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,8 19,8 12,18"/></svg>';
-            icon.innerHTML = collapsed ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="2,10 12,10 22,10"/></svg>';
-            // 그룹이 직접 파일을 가질 경우, 폴더 열 때 우측에 보여줌
-            if (isGroupNode && !collapsed) {
-                setGroupParam(item.__fullPath);
-                setActive(item.__fullPath);
-                loadGroup(item.__fullPath);
-            }
-          };
-
-          li.appendChild(btn);
-          li.appendChild(childUl);
-        } else {
-          // 리프 노드 (항상 클릭 가능한 그룹 항목)
-          const a = document.createElement('a');
-          a.className = 'tree-file';
-          a.dataset.group = item.__fullPath;
-          a.href = `?group=${encodeURIComponent(item.__fullPath)}`;
-          a.title = key;
-          a.style.paddingLeft = `${8 + depth * 16}px`;
-
-          const icon = document.createElement('span');
-          icon.className = 'tree-icon';
-          icon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
-          icon.setAttribute('aria-hidden', 'true');
-
-          const text = document.createElement('span');
-          text.className = 'tree-label';
-          text.textContent = key;
-
-          a.appendChild(icon);
-          a.appendChild(text);
-
-          a.onclick = (e) => {
+    // buildGroupTree, renderGroupTree → GTree 공통 모듈 사용
+    function renderResourceTree(node) {
+      return GTree.renderTree(node, {
+        onLeaf: (key, item) => {
+          // 자료실에서 leaf 노드는 파일이 아니라 ‘그룹’임
+          const fullPath = item.__fullPath;
+          const a = GTree.createFileLink(key);
+          a.dataset.group = fullPath;
+          a.href = `?group=${encodeURIComponent(fullPath)}`;
+          a.onclick = e => {
             e.preventDefault();
-            const targetGroup = a.dataset.group;
-            setGroupParam(targetGroup);
-            setActive(targetGroup);
-            loadGroup(targetGroup);
+            setGroupParam(fullPath);
+            setActive(fullPath);
+            loadGroup(fullPath);
           };
-
-          li.appendChild(a);
+          return a;
+        },
+        onFolderOpen: (key, item) => {
+          // 폴더(hasChildren)이 실제 그룹이기도 하면 열 때 콘텐츠를 우측에 표시
+          if (item.__isGroup) {
+            setGroupParam(item.__fullPath);
+            setActive(item.__fullPath);
+            loadGroup(item.__fullPath);
+          }
         }
-
-        ul.appendChild(li);
       });
-
-      return ul;
     }
 
     async function fetchFiles() {
@@ -337,33 +247,15 @@
           return;
         }
 
-        const tree = buildGroupTree(allFiles);
+        const tree = GTree.buildGroupTree(allFiles);
         container.innerHTML = '';
-        container.appendChild(renderGroupTree(tree));
+        container.appendChild(renderResourceTree(tree));
 
         const initial = getGroupParam();
         if (initial) {
           setActive(initial);
           loadGroup(initial);
-          
-          container.querySelectorAll('a.tree-file').forEach(a => {
-            if (a.dataset.group === initial) {
-              let parent = a.closest('li.tree-li')?.parentElement;
-              while (parent && parent.classList.contains('tree-ul')) {
-                if (parent.classList.contains('tree-collapsed')) {
-                  parent.classList.remove('tree-collapsed');
-                  const btn = parent.previousElementSibling;
-                  if (btn) {
-                    const arr = btn.querySelector('.tree-arrow');
-                    const ico = btn.querySelector('.tree-icon');
-                    if (arr) arr.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,8 19,8 12,18"/></svg>';
-                    if (ico) ico.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="2,10 12,10 22,10"/></svg>';
-                  }
-                }
-                parent = parent.closest('li.tree-li')?.parentElement;
-              }
-            }
-          });
+          GTree.expandToActive(container, a => a.dataset.group === initial);
         }
 
       } catch (err) {
@@ -437,77 +329,8 @@
       padding: 14px;
     }
 
-    /* ── 트리 ─────────────────────────────────────────── */
+    /* 트리 스타일은 shared/tree.css에서 관리합니다. */
     .post-list { margin: 0; padding: 0; width: 100%; }
-
-    .tree-ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .tree-ul.tree-collapsed { display: none; }
-
-    .tree-li { margin: 1px 0; }
-
-    /* 공통: 파일 링크, 폴더 버튼 */
-    .tree-file,
-    .tree-folder {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      width: 100%;
-      box-sizing: border-box;
-      padding-top: 6px;
-      padding-bottom: 6px;
-      padding-right: 8px;
-      border-radius: 8px;
-      border: none;
-      background: transparent;
-      color: var(--text);
-      font-size: 12px;
-      line-height: 1.3;
-      text-decoration: none;
-      cursor: pointer;
-      text-align: left;
-      transition: background 0.14s;
-    }
-    .tree-file:hover,
-    .tree-folder:hover {
-      background: color-mix(in srgb, var(--accent) 8%, var(--panel));
-    }
-    .tree-file.active {
-      background: color-mix(in srgb, var(--accent) 14%, var(--panel));
-      border-left: 3px solid var(--accent);
-      font-weight: 600;
-    }
-
-    .tree-arrow {
-      font-size: 9px;
-      flex-shrink: 0;
-      width: 12px;
-      text-align: center;
-      opacity: 0.6;
-    }
-    .tree-icon {
-      flex-shrink: 0;
-      font-size: 13px;
-      line-height: 1;
-    }
-    .tree-label {
-      flex: 1;
-      min-width: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .tree-loading,
-    .tree-empty {
-      font-size: 12px;
-      color: var(--text);
-      opacity: 0.6;
-      padding: 8px 4px;
-    }
 
     /* ── 뷰어 ─────────────────────────────────────────── */
     .viewer-markdown.markdown-body {

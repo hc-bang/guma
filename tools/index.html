@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -8,17 +9,39 @@
   <!-- 환경설정 페이지와 동일한 스타일 세트 사용 -->
   <link rel="stylesheet" href="../style.css" />
   <link rel="stylesheet" href="../config/config.css" />
+  <link rel="stylesheet" href="../shared/tree.css" />
 </head>
+
 <body>
   <!-- config/index.html 레이아웃을 그대로 복제 -->
   <header class="topbar">
     <div class="topbar-left">
-      <h1 class="title"><span class="title-icon icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>도구</h1>
+      <h1 class="title"><span class="title-icon icon-svg" aria-hidden="true"><svg width="16" height="16"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path
+              d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+          </svg></span>도구</h1>
     </div>
     <div class="topbar-right">
-      <a class="btn icon-btn" href="../" aria-label="홈으로"><span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg></span></a>
-      <button id="themeToggle" class="btn icon-btn" type="button" aria-label="모드 토글"><span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span></button>
-      <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴"><span class="icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span></button>
+      <a class="btn icon-btn" href="../" aria-label="홈으로"><span class="icon-svg" aria-hidden="true"><svg width="15"
+            height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9,22 9,12 15,12 15,22" />
+          </svg></span></a>
+      <button id="themeToggle" class="btn icon-btn" type="button" aria-label="모드 토글"><span class="icon-svg"
+          aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg></span></button>
+      <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴"><span class="icon-svg"
+          aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg></span></button>
     </div>
   </header>
 
@@ -31,7 +54,10 @@
   <main class="container tools">
     <aside class="panel tools-left" aria-label="도구 목록">
       <div class="tools-left-title">
-        <span class="tools-left-title-icon icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="tools-left-title-icon icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg></span>
         <span class="tools-left-title-text">목록</span>
       </div>
       <div id="toolContainer" class="tool-list">
@@ -51,33 +77,34 @@
     </section>
   </main>
 
+  <script src="../shared/tree.js"></script>
   <script>
     const container = document.getElementById('toolContainer');
     const viewer = document.getElementById('toolViewer');
     // mapping from tree display path (group/.../file) -> actual file path to load in iframe
     let displayMap = {};
 
-    function setTitle(file){
+    function setTitle(file) {
       const base = (file || '').replace(/\/?index\.html$/i, '').replace(/\.html$/i, '').replace(/[-_\/]+/g, ' ').trim() || '도구';
       document.title = `GUMA™ 도구 - ${base}`;
     }
 
-    function getFileParam(){
+    function getFileParam() {
       const params = new URLSearchParams(location.search);
       return params.get('file') || '';
     }
 
-    function setFileParam(file, replace=false){
+    function setFileParam(file, replace = false) {
       const u = new URL(location.href);
-      if(file) u.searchParams.set('file', file);
+      if (file) u.searchParams.set('file', file);
       else u.searchParams.delete('file');
-      if(replace) history.replaceState({ file }, '', u);
+      if (replace) history.replaceState({ file }, '', u);
       else history.pushState({ file }, '', u);
     }
 
-    function loadTool(file){
-      if(!viewer) return;
-      if(!file){
+    function loadTool(file) {
+      if (!viewer) return;
+      if (!file) {
         viewer.innerHTML = '<p class="hint">도구를 선택하세요.</p>';
         setTitle('');
         return;
@@ -86,378 +113,157 @@
       setTitle(file);
       // 파일 경로가 폴더/index.html 형태라면 그대로 쓰고,
       // 만약 폴더명만 들어오면 index.html을 붙임.
-  const src = file.endsWith('/index.html') || file.toLowerCase().endsWith('.html') ? `./${file}` : `./${file}/index.html`;
-  viewer.innerHTML = `<iframe src="${src}" class="tool-frame"></iframe>`;
-  const iframe = viewer.querySelector('iframe');
-  if (iframe) {
-    iframe.addEventListener('load', () => {
-      const theme = localStorage.getItem('theme') || (document.body.classList.contains('dark') ? 'dark' : 'light');
-      try { iframe.contentWindow.postMessage({ type: 'themeChange', theme }, '*'); } catch (e) {}
-    });
-  }
-}
+      const src = file.endsWith('/index.html') || file.toLowerCase().endsWith('.html') ? `./${file}` : `./${file}/index.html`;
+      viewer.innerHTML = `<iframe src="${src}" class="tool-frame"></iframe>`;
+      const iframe = viewer.querySelector('iframe');
+      if (iframe) {
+        iframe.addEventListener('load', () => {
+          const theme = localStorage.getItem('theme') || (document.body.classList.contains('dark') ? 'dark' : 'light');
+          try { iframe.contentWindow.postMessage({ type: 'themeChange', theme }, '*'); } catch (e) { }
+        });
+      }
+    }
 
-    function setActive(file){
-      if(!container) return;
+    function setActive(file) {
+      if (!container) return;
       // file may be a display key (e.g. "변환/json-base64-converter") or an actual path
       container.querySelectorAll('a.tool-item').forEach((a) => {
         const displayKey = a.dataset.display;
         const actual = a.dataset.file;
-        const matches = (displayKey && displayKey === file) || (actual && actual === file) || (typeof displayMap !== 'undefined' && displayMap[file] && actual === displayMap[file]);
+        const matches = (displayKey && displayKey === file) || (actual && actual === file) || (displayMap[file] && actual === displayMap[file]);
         a.classList.toggle('active', !!matches);
       });
     }
 
-    // Legacy: build tree from flat path strings
-    function buildTreeFromPaths(paths) {
-      const root = {};
-      paths.forEach(p => {
-        const path = String(p).replace(/^\.\//, '');
-        const parts = path.split('/');
-        let cur = root;
-        parts.forEach((part, idx) => {
-          if (!cur[part]) cur[part] = { __children: {}, __isFile: false, __meta: null };
-          if (idx === parts.length - 1) cur[part].__isFile = true;
-          cur = cur[part].__children;
-        });
-      });
-      return root;
-    }
+    // 중복 함수 제거: GTree 공통 모듈로 위임
+    const computeLeafKeyFromFilePath = GTree.computeLeafKeyFromFilePath;
 
-    // Build tree from entries { file, display, group } using group as top-level.
-    // Ensure leaf node keys are normalized (basename without extension) so they match displayMap keys.
-    // Utility: compute a stable leaf key from a file path.
-    // - If the last segment is "index.html" (or "index"), use the parent folder name as the leaf.
-    // - Otherwise use the last segment with .html removed.
-    function computeLeafKeyFromFilePath(filePath) {
-      const parts = String(filePath || '').split('/').filter(Boolean);
-      if (parts.length === 0) return '';
-      let last = parts[parts.length - 1];
-      if (/^index(\.html)?$/i.test(last) && parts.length >= 2) {
-        last = parts[parts.length - 2];
-      }
-      return String(last).replace(/\.html$/i, '');
-    }
 
-    function buildTreeFromEntries(entries) {
-      const root = {};
+        // 트리 렌더링 (GTree 공통 모듈 사용)
+        function renderToolTree(node) {
+          return GTree.renderTree(node, {
+            onLeaf: (key, item, parentPath) => {
+              const meta = item.__meta || {};
+              const filePath = meta.file || (parentPath + key);
+              const leafFromFile = computeLeafKeyFromFilePath(filePath);
+              const displayKey = key || leafFromFile || (String(filePath).split('/').filter(Boolean).pop() || filePath);
+              const displayPathResolved = parentPath + displayKey;
+              const actualFile = (displayMap[displayPathResolved]) ? displayMap[displayPathResolved] : (meta.file || displayPathResolved);
 
-      function ensureNode(parent, key) {
-        if (!parent[key]) parent[key] = { __children: {}, __isFile: false, __meta: null };
-        return parent[key];
-      }
+              let label = (meta.display && String(meta.display).trim()) || String(displayKey);
+              label = label.replace(/[-_]+/g, ' ');
 
-      entries.forEach(entry => {
-        const groupRaw = String(entry.group || '기타');
-        const groupParts = groupRaw.split('/').filter(Boolean);
-        if (groupParts.length === 0) groupParts.push('기타');
-
-        // navigate/create group nodes
-        let parent = root;
-        groupParts.forEach(gp => {
-          const node = ensureNode(parent, gp);
-          parent = node.__children;
-        });
-
-        // compute normalized leaf key using shared utility (handles index.html -> parent folder)
-        const leafKey = computeLeafKeyFromFilePath(String(entry.file || ''));
-
-        // store node under normalized leafKey (prevents mismatches with displayMap)
-        if (!parent[leafKey]) parent[leafKey] = { __children: {}, __isFile: false, __meta: null };
-        parent[leafKey].__isFile = true;
-        parent[leafKey].__meta = {
-          file: entry.file,
-          display: entry.display,
-          group: entry.group
-        };
-      });
-
-      return root;
-    }
-
-    // Generic buildTree wrapper: accept either array of strings or array of entry objects
-    function buildTree(items) {
-      if (!Array.isArray(items) || items.length === 0) return {};
-      const first = items[0];
-      if (typeof first === 'string') return buildTreeFromPaths(items);
-      return buildTreeFromEntries(items);
-    }
-
-    function renderTree(node, parentPath = '', depth = 0) {
-      const ul = document.createElement('ul');
-      ul.className = 'tree-ul';
-
-      // index.json의 배열 선언 순서를 유지
-      const keys = Object.keys(node);
-
-      keys.forEach(key => {
-        const item = node[key];
-        const li = document.createElement('li');
-        li.className = 'tree-li';
-
-        const isLeafFile = item.__isFile && Object.keys(item.__children).length === 0;
-
-        if (isLeafFile) {
-          // Resolve metadata and compute a stable display key + label.
-          const meta = item.__meta || {};
-          // filePath: prefer meta.file, fall back to parentPath+key
-          const filePath = meta.file || (parentPath + key);
-          // compute a normalized leaf key from the file path (handles index.html cases)
-          const leafFromFile = computeLeafKeyFromFilePath(filePath);
-          // choose displayKey: prefer existing key, otherwise fall back to computed leaf
-          const displayKey = key || leafFromFile || (String(filePath).split('/').filter(Boolean).pop() || filePath);
-          // displayPath is what we use as the visual mapping key (group/.../leafKey)
-          const displayPathResolved = parentPath + displayKey;
-          // Determine actual file path to load via displayMap or meta.file
-          const actualFile = (typeof displayMap !== 'undefined' && displayMap[displayPathResolved]) ? displayMap[displayPathResolved] : (meta.file || displayPathResolved);
-
-          // Determine label: meta.display preferred, otherwise humanize the displayKey
-          let label = (meta.display && String(meta.display).trim()) || String(displayKey);
-          label = label.replace(/[-_]+/g, ' ');
-
-          const a = document.createElement('a');
-          // 파일 항목은 트리 스타일을 적용하기 위해 tree-file 클래스도 추가
-          a.className = 'tree-file tool-item';
-          a.dataset.display = displayPathResolved; // visual key
-          a.dataset.file = actualFile; // actual file path for iframe loading
-          a.href = '#';
-          a.title = label;
-          a.style.paddingLeft = `${8 + depth * 16}px`;
-
-          const icon = document.createElement('span');
-          icon.className = 'tree-icon';
-          icon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13,2 13,9 20,9"/></svg>';
-          icon.setAttribute('aria-hidden', 'true');
-
-          const text = document.createElement('span');
-          text.className = 'tree-label';
-          text.textContent = label;
-
-          a.appendChild(icon);
-          a.appendChild(text);
-
-          a.onclick = (e) => {
-            e.preventDefault();
-            // store the display key in the URL so it remains readable, and load the actual file path
-            setFileParam(displayPathResolved);
-            setActive(displayPathResolved);
-            loadTool(actualFile);
-          };
-
-          li.appendChild(a);
-        } else {
-          const btn = document.createElement('button');
-          btn.className = 'tree-folder';
-          btn.type = 'button';
-          btn.style.paddingLeft = `${8 + depth * 16}px`;
-          btn.title = key;
-
-          const arrow = document.createElement('span');
-          arrow.className = 'tree-arrow';
-          arrow.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="8,5 18,12 8,19"/></svg>';
-          arrow.setAttribute('aria-hidden', 'true');
-
-          const icon = document.createElement('span');
-          icon.className = 'tree-icon';
-          icon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
-          icon.setAttribute('aria-hidden', 'true');
-
-          const text = document.createElement('span');
-          text.className = 'tree-label';
-          text.textContent = key;
-
-          btn.appendChild(arrow);
-          btn.appendChild(icon);
-          btn.appendChild(text);
-
-          const childUl = renderTree(item.__children, parentPath + key + '/', depth + 1);
-          childUl.classList.add('tree-collapsed');
-
-          btn.onclick = () => {
-            const collapsed = childUl.classList.toggle('tree-collapsed');
-            arrow.innerHTML = collapsed ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="8,5 18,12 8,19"/></svg>' : '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,8 19,8 12,18"/></svg>';
-            icon.innerHTML = collapsed ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="2,10 12,10 22,10"/></svg>';
-          };
-
-          li.appendChild(btn);
-          li.appendChild(childUl);
-        }
-
-        ul.appendChild(li);
-      });
-
-      return ul;
-    }
-
-    // 로컬 index.json에서 목록을 읽어 트리로 렌더링
-    async function loadToolIndex() {
-      if(!container) return;
-      try {
-        const res = await fetch('./index.json', { cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const j = await res.json();
-        // Normalize files array into entries: objects { file, display, group }
-        const raw = Array.isArray(j.files) ? j.files : [];
-        const entries = raw.map(item => {
-          if (typeof item === 'string') return { file: item, display: undefined, group: undefined };
-          if (item && typeof item === 'object') {
-            return {
-              file: item.file || item.path || item.filepath || '',
-              display: item.display || undefined,
-              group: item.group || item.category || undefined
-            };
-          }
-          return null;
-        }).filter(e => e && e.file);
-
-        // reset displayMap for this load
-        // Use group + normalized leaf key as the mapping key so that 'file' and 'display'
-        // values containing '/' or index.html forms do not create menu path segments.
-        displayMap = {};
-        entries.forEach(entry => {
-          const filePath = String(entry.file || '');
-          const leafBase = computeLeafKeyFromFilePath(filePath);
-          const group = entry.group ? String(entry.group).trim() : '';
-          const key = group ? `${group}/${leafBase}` : leafBase;
-          displayMap[key] = entry.file;
-        });
-
-        if (entries.length === 0) {
-          container.innerHTML = '<p class="tree-empty">등록된 도구가 없습니다.</p>';
-          return;
-        }
-        const tree = buildTree(entries);
-        container.innerHTML = '';
-        container.appendChild(renderTree(tree));
-
-        // 초기 파라미터 처리
-        const initial = getFileParam();
-        if (initial) {
-          // initial is a display key (e.g. "변환/json-base64-converter") or actual file path
-          const targetActual = (typeof displayMap !== 'undefined' && displayMap[initial]) ? displayMap[initial] : initial;
-          // mark active by display key if available, otherwise by actual path
-          const activeKey = (typeof displayMap !== 'undefined' && displayMap[initial]) ? initial : targetActual;
-          setActive(activeKey);
-          loadTool(targetActual);
-          // 폴더 자동 확장: 동일한 posts 동작 재사용
-          container.querySelectorAll('a.tool-item').forEach(a => {
-            if (a.dataset.display === activeKey || a.dataset.file === activeKey || a.dataset.file === targetActual) {
-              let parent = a.closest('li.tree-li')?.parentElement;
-              while (parent && parent.classList.contains('tree-ul')) {
-                if (parent.classList.contains('tree-collapsed')) {
-                  parent.classList.remove('tree-collapsed');
-                  const btn = parent.previousElementSibling;
-                  if (btn) {
-                    const arr = btn.querySelector('.tree-arrow');
-                    const ico = btn.querySelector('.tree-icon');
-                    if (arr) arr.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,8 19,8 12,18"/></svg>';
-                    if (ico) ico.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="2,10 12,10 22,10"/></svg>';
-                  }
-                }
-                parent = parent.closest('li.tree-li')?.parentElement;
-              }
+              const a = GTree.createFileLink(label);
+              a.classList.add('tool-item');
+              a.dataset.display = displayPathResolved;
+              a.dataset.file = actualFile;
+              a.href = '#';
+              a.onclick = e => {
+                e.preventDefault();
+                setFileParam(displayPathResolved);
+                setActive(displayPathResolved);
+                loadTool(actualFile);
+              };
+              return a;
             }
           });
         }
-      } catch (e) {
-        console.error(e);
-        container.innerHTML = `<p class="tree-empty tree-error">❌ ${String(e?.message || e)}</p>`;
-      }
-    }
 
-    // popstate handling (브라우저 내비게이션)
-    window.addEventListener('popstate', (e) => {
-      const f = (e.state && e.state.file) ? e.state.file : getFileParam();
-      const targetActual = (typeof displayMap !== 'undefined' && displayMap[f]) ? displayMap[f] : f;
-      const activeKey = (typeof displayMap !== 'undefined' && displayMap[f]) ? f : targetActual;
-      setActive(activeKey);
-      loadTool(targetActual);
-    });
+        // 로컬 index.json에서 목록을 읽어 트리로 렌더링
+        async function loadToolIndex() {
+          if (!container) return;
+          try {
+            const res = await fetch('./index.json', { cache: 'no-store' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const j = await res.json();
+            // Normalize files array into entries: objects { file, display, group }
+            const raw = Array.isArray(j.files) ? j.files : [];
+            const entries = raw.map(item => {
+              if (typeof item === 'string') return { file: item, display: undefined, group: undefined };
+              if (item && typeof item === 'object') {
+                return {
+                  file: item.file || item.path || item.filepath || '',
+                  display: item.display || undefined,
+                  group: item.group || item.category || undefined
+                };
+              }
+              return null;
+            }).filter(e => e && e.file);
 
-    // 초기 로드
-    loadToolIndex();
+            // reset displayMap for this load
+            // Use group + normalized leaf key as the mapping key so that 'file' and 'display'
+            // values containing '/' or index.html forms do not create menu path segments.
+            displayMap = {};
+            entries.forEach(entry => {
+              const filePath = String(entry.file || '');
+              const leafBase = computeLeafKeyFromFilePath(filePath);
+              const group = entry.group ? String(entry.group).trim() : '';
+              const key = group ? `${group}/${leafBase}` : leafBase;
+              displayMap[key] = entry.file;
+            });
+
+            if (entries.length === 0) {
+              container.innerHTML = '<p class="tree-empty">등록된 도구가 없습니다.</p>';
+              return;
+            }
+            const tree = GTree.buildTreeFromEntries(entries);
+            container.innerHTML = '';
+            container.appendChild(renderToolTree(tree));
+
+            // 초기 파라미터 처리
+            const initial = getFileParam();
+            if (initial) {
+              const targetActual = displayMap[initial] ? displayMap[initial] : initial;
+              const activeKey = displayMap[initial] ? initial : targetActual;
+              setActive(activeKey);
+              loadTool(targetActual);
+              // 폴더 자동 확장 (GTree 공통 모듈 사용)
+              GTree.expandToActive(container, a => a.dataset.display === activeKey || a.dataset.file === targetActual);
+            }
+          } catch (e) {
+            console.error(e);
+            container.innerHTML = `<p class="tree-empty tree-error">❌ ${String(e?.message || e)}</p>`;
+          }
+        }
+
+        // popstate handling (브라우저 내비게이션)
+        window.addEventListener('popstate', (e) => {
+          const f = (e.state && e.state.file) ? e.state.file : getFileParam();
+          const targetActual = (typeof displayMap !== 'undefined' && displayMap[f]) ? displayMap[f] : f;
+          const activeKey = (typeof displayMap !== 'undefined' && displayMap[f]) ? f : targetActual;
+          setActive(activeKey);
+          loadTool(targetActual);
+        });
+
+        // 초기 로드
+        loadToolIndex();
   </script>
 
   <style>
-    /* posts 스타일 트리 복사 — 좌측 트리 일관성 유지 */
-    .tree-ul {
-      list-style: none;
+    /* 트리 스타일은 shared/tree.css에서 관리합니다. */
+    .tool-list {
       margin: 0;
+      list-style: none;
       padding: 0;
-    }
-    .tree-ul.tree-collapsed { display: none; }
-    .tree-li { margin: 1px 0; }
-
-    .tree-file,
-    .tree-folder {
-      display: flex;
-      align-items: center;
-      gap: 5px;
       width: 100%;
-      box-sizing: border-box;
-      padding-top: 6px;
-      padding-bottom: 6px;
-      padding-right: 8px;
-      border-radius: 8px;
-      border: none;
-      background: transparent;
-      color: var(--text);
-      font-size: 12px;
-      line-height: 1.3;
-      text-decoration: none;
-      cursor: pointer;
-      text-align: left;
-      transition: background 0.14s;
-    }
-    .tree-file:hover,
-    .tree-folder:hover {
-      background: color-mix(in srgb, var(--accent) 8%, var(--panel));
-    }
-    .tree-file.active {
-      background: color-mix(in srgb, var(--accent) 14%, var(--panel));
-      border-left: 3px solid var(--accent);
-      font-weight: 600;
     }
 
-    .tree-arrow {
-      font-size: 9px;
-      flex-shrink: 0;
-      width: 12px;
-      text-align: center;
-      opacity: 0.6;
-    }
-    .tree-icon {
-      flex-shrink: 0;
-      font-size: 13px;
-      line-height: 1;
-    }
-    .tree-label {
-      flex: 1;
-      min-width: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .tree-loading,
-    .tree-empty { font-size: 12px; color: var(--text); opacity: 0.6; padding: 8px 4px; }
-
-    /* split view layout: 좌측은 슬림하게 붙이고, 우측(뷰어)을 크게 */
-    .container.tools{
+    .container.tools {
       max-width: 100%;
       width: 100%;
-      display:grid;
+      display: grid;
       grid-template-columns: 280px minmax(0, 1fr);
       gap: 12px;
       align-items: stretch;
     }
-    @media (max-width: 900px){
-      .container.tools{
+
+    @media (max-width: 900px) {
+      .container.tools {
         grid-template-columns: 1fr;
       }
     }
 
-    .tools-left{
+    .tools-left {
       position: sticky;
       top: 56px;
       max-height: calc(100dvh - 72px);
@@ -465,10 +271,10 @@
       padding: 10px;
     }
 
-    .tools-left-title{
-      display:flex;
-      align-items:center;
-      gap:8px;
+    .tools-left-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       margin: 2px 2px 10px;
       padding: 8px 10px;
       border-radius: 12px;
@@ -479,35 +285,37 @@
       font-size: 13px;
       user-select: none;
     }
-    .tools-left-title-icon{
+
+    .tools-left-title-icon {
       width: 18px;
       height: 18px;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       font-size: 16px;
       line-height: 1;
     }
-    @media (max-width: 900px){
-      .tools-left{
+
+    @media (max-width: 900px) {
+      .tools-left {
         position: static;
         max-height: none;
       }
     }
 
-    .tools-right{
+    .tools-right {
       min-height: calc(100dvh - 110px);
       padding: 14px;
     }
 
-    .tool-list{
+    .tool-list {
       margin: 0;
       list-style: none;
       padding: 0;
       width: 100%;
     }
 
-    .tool-item:not(.tree-file){
+    .tool-item:not(.tree-file) {
       margin-bottom: 8px;
       padding: 10px 10px;
       background: var(--panel);
@@ -520,11 +328,13 @@
       font-size: 13px;
       line-height: 1.25;
     }
-    .tool-item:not(.tree-file):hover{
+
+    .tool-item:not(.tree-file):hover {
       transform: translateY(-1px);
       background: color-mix(in srgb, var(--accent) 6%, var(--panel));
     }
-    .tool-item:not(.tree-file).active{
+
+    .tool-item:not(.tree-file).active {
       border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
       background: color-mix(in srgb, var(--accent) 10%, var(--panel));
       box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
@@ -550,9 +360,11 @@
       text-align: left;
       transition: background 0.14s;
     }
+
     .tree-file.tool-item:hover {
       background: color-mix(in srgb, var(--accent) 8%, var(--panel));
     }
+
     .tree-file.tool-item.active {
       background: color-mix(in srgb, var(--accent) 14%, var(--panel));
       border-left: 3px solid var(--accent);
@@ -560,7 +372,7 @@
     }
 
     /* tool viewer */
-    .tool-viewer{
+    .tool-viewer {
       width: 100%;
       height: 100%;
       min-height: calc(100dvh - 110px);
@@ -569,16 +381,16 @@
       justify-content: center;
     }
 
-    .tool-frame{
+    .tool-frame {
       width: 100%;
       height: calc(100dvh - 110px);
       border: 1px solid var(--border);
       border-radius: 12px;
       background: var(--panel);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
-    .hint{
+    .hint {
       color: color-mix(in srgb, var(--text) 60%, transparent);
       font-size: 14px;
     }
@@ -586,4 +398,5 @@
   <script>window.GUMA = { root: '../', page: 'tools' };</script>
   <script src="../shared/topbar.js" defer></script>
 </body>
+
 </html>

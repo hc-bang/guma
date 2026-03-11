@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -7,16 +8,41 @@
   <link rel="icon" href="../favicon.svg" />
   <link rel="stylesheet" href="../style.css" />
   <link rel="stylesheet" href="../config/config.css" />
+  <link rel="stylesheet" href="../shared/tree.css" />
 </head>
+
 <body>
   <header class="topbar">
     <div class="topbar-left">
-      <h1 class="title"><span class="title-icon icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span>문서</h1>
+      <h1 class="title"><span class="title-icon icon-svg" aria-hidden="true"><svg width="16" height="16"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14,2 14,8 20,8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <line x1="10" y1="9" x2="8" y2="9" />
+          </svg></span>문서</h1>
     </div>
     <div class="topbar-right">
-      <a class="btn icon-btn" href="../" aria-label="홈으로"><span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg></span></a>
-      <button id="themeToggle" class="btn icon-btn" type="button" aria-label="모드 토글"><span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span></button>
-      <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴"><span class="icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span></button>
+      <a class="btn icon-btn" href="../" aria-label="홈으로"><span class="icon-svg" aria-hidden="true"><svg width="15"
+            height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9,22 9,12 15,12 15,22" />
+          </svg></span></a>
+      <button id="themeToggle" class="btn icon-btn" type="button" aria-label="모드 토글"><span class="icon-svg"
+          aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg></span></button>
+      <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴"><span class="icon-svg"
+          aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg></span></button>
     </div>
   </header>
 
@@ -29,7 +55,10 @@
   <main class="container docs">
     <aside class="panel docs-left" aria-label="문서 목록">
       <div class="docs-left-title">
-        <span class="docs-left-title-icon icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="docs-left-title-icon icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg></span>
         <span class="docs-left-title-text">목록</span>
       </div>
       <div id="postContainer" class="post-list">
@@ -44,14 +73,19 @@
     </section>
   </main>
 
-  <link id="theme-md-light" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.6.1/github-markdown-light.min.css" />
-  <link id="theme-md-dark" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.6.1/github-markdown-dark.min.css" />
-  <link id="theme-hl-light" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css" />
-  <link id="theme-hl-dark" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css" />
+  <link id="theme-md-light" rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.6.1/github-markdown-light.min.css" />
+  <link id="theme-md-dark" rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.6.1/github-markdown-dark.min.css" />
+  <link id="theme-hl-light" rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css" />
+  <link id="theme-hl-dark" rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css" />
 
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
 
+  <script src="../shared/tree.js"></script>
   <script>
     const container = document.getElementById('postContainer');
     const mdEl = document.getElementById('md');
@@ -96,7 +130,7 @@
               if (lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
               return hljs.highlightAuto(code).value;
             }
-          } catch (e) {}
+          } catch (e) { }
           return escapeHtml(code);
         }
       });
@@ -132,7 +166,7 @@
           if (window.hljs) {
             mdEl.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
           }
-        } catch (e) {}
+        } catch (e) { }
 
         mdEl.querySelectorAll('a[href]').forEach(a => {
           if (/^https?:\/\//i.test(a.getAttribute('href') || '')) {
@@ -159,149 +193,35 @@
       });
     }
 
-    /* Normalize index.json entries to { file, display, group } (object-only) */
+    /* index.json entries를 { file, display, group } 형태로 정규화한다. */
     function normalizeIndexFiles(raw) {
       if (!raw || !Array.isArray(raw.files)) return [];
-      return raw.files.map(item => {
-        return {
-          file: String(item.file || ''),
-          display: item.display || undefined,
-          group: item.group || undefined
-        };
-      }).filter(e => e.file);
+      return raw.files.map(item => ({
+        file: String(item.file || ''),
+        display: item.display || undefined,
+        group: item.group || undefined
+      })).filter(e => e.file);
     }
 
-    /* Build tree from entries array of { file, display, group }.
-       Group is used as the top-level node; files are listed directly under their group.
-       - group may contain '/' to indicate nested groups.
-       - file and display MUST NOT create extra path segments in the menu; only group defines menu hierarchy.
-       - We place each file as a leaf under its group using the file basename as the node key, and store display in __meta for labeling. */
-    function buildTree(entries) {
-      const root = {};
-
-      function ensureNodeMap(parent, key) {
-        if (!parent[key]) parent[key] = { __children: {}, __isFile: false, __meta: null };
-        return parent[key];
-      }
-
-      entries.forEach(entry => {
-        const groupRaw = String(entry.group || '기타');
-        const groupParts = groupRaw.split('/').filter(Boolean);
-        if (groupParts.length === 0) groupParts.push('기타');
-
-        // traverse/create group containers; group nodes are stored directly under root
-        let parent = root;
-        groupParts.forEach(gp => {
-          const node = ensureNodeMap(parent, gp);
-          parent = node.__children;
-        });
-
-        // determine file basename (last segment of entry.file)
-        const fileParts = String(entry.file || '').split('/').filter(Boolean);
-        const baseName = fileParts.length ? fileParts[fileParts.length - 1] : String(entry.file || '');
-
-        // create leaf node directly under the group (do not split by '/')
-        if (!parent[baseName]) parent[baseName] = { __children: {}, __isFile: false, __meta: null };
-        parent[baseName].__isFile = true;
-        parent[baseName].__meta = {
-          file: entry.file,
-          display: entry.display,
-          group: entry.group
-        };
-      });
-
-      return root;
-    }
-
-    // ── 트리 렌더링 ────────────────────────────────────────
-    function renderTree(node, parentPath = '', depth = 0) {
-      const ul = document.createElement('ul');
-      ul.className = 'tree-ul';
-
-      // index.json의 배열 순서를 최대한 유지하기 위해 별도 정렬 없이 Object.keys 순서 사용
-      // (JS 객체 프로퍼티 순서는 삽입 순서를 따름)
-      const keys = Object.keys(node);
-
-      keys.forEach(key => {
-        const item = node[key];
-        const li = document.createElement('li');
-        li.className = 'tree-li';
-        const isLeafFile = item.__isFile && Object.keys(item.__children).length === 0;
-
-        if (isLeafFile) {
+    // ── 트리 렌더링 (GTree 공통 모듈 사용) ────────────────────
+    function renderPostTree(tree) {
+      return GTree.renderTree(tree, {
+        onLeaf: (key, item, parentPath) => {
           const meta = item.__meta || {};
           const filePath = meta.file || (parentPath + key);
           const label = (meta.display && String(meta.display)) || key.replace(/\.md$/i, '');
-          const a = document.createElement('a');
-          a.className = 'tree-file';
+          const a = GTree.createFileLink(label);
           a.dataset.file = filePath;
           a.href = `?file=${encodeURIComponent(filePath)}`;
-          a.title = label;
-          a.style.paddingLeft = `${8 + depth * 16}px`;
-
-          const icon = document.createElement('span');
-          icon.className = 'tree-icon';
-          icon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13,2 13,9 20,9"/></svg>';
-          icon.setAttribute('aria-hidden', 'true');
-
-          const text = document.createElement('span');
-          text.className = 'tree-label';
-          text.textContent = label;
-
-          a.appendChild(icon);
-          a.appendChild(text);
-
-          a.onclick = (e) => {
+          a.onclick = e => {
             e.preventDefault();
-            const targetFile = a.dataset.file;
-            setFileParam(targetFile);
-            setActive(targetFile);
-            loadMd(targetFile);
+            setFileParam(filePath);
+            setActive(filePath);
+            loadMd(filePath);
           };
-
-          li.appendChild(a);
-        } else {
-          const btn = document.createElement('button');
-          btn.className = 'tree-folder';
-          btn.type = 'button';
-          btn.style.paddingLeft = `${8 + depth * 16}px`;
-          btn.title = key;
-
-          const arrow = document.createElement('span');
-          arrow.className = 'tree-arrow';
-          arrow.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="8,5 18,12 8,19"/></svg>';
-          arrow.setAttribute('aria-hidden', 'true');
-
-          const icon = document.createElement('span');
-          icon.className = 'tree-icon';
-          icon.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
-          icon.setAttribute('aria-hidden', 'true');
-
-          const text = document.createElement('span');
-          text.className = 'tree-label';
-          text.textContent = key;
-
-          btn.appendChild(arrow);
-          btn.appendChild(icon);
-          btn.appendChild(text);
-
-          const childUl = renderTree(item.__children, parentPath + key + '/', depth + 1);
-          childUl.classList.add('tree-collapsed');
-
-          btn.onclick = () => {
-            const collapsed = childUl.classList.toggle('tree-collapsed');
-            arrow.innerHTML = collapsed ? '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="8,5 18,12 8,19"/></svg>' : '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,8 19,8 12,18"/></svg>';
-            icon.innerHTML = collapsed ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="2,10 12,10 22,10"/></svg>';
-          };
-
-          li.appendChild(btn);
-          li.appendChild(childUl);
+          return a;
         }
-
-        ul.appendChild(li);
       });
-
-      return ul;
     }
 
     // ── 초기 로드(인덱스 JSON 우선 사용, 이후 실패 시 에러 표시) ──────────────────────────────────────────
@@ -330,35 +250,17 @@
           return;
         }
 
-        // 트리 빌드 및 렌더링
-        const tree = buildTree(files);
+        // 트리 빌드 및 렌더링 (GTree 공통 모듈 사용)
+        const tree = GTree.buildTreeFromEntries(files);
         container.innerHTML = '';
-        container.appendChild(renderTree(tree));
+        container.appendChild(renderPostTree(tree));
 
         const initial = getFileParam();
         if (initial) {
           setActive(initial);
           await loadMd(initial);
-
-          // 초기 파일의 상위 폴더 펼치기
-          container.querySelectorAll('a.tree-file').forEach(a => {
-            if (a.dataset.file === initial) {
-              let parent = a.closest('li.tree-li')?.parentElement;
-              while (parent && parent.classList.contains('tree-ul')) {
-                if (parent.classList.contains('tree-collapsed')) {
-                  parent.classList.remove('tree-collapsed');
-                  const btn = parent.previousElementSibling;
-                  if (btn) {
-                    const arr = btn.querySelector('.tree-arrow');
-                    const ico = btn.querySelector('.tree-icon');
-                    if (arr) arr.innerHTML = '<svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,8 19,8 12,18"/></svg>';
-                    if (ico) ico.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="2,10 12,10 22,10"/></svg>';
-                  }
-                }
-                parent = parent.closest('li.tree-li')?.parentElement;
-              }
-            }
-          });
+          // 초기 파일의 상위 폴더 자동 펼치기
+          GTree.expandToActive(container, a => a.dataset.file === initial);
         }
       } catch (err) {
         console.error(err);
@@ -390,8 +292,11 @@
       gap: 12px;
       align-items: stretch;
     }
+
     @media (max-width: 900px) {
-      .container.docs { grid-template-columns: 1fr; }
+      .container.docs {
+        grid-template-columns: 1fr;
+      }
     }
 
     .docs-left {
@@ -401,8 +306,12 @@
       overflow: auto;
       padding: 10px;
     }
+
     @media (max-width: 900px) {
-      .docs-left { position: static; max-height: none; }
+      .docs-left {
+        position: static;
+        max-height: none;
+      }
     }
 
     .docs-left-title {
@@ -419,11 +328,15 @@
       font-size: 13px;
       user-select: none;
     }
+
     .docs-left-title-icon {
-      width: 18px; height: 18px;
+      width: 18px;
+      height: 18px;
       display: inline-flex;
-      align-items: center; justify-content: center;
-      font-size: 16px; line-height: 1;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      line-height: 1;
     }
 
     .docs-right {
@@ -431,76 +344,11 @@
       padding: 14px;
     }
 
-    /* ── 트리 ─────────────────────────────────────────── */
-    .post-list { margin: 0; padding: 0; width: 100%; }
-
-    .tree-ul {
-      list-style: none;
+    /* 트리 스타일은 shared/tree.css에서 관리합니다. */
+    .post-list {
       margin: 0;
       padding: 0;
-    }
-    .tree-ul.tree-collapsed { display: none; }
-
-    .tree-li { margin: 1px 0; }
-
-    /* 공통: 파일 링크, 폴더 버튼 */
-    .tree-file,
-    .tree-folder {
-      display: flex;
-      align-items: center;
-      gap: 5px;
       width: 100%;
-      box-sizing: border-box;
-      padding-top: 6px;
-      padding-bottom: 6px;
-      padding-right: 8px;
-      border-radius: 8px;
-      border: none;
-      background: transparent;
-      color: var(--text);
-      font-size: 12px;
-      line-height: 1.3;
-      text-decoration: none;
-      cursor: pointer;
-      text-align: left;
-      transition: background 0.14s;
-    }
-    .tree-file:hover,
-    .tree-folder:hover {
-      background: color-mix(in srgb, var(--accent) 8%, var(--panel));
-    }
-    .tree-file.active {
-      background: color-mix(in srgb, var(--accent) 14%, var(--panel));
-      border-left: 3px solid var(--accent);
-      font-weight: 600;
-    }
-
-    .tree-arrow {
-      font-size: 9px;
-      flex-shrink: 0;
-      width: 12px;
-      text-align: center;
-      opacity: 0.6;
-    }
-    .tree-icon {
-      flex-shrink: 0;
-      font-size: 13px;
-      line-height: 1;
-    }
-    .tree-label {
-      flex: 1;
-      min-width: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .tree-loading,
-    .tree-empty {
-      font-size: 12px;
-      color: var(--text);
-      opacity: 0.6;
-      padding: 8px 4px;
     }
 
     /* ── 뷰어 ─────────────────────────────────────────── */
@@ -508,15 +356,23 @@
       color: var(--text);
       background: transparent;
     }
-    .viewer-markdown { padding: 0; }
+
+    .viewer-markdown {
+      padding: 0;
+    }
+
     .viewer-markdown pre {
       border-radius: 12px;
       padding: 14px;
       overflow: auto;
     }
-    .viewer-markdown code { border-radius: 8px; }
+
+    .viewer-markdown code {
+      border-radius: 8px;
+    }
   </style>
   <script>window.GUMA = { root: '../', page: 'posts' };</script>
   <script src="../shared/topbar.js" defer></script>
 </body>
+
 </html>

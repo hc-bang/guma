@@ -10,7 +10,8 @@
 </head>
 
 <body>
-
+  <canvas id="embers-canvas"></canvas>
+  <!-- Topbar -->
   <header class="topbar">
     <div class="topbar-left">
       <div id="topBookmarks" class="top-bookmarks" aria-label="상단 즐겨찾기"></div>
@@ -81,8 +82,21 @@
       </form>
     </div>
 
+    <div id="greeting-text" class="greeting-text"></div>
+
     <div id="bookmarks" class="bookmarks"></div>
   </main>
+
+  <!-- News Section (A안: 구글 RSS 파싱 노출부) -->
+  <section id="news-section" class="news-section hidden">
+    <div class="news-header">
+      <h2 class="news-title">실시간 이슈</h2>
+      <span class="news-logo">Google 뉴스</span>
+    </div>
+    <div id="news-container" class="news-container">
+      <!-- JS로 동적 렌더링될 카드 영역 -->
+    </div>
+  </section>
 
   <div id="modalOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <div class="modal">
@@ -101,8 +115,9 @@
   </div>
 
   <script>window.GUMA = { root: './', page: '' };</script>
-  <script src="shared/topbar.js" defer></script>
-  <script src="script.js"></script>
+  <script src="./shared/topbar.js"></script>
+  <script src="./script.js"></script>
+  <script src="./shared/theme-effects.js"></script>
 </body>
 
 </html>

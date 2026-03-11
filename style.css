@@ -256,10 +256,11 @@ body.dark .top-folder-icon::before { background: linear-gradient(#ffd37a, #e5a83
   object-fit: contain; border-radius: 3px; flex-shrink: 0;
 }
 
-.top-folder-sub { display: flex; flex-direction: column; }
+.top-folder-sub { display: flex; flex-direction: column; position: relative; }
 .top-folder-item-folder {
   width: 100%; text-align: left;
   border: none; cursor: pointer; background: transparent; font-family: inherit;
+  justify-content: space-between;
 }
 .top-folder-item-folder-icon {
   width: 13px; height: 11px;
@@ -284,11 +285,22 @@ body.dark .top-folder-item-folder-icon::before { background: linear-gradient(#ff
 .top-folder-item-folder-label { line-height: 1; }
 
 .top-folder-submenu {
-  margin-left: 14px;
-  padding-left: 8px;
-  border-left: 1px solid var(--border);
+  position: absolute;
+  top: -6px;
+  left: 100%;
+  margin-left: 2px;
+  min-width: 200px;
+  max-width: 340px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  z-index: 360;
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .top-folder-submenu.hidden { display: none; }
 
@@ -631,3 +643,178 @@ body.dark .top-folder-item-folder-icon::before { background: linear-gradient(#ff
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+/* ── Roasted Theme Effects ───────────────────────────────── */
+#embers-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.65; /* 라이트 모드에서도 시각적으로 체감되도록 투명도 대폭 상향 */
+  transition: opacity var(--trans);
+}
+body.dark #embers-canvas {
+  opacity: 1; /* 다크 모드에서 불씨 더 선명하게 표시 */
+}
+
+.logo {
+  transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease;
+}
+.logo:hover {
+  transform: translateY(-3px);
+  color: #d97706; /* 노릇노릇한 주황색 톤 */
+  text-shadow: 0 4px 15px rgba(217, 119, 6, 0.4);
+}
+.logo-icon {
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+.logo:hover .logo-icon {
+  transform: scale(1.1) rotate(5deg);
+  filter: drop-shadow(0 4px 8px rgba(217, 119, 6, 0.4)) hue-rotate(-10deg) saturate(1.5);
+}
+body.dark .logo:hover {
+  color: #fb923c;
+  text-shadow: 0 4px 15px rgba(251, 146, 60, 0.4);
+}
+body.dark .logo:hover .logo-icon {
+  filter: drop-shadow(0 4px 8px rgba(251, 146, 60, 0.4)) hue-rotate(-10deg) saturate(1.5);
+}
+
+.greeting-text {
+  height: 20px;
+  font-size: 13px; /* 폰트를 한 톤 작게 */
+  color: var(--text-muted);
+  opacity: 0.75; /* 투명도를 낮추어 너무 튀지 않게 조정 */
+  margin: 18px 0 4px 0; /* 단축키 영역(shortcuts) 과의 간격을 넓히기 위해 하단 마진 증가 */
+  font-weight: 400; /* 폰트 웨이트 톤다운 */
+  text-align: center;
+}
+
+#searchInput:focus {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2), inset 0 0 8px rgba(245, 158, 11, 0.1) !important;
+}
+body.dark #searchInput:focus {
+  border-color: #fb923c !important;
+  box-shadow: 0 0 15px rgba(251, 146, 60, 0.3), inset 0 0 10px rgba(251, 146, 60, 0.1) !important;
+}
+
+.bookmark .icon-wrap {
+  transition: transform var(--trans), box-shadow var(--trans), border-color var(--trans), background var(--trans);
+}
+.bookmark:hover .icon-wrap {
+  transform: translateY(-4px);
+  border-color: #f59e0b;
+  box-shadow: 0 6px 15px rgba(245, 158, 11, 0.25);
+  background: linear-gradient(to bottom, var(--card), rgba(245, 158, 11, 0.08));
+}
+body.dark .bookmark:hover .icon-wrap {
+  border-color: #fb923c;
+  box-shadow: 0 6px 15px rgba(251, 146, 60, 0.4);
+  background: linear-gradient(to bottom, var(--card), rgba(251, 146, 60, 0.15));
+}
+
+/* ── News Widget ────────────────────────────────────────── */
+.news-section {
+  width: 95vw;
+  max-width: 1100px; /* 5개 카드와 이미지 배치를 위해 최대 너비 상향 */
+  margin: 20px auto 40px auto; /* 밖으로 빠져나온 요소의 중앙 정렬 마진 */
+  opacity: 1;
+  transition: opacity var(--trans);
+}
+.news-section.hidden {
+  display: none;
+  opacity: 0;
+}
+.news-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 14px;
+  padding: 0 8px;
+}
+.news-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+.news-logo {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.news-container {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr); /* 5개 카드를 스크롤 없이 가로 폭에 맞춰 렌더링 */
+  gap: 16px;
+  padding: 8px 4px 20px 4px;
+}
+
+/* 모바일 등 좁은 화면 진입 시 가로 스크롤 호환 체제 */
+@media (max-width: 900px) {
+  .news-container {
+    display: flex;
+    overflow-x: auto;
+    -ms-overflow-style: none;  
+    scrollbar-width: none;  
+  }
+  .news-container::-webkit-scrollbar { display: none; }
+  .news-card { flex: 0 0 240px; }
+}
+
+.news-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  text-decoration: none;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--trans), box-shadow var(--trans), border-color var(--trans);
+}
+.news-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(var(--accent-rgb), 0.4);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+/* 구운 GUMA 테마 호버 포인트 */
+body.dark .news-card:hover {
+  border-color: #fb923c;
+  box-shadow: 0 8px 24px rgba(251, 146, 60, 0.15);
+}
+
+.news-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+  /* 2줄 말줄임표 처리 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.news-card-img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: var(--radius-s);
+  background: var(--panel);
+}
+.news-card-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 4px; /* 메타 영역 여백 확보 */
+}

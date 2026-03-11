@@ -5,40 +5,12 @@
       "url": "https://www.youtube.com/"
     },
     {
-      "name": "Claude",
-      "url": "https://claude.ai"
-    },
-    {
-      "name": "Genspark",
-      "url": "https://www.genspark.ai/agents?type=ai_chat"
-    },
-    {
-      "name": "grok",
-      "url": "https://grok.com/"
-    },
-    {
-      "name": "chatgpt",
-      "url": "https://chatgpt.com/"
-    },
-    {
       "name": "gemini",
       "url": "https://gemini.google.com"
     },
     {
-      "name": "copilot",
-      "url": "https://copilot.microsoft.com/"
-    },
-    {
-      "name": "NotebookLM",
-      "url": "https://notebooklm.google.com/"
-    },
-    {
-      "name": "홈 | 웍스",
-      "url": "https://ivycomtech.ncpworkplace.com/"
-    },
-    {
-      "name": "메시지 | 웍스",
-      "url": "https://talk.worksmobile.com"
+      "name": "웍스::메시지",
+      "url": "https://talk.worksmobile.com/"
     },
     {
       "name": "localhost",

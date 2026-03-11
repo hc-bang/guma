@@ -87,8 +87,10 @@
   function toggleTheme() {
     setTheme(document.body.classList.contains('dark') ? 'light' : 'dark');
   }
-  // 저장된 테마 적용 (CSS 로드 전 깜박임 방지)
-  const initialTheme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+  // 저장된 테마 획득 (특별한 설정이 없으면 'dark' 기본 적용)
+  const savedTheme = localStorage.getItem('theme');
+  const initialTheme = (savedTheme === 'light') ? 'light' : 'dark';
+  
   if (initialTheme === 'dark') document.body.classList.add('dark');
   syncMarkdownTheme(initialTheme);
 

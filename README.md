@@ -17,6 +17,7 @@
 | **환경설정** | 상단 북마크 · 바로가기 GUI/JSON 편집, 내보내기 · 불러오기 |
 | **문서 뷰어** | Markdown 파일 트리 탐색 + 렌더링 (marked.js + highlight.js) |
 | **자료실** | 폴더 기반 트리 탐색 및 파일 카드형 UI (외부 링크 호환, 다운로드) |
+| **실시간 이슈 (뉴스)** | Google 뉴스 RSS 기반 상위 5개 기사 카드 표시. 30분 캐싱으로 API 호출 최소화 |
 | **도구 모음** | Key Generator · URL Encoder · JSON Formatter · JSON↔Base64 · JWT Debugger |
 
 ---
@@ -210,6 +211,18 @@ npx serve .
 
 ---
 
+## 실시간 이슈 (뉴스)
+
+메인 화면 하단에 Google 뉴스 RSS 기반의 실시간 이슈 카드를 표시합니다.
+
+- **데이터 소스**: Google 뉴스 RSS (`news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko`)
+- **파싱 방법**: `rss2json.com` API → 실패 시 `allorigins.win` 프록시로 XML 직접 파싱
+- **캐싱**: `localStorage`에 30분 단위로 캐싱하여 불필요한 외부 API 호출 방지
+  - 30분 이내 재방문 시 캐시에서 즉시 렌더링 (API 호출 없음)
+  - 30분 초과 시 새 데이터를 fetch하여 캐시 갱신
+
+---
+
 ## localStorage 키 목록
 
 | 키 | 설명 |
@@ -218,6 +231,7 @@ npx serve .
 | `engine` | 마지막으로 선택한 검색 엔진 ID |
 | `bookmarks` | 바로가기 그리드 데이터 (JSON 배열) |
 | `topBookmarks` | 상단 북마크 데이터 (환경설정에서 적용 시) |
+| `newsCache` | 뉴스 기사 캐시 (`{ timestamp, articles }` JSON) — 30분 유효 |
 | `faviconCache::{origin}` | 파비콘 URL 캐시 |
 
 ---

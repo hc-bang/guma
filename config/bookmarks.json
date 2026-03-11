@@ -4,6 +4,10 @@
       "name": "AI",
       "items": [
         {
+          "name": "gemini",
+          "url": "https://gemini.google.com"
+        },
+        {
           "name": "OpenWebUI",
           "url": "https://owui.fw-mgr.ivycomtech.com"
         },
@@ -22,10 +26,6 @@
         {
           "name": "chatgpt",
           "url": "https://chatgpt.com/"
-        },
-        {
-          "name": "gemini",
-          "url": "https://gemini.google.com"
         },
         {
           "name": "copilot",
@@ -84,7 +84,7 @@
       ]
     },
     {
-      "name": "IVY",
+      "name": "회사",
       "items": [
         {
           "name": "웍스 홈",
@@ -243,6 +243,10 @@
         {
           "name": "네이버 메모",
           "url": "https://memo.naver.com/"
+        },
+        {
+          "name": "bitwarden",
+          "url": "https://bitwarden.com/"
         }
       ]
     },

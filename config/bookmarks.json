@@ -83,16 +83,16 @@
       "name": "Google",
       "items": [
         {
-          "name": "Google AI Studio",
-          "url": "https://aistudio.google.com/"
-        },
-        {
           "name": "Google 계정",
           "url": "https://myaccount.google.com/"
         },
         {
           "name": "Google One",
           "url": "https://one.google.com/"
+        },
+        {
+          "name": "Google AI Studio",
+          "url": "https://aistudio.google.com/"
         }
       ]
     },

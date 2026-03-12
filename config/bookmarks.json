@@ -229,16 +229,20 @@
       "name": "개인",
       "items": [
         {
-          "name": "공유기 | GW-ME6110",
-          "url": "http://192.168.45.1/"
-        },
-        {
           "name": "네이버 메모",
           "url": "https://memo.naver.com/"
         },
         {
           "name": "bitwarden",
           "url": "https://bitwarden.com/"
+        },
+        {
+          "name": "공유기 | A3004NS-M",
+          "url": "http://192.168.0.1/"
+        },
+        {
+          "name": "공유기 | GW-ME6110",
+          "url": "http://192.168.45.1/"
         }
       ]
     },

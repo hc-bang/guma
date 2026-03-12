@@ -8,6 +8,10 @@
           "url": "https://gemini.google.com"
         },
         {
+          "name": "NotebookLM",
+          "url": "https://notebooklm.google.com/"
+        },
+        {
           "name": "OpenWebUI",
           "url": "https://owui.fw-mgr.ivycomtech.com"
         },
@@ -30,35 +34,6 @@
         {
           "name": "copilot",
           "url": "https://copilot.microsoft.com/"
-        },
-        {
-          "name": "NotebookLM",
-          "url": "https://notebooklm.google.com/"
-        },
-        {
-          "name": "Provider",
-          "items": [
-            {
-              "name": "claude docs",
-              "url": "https://platform.claude.com/docs/ko"
-            },
-            {
-              "name": "Google AI Studio",
-              "url": "https://aistudio.google.com/"
-            },
-            {
-              "name": "OpenAI Platform",
-              "url": "https://platform.openai.com/"
-            },
-            {
-              "name": "GroqCloud",
-              "url": "https://console.groq.com/"
-            },
-            {
-              "name": "Hugging Face",
-              "url": "https://huggingface.co/"
-            }
-          ]
         }
       ]
     },
@@ -101,6 +76,23 @@
         {
           "name": "GitLab | Old",
           "url": "http://192.168.1.236:32000/"
+        }
+      ]
+    },
+    {
+      "name": "Google",
+      "items": [
+        {
+          "name": "Google AI Studio",
+          "url": "https://aistudio.google.com/"
+        },
+        {
+          "name": "Google 계정",
+          "url": "https://myaccount.google.com/"
+        },
+        {
+          "name": "Google One",
+          "url": "https://one.google.com/"
         }
       ]
     },

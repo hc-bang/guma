@@ -68,7 +68,7 @@
     },
     {
       "group": "GUMA™/gallery_manager",
-      "file": "./files/exiftool-13.52_64.zip",
+      "file": "https://exiftool.org/exiftool-13.52_64.zip",
       "display": "exiftool-13.52_64.zip",
       "desc": "exiftool 13.52 64-bit Windows"
     },

@@ -43,6 +43,24 @@
       "desc": "Git for Windows/x64 Setup (2.53.0)"
     },
     {
+      "group": "설치/일반 도구",
+      "file": "https://drive.google.com/file/d/1ZvkrPBpk0obwNCUDjNBIytCIvhjxztRM/view?usp=sharing",
+      "display": "Microsoft Office 2024",
+      "desc": "Microsoft Office 2024 | OfficeSetup.exe"
+    },
+    {
+      "group": "설치/일반 도구",
+      "file": "https://drive.google.com/file/d/15ulzhAomd3fwyk1yy0raSLKP6_xYB3fo/view?usp=sharing",
+      "display": "한컴오피스 2024",
+      "desc": "한컴오피스 2024.zip"
+    },
+    {
+      "group": "설치/시스템",
+      "file": "https://drive.google.com/file/d/1qXxfa81jxeIVVBE1qg72WIV_1a74Q17B/view?usp=sharing",
+      "display": "HP Deskjet 3050 - J610",
+      "desc": "HP Deskjet 3050 - J610 시리즈 프린터 드라이버 설치 파일"
+    },
+    {
       "group": "설치/시스템",
       "file": "https://github.com/pbatard/rufus/releases/download/v4.13/rufus-4.13.exe",
       "display": "Rufus",

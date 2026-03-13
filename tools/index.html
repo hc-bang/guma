@@ -4,12 +4,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- bfcache 방지: 브라우저가 페이지를 메모리에서 복원하지 않도록 설정 -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>GUMA™ 도구</title>
   <link rel="icon" href="../favicon.svg" />
   <!-- 환경설정 페이지와 동일한 스타일 세트 사용 -->
-  <link rel="stylesheet" href="../style.css" />
-  <link rel="stylesheet" href="../config/config.css" />
-  <link rel="stylesheet" href="../shared/tree.css" />
+  <link rel="stylesheet" href="../style.css?v=1.1" />
+  <link rel="stylesheet" href="../config/config.css?v=1.1" />
+  <link rel="stylesheet" href="../shared/tree.css?v=1.1" />
 </head>
 
 <body>
@@ -61,12 +65,7 @@
         <span class="tools-left-title-text">목록</span>
       </div>
       <div id="toolContainer" class="tool-list">
-        <a href="#" class="tool-item" data-file="key-generator.html">Key Generator</a>
-        <a href="#" class="tool-item" data-file="url-encoder.html">URL Encoder/Decoder</a>
-        <a href="#" class="tool-item" data-file="json-base64-converter.html">JSON <> Base64</a>
-        <a href="#" class="tool-item" data-file="json-formatter.html">JSON Formatter</a>
-        <a href="#" class="tool-item" data-file="jwt-debugger.html">JWT Debugger</a>
-        <a href="#" class="tool-item" data-file="ascii-art-generator.html">ASCII Art Generator</a>
+        <p class="tree-loading">목록을 불러오는 중...</p>
       </div>
     </aside>
 
@@ -77,7 +76,7 @@
     </section>
   </main>
 
-  <script src="../shared/tree.js"></script>
+  <script src="../shared/tree.js?v=1.1"></script>
   <script>
     const container = document.getElementById('toolContainer');
     const viewer = document.getElementById('toolViewer');
@@ -126,8 +125,7 @@
 
     function setActive(file) {
       if (!container) return;
-      // file may be a display key (e.g. "변환/json-base64-converter") or an actual path
-      container.querySelectorAll('a.tool-item').forEach((a) => {
+      container.querySelectorAll('a.tree-file').forEach((a) => {
         const displayKey = a.dataset.display;
         const actual = a.dataset.file;
         const matches = (displayKey && displayKey === file) || (actual && actual === file) || (displayMap[file] && actual === displayMap[file]);
@@ -154,7 +152,6 @@
               label = label.replace(/[-_]+/g, ' ');
 
               const a = GTree.createFileLink(label);
-              a.classList.add('tool-item');
               a.dataset.display = displayPathResolved;
               a.dataset.file = actualFile;
               a.href = '#';
@@ -252,7 +249,7 @@
       max-width: 100%;
       width: 100%;
       display: grid;
-      grid-template-columns: 280px minmax(0, 1fr);
+      grid-template-columns: 260px minmax(0, 1fr);
       gap: 12px;
       align-items: stretch;
     }
@@ -310,65 +307,8 @@
 
     .tool-list {
       margin: 0;
-      list-style: none;
       padding: 0;
       width: 100%;
-    }
-
-    .tool-item:not(.tree-file) {
-      margin-bottom: 8px;
-      padding: 10px 10px;
-      background: var(--panel);
-      border-radius: 10px;
-      display: block;
-      text-decoration: none;
-      color: var(--text);
-      transition: transform 0.16s, background 0.16s, border-color 0.16s;
-      border: 1px solid var(--border);
-      font-size: 13px;
-      line-height: 1.25;
-    }
-
-    .tool-item:not(.tree-file):hover {
-      transform: translateY(-1px);
-      background: color-mix(in srgb, var(--accent) 6%, var(--panel));
-    }
-
-    .tool-item:not(.tree-file).active {
-      border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-      background: color-mix(in srgb, var(--accent) 10%, var(--panel));
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
-    }
-
-    /* tree-file in tools list: ensure flex layout like posts */
-    .tree-file.tool-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      width: 100%;
-      box-sizing: border-box;
-      padding-top: 6px;
-      padding-bottom: 6px;
-      padding-right: 8px;
-      border-radius: 8px;
-      background: transparent;
-      color: var(--text);
-      font-size: 12px;
-      line-height: 1.3;
-      text-decoration: none;
-      cursor: pointer;
-      text-align: left;
-      transition: background 0.14s;
-    }
-
-    .tree-file.tool-item:hover {
-      background: color-mix(in srgb, var(--accent) 8%, var(--panel));
-    }
-
-    .tree-file.tool-item.active {
-      background: color-mix(in srgb, var(--accent) 14%, var(--panel));
-      border-left: 3px solid var(--accent);
-      font-weight: 600;
     }
 
     /* tool viewer */
@@ -390,6 +330,14 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
+    /* 방어적 스타일: 선택자 우선순위를 높여(body 추가) 확실하게 오버라이드 */
+    body .tree-file.active {
+      border-left: none !important;
+      font-weight: 600 !important;
+      box-shadow: none !important;
+      background: color-mix(in srgb, var(--accent) 12%, var(--panel)) !important;
+    }
+
     .hint {
       color: color-mix(in srgb, var(--text) 60%, transparent);
       font-size: 14px;
@@ -397,6 +345,15 @@
   </style>
   <script>window.GUMA = { root: '../', page: 'tools' };</script>
   <script src="../shared/topbar.js" defer></script>
+  <script>
+    // bfcache(뒤로가기 캐시)에서 복원된 경우 강제 새로고침
+    // 이를 통해 페이지가 이전 스타일 상태로 돌아오는 현상을 방지한다.
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) {
+        window.location.reload();
+      }
+    });
+  </script>
 </body>
 
 </html>

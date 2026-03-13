@@ -241,12 +241,12 @@
           "url": "https://bitwarden.com/"
         },
         {
-          "name": "공유기 | A3004NS-M",
-          "url": "http://192.168.0.1/"
-        },
-        {
           "name": "공유기 | GW-ME6110",
           "url": "http://192.168.45.1/"
+        },
+        {
+          "name": "확장기 | extender-A6T",
+          "url": "http://192.168.45.103/"
         }
       ]
     },

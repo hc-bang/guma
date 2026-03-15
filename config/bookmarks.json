@@ -20,6 +20,10 @@
           "url": "https://www.tworld.co.kr/"
         },
         {
+          "name": "군포시 청소년 수련관",
+          "url": "https://www.gpyf.or.kr/gpdream/index.do"
+        },
+        {
           "name": "군포시 도서관",
           "url": "https://www.gunpolib.go.kr/"
         },
@@ -250,10 +254,6 @@
         {
           "name": "handbrake | 영상 변환",
           "url": "https://handbrake.fr/"
-        },
-        {
-          "name": "digiKam | 사진 정리",
-          "url": "https://www.digikam.org/"
         },
         {
           "name": "픽픽 | 캡처",

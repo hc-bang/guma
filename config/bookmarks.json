@@ -4,10 +4,6 @@
       "name": "개인",
       "items": [
         {
-          "name": "네이버 메모",
-          "url": "https://memo.naver.com/"
-        },
-        {
           "name": "bitwarden",
           "url": "https://bitwarden.com/"
         },

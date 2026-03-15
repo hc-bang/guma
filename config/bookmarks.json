@@ -1,6 +1,56 @@
 {
   "top": [
     {
+      "name": "개인",
+      "items": [
+        {
+          "name": "네이버 메모",
+          "url": "https://memo.naver.com/"
+        },
+        {
+          "name": "bitwarden",
+          "url": "https://bitwarden.com/"
+        },
+        {
+          "name": "공유기 | GW-ME6110",
+          "url": "http://192.168.45.1/"
+        },
+        {
+          "name": "확장기 | extender-A6T",
+          "url": "http://192.168.45.103/"
+        },
+        {
+          "name": "tworld",
+          "url": "https://www.tworld.co.kr/"
+        },
+        {
+          "name": "군포시 도서관",
+          "url": "https://www.gunpolib.go.kr/"
+        },
+        {
+          "name": "K-패스",
+          "url": "https://korea-pass.kr/"
+        }
+      ]
+    },
+    {
+      "name": "놀이터",
+      "items": [
+        {
+          "name": "YouTube™",
+          "url": "https://youtube.com/"
+        },
+        {
+          "name": "쿠팡플레이",
+          "url": "https://www.coupangplay.com/"
+        },
+        {
+          "name": "슈퍼셀",
+          "url": "https://supercell.com/"
+        }
+      ]
+    },
+    {
       "name": "AI",
       "items": [
         {
@@ -34,6 +84,48 @@
         {
           "name": "copilot",
           "url": "https://copilot.microsoft.com/"
+        },
+        {
+          "name": "ollama",
+          "url": "https://ollama.com/"
+        },
+        {
+          "name": "Google",
+          "items": [
+            {
+              "name": "Google 계정",
+              "url": "https://myaccount.google.com/"
+            },
+            {
+              "name": "Google One",
+              "url": "https://one.google.com/"
+            },
+            {
+              "name": "Google AI Studio",
+              "url": "https://aistudio.google.com/"
+            }
+          ]
+        },
+        {
+          "name": "AI 환경구축",
+          "items": [
+            {
+              "name": "LiteLLM",
+              "url": "https://www.litellm.ai/"
+            },
+            {
+              "name": "OpenWebUI",
+              "url": "https://openwebui.com/"
+            },
+            {
+              "name": "SearXNG",
+              "url": "https://github.com/searxng/searxng"
+            },
+            {
+              "name": "OpenWebUI IMG ▼",
+              "url": "https://lobehub.com/ko/icons"
+            }
+          ]
         }
       ]
     },
@@ -76,23 +168,18 @@
         {
           "name": "GitLab | Old",
           "url": "http://192.168.1.236:32000/"
-        }
-      ]
-    },
-    {
-      "name": "Google",
-      "items": [
-        {
-          "name": "Google 계정",
-          "url": "https://myaccount.google.com/"
         },
         {
-          "name": "Google One",
-          "url": "https://one.google.com/"
+          "name": "네이브 클라우드",
+          "url": "https://www.ncloud.com/"
         },
         {
-          "name": "Google AI Studio",
-          "url": "https://aistudio.google.com/"
+          "name": "홈페이지 어드민",
+          "url": "https://www.ivycomtech.com/admin/adminMain"
+        },
+        {
+          "name": "OpenAI Platform",
+          "url": "https://platform.openai.com/"
         }
       ]
     },
@@ -114,36 +201,6 @@
         {
           "name": "공공데이터포털",
           "url": "https://www.data.go.kr/"
-        }
-      ]
-    },
-    {
-      "name": "참고",
-      "items": [
-        {
-          "name": "AI 환경구축",
-          "items": [
-            {
-              "name": "LiteLLM",
-              "url": "https://www.litellm.ai/"
-            },
-            {
-              "name": "ollama",
-              "url": "https://ollama.com/"
-            },
-            {
-              "name": "OpenWebUI",
-              "url": "https://openwebui.com/"
-            },
-            {
-              "name": "SearXNG",
-              "url": "https://github.com/searxng/searxng"
-            },
-            {
-              "name": "OpenWebUI 이미지 다운로드",
-              "url": "https://lobehub.com/ko/icons"
-            }
-          ]
         }
       ]
     },
@@ -209,44 +266,6 @@
         {
           "name": "Rufus | 부팅 USB",
           "url": "https://rufus.ie/ko/"
-        }
-      ]
-    },
-    {
-      "name": "놀이터",
-      "items": [
-        {
-          "name": "YouTube™",
-          "url": "https://youtube.com/"
-        },
-        {
-          "name": "쿠팡플레이",
-          "url": "https://www.coupangplay.com/"
-        },
-        {
-          "name": "사이트 순위",
-          "url": "https://rankers.info/"
-        }
-      ]
-    },
-    {
-      "name": "개인",
-      "items": [
-        {
-          "name": "네이버 메모",
-          "url": "https://memo.naver.com/"
-        },
-        {
-          "name": "bitwarden",
-          "url": "https://bitwarden.com/"
-        },
-        {
-          "name": "공유기 | GW-ME6110",
-          "url": "http://192.168.45.1/"
-        },
-        {
-          "name": "확장기 | extender-A6T",
-          "url": "http://192.168.45.103/"
         }
       ]
     },

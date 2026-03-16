@@ -1,5 +1,6 @@
 const TOP_BOOKMARKS_STORAGE_KEY = 'topBookmarks';
 const SHORTCUTS_STORAGE_KEY = 'bookmarks';
+const SEARCH_ENGINES_STORAGE_KEY = 'searchEngines';
 
 function $(sel){
   return document.querySelector(sel);
@@ -53,6 +54,15 @@ function validateShortcutsArray(arr){
   });
 }
 
+function validateEnginesData(data){
+  if(!data || typeof data !== 'object') throw new Error('engines 데이터는 객체여야 합니다.');
+  if(!data.engines || typeof data.engines !== 'object') throw new Error('{ "engines": { ... } } 형식이어야 합니다.');
+  Object.keys(data.engines).forEach(key => {
+    const e = data.engines[key];
+    if (!e.label || !e.domain || !e.urlPattern) throw new Error(`engines['${key}'] 의 필수 값이 누락되었습니다.`);
+  });
+}
+
 function getTopFromLocalStorage(){
   try{
     const raw = localStorage.getItem(TOP_BOOKMARKS_STORAGE_KEY);
@@ -78,7 +88,7 @@ function getShortcutsFromLocalStorage(){
     const raw = localStorage.getItem(SHORTCUTS_STORAGE_KEY);
     if (!raw) return null;
     const arr = JSON.parse(raw);
-    if(!Array.isArray(arr)) return null; // 로컬스토리지에 없으면 null 반환하여 json 로딩 유도
+    if(!Array.isArray(arr)) return null; 
     return arr;
   }catch(e){
     return null;
@@ -91,6 +101,26 @@ async function getShortcutsDefaultFromFile(){
   const data = await res.json();
   const arr = fileFormatToShortcuts(data);
   return arr;
+}
+
+function getEnginesFromLocalStorage(){
+  try{
+    const raw = localStorage.getItem(SEARCH_ENGINES_STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    validateEnginesData(data);
+    return data;
+  }catch(e){
+    return null;
+  }
+}
+
+async function getEnginesDefaultFromFile(){
+  const res = await fetch('./engines.json', { cache: 'no-store' });
+  if(!res.ok) throw new Error(`config/engines.json 로드 실패 (HTTP ${res.status})`);
+  const data = await res.json();
+  validateEnginesData(data);
+  return data;
 }
 
 function setEditorTab(tab){
@@ -635,6 +665,246 @@ $('#scReset').addEventListener('click', async ()=>{
   }
 });
 
+// --- Engines ---
+const egJson = $('#egJson');
+const egJsonLabel = $('#egJsonLabel');
+const egList = $('#egList');
+const egLoad = $('#egLoad');
+const egApply = $('#egApply');
+const egExport = $('#egExport');
+const egImport = $('#egImport');
+const egReset = $('#egReset');
+
+let egData = { engines: {} };
+
+function syncEnginesJsonFromData(){
+  egJson.value = JSON.stringify(egData, null, 2);
+}
+
+function syncEnginesDataFromJson(){
+  const data = JSON.parse(egJson.value || 'null');
+  validateEnginesData(data);
+  egData = data;
+}
+
+function renderEngineRow(key, index){
+  const item = egData.engines[key];
+  const node = document.createElement('div');
+  node.className = 'node';
+
+  const header = document.createElement('div');
+  header.className = 'node-header';
+
+  const badge = document.createElement('span');
+  badge.className = 'node-badge';
+  badge.textContent = 'ENGINE';
+
+  const keyField = document.createElement('div');
+  keyField.className = 'field';
+  const keyInput = document.createElement('input');
+  keyInput.placeholder = 'ID(unique)';
+  keyInput.value = key;
+  keyInput.oninput = ()=>{
+    const newKey = keyInput.value.trim();
+    if (newKey && newKey !== key) {
+      egData.engines[newKey] = egData.engines[key];
+      delete egData.engines[key];
+      key = newKey; // 업데이트된 키로 유지
+      syncEnginesJsonFromData();
+    }
+  };
+  keyField.appendChild(keyInput);
+
+  const labelField = document.createElement('div');
+  labelField.className = 'field';
+  const labelInput = document.createElement('input');
+  labelInput.placeholder = '표시 이름';
+  labelInput.value = item.label;
+  labelInput.oninput = ()=>{
+    item.label = labelInput.value;
+    syncEnginesJsonFromData();
+  };
+  labelField.appendChild(labelInput);
+
+  const domainField = document.createElement('div');
+  domainField.className = 'field';
+  const domainInput = document.createElement('input');
+  domainInput.placeholder = '도메인 (아이콘용)';
+  domainInput.value = item.domain;
+  domainInput.oninput = ()=>{
+    item.domain = domainInput.value;
+    syncEnginesJsonFromData();
+  };
+  domainField.appendChild(domainInput);
+
+  const urlField = document.createElement('div');
+  urlField.className = 'field';
+  const urlInput = document.createElement('input');
+  urlInput.placeholder = '검색 URL 패턴';
+  urlInput.value = item.urlPattern;
+  urlInput.oninput = ()=>{
+    item.urlPattern = urlInput.value;
+    syncEnginesJsonFromData();
+  };
+  urlField.appendChild(urlInput);
+
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'mini danger';
+  delBtn.textContent = '삭제';
+  delBtn.onclick = ()=>{
+    delete egData.engines[key];
+    syncEnginesJsonFromData();
+    renderEnginesList();
+  };
+
+  header.appendChild(badge);
+  header.appendChild(keyField);
+  header.appendChild(labelField);
+  header.appendChild(domainField);
+  header.appendChild(urlField);
+  header.appendChild(delBtn);
+
+  node.appendChild(header);
+  return node;
+}
+
+function renderEnginesList(){
+  if(!egList) return;
+  egList.innerHTML = '';
+
+  const top = document.createElement('div');
+  top.className = 'node';
+
+  const header = document.createElement('div');
+  header.className = 'node-header';
+
+  const badge = document.createElement('span');
+  badge.className = 'node-badge';
+  badge.textContent = `SEARCH ENGINES (${Object.keys(egData.engines).length})`;
+
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'mini';
+  addBtn.textContent = '추가';
+  addBtn.onclick = ()=>{
+    const newKey = 'new_' + Date.now();
+    egData.engines[newKey] = { label: '새 엔진', domain: 'example.com', urlPattern: 'https://search.example.com?q=' };
+    syncEnginesJsonFromData();
+    renderEnginesList();
+  };
+
+  header.appendChild(badge);
+  header.appendChild(addBtn);
+  top.appendChild(header);
+
+  const children = document.createElement('div');
+  children.className = 'node-children';
+
+  Object.keys(egData.engines).forEach((key, idx)=>{
+    children.appendChild(renderEngineRow(key, idx));
+  });
+
+  top.appendChild(children);
+  egList.appendChild(top);
+}
+
+function setEgMode(mode){
+  if(mode === 'json'){
+    egList?.classList.add('hidden');
+    egJson?.classList.remove('hidden');
+    egJsonLabel?.classList.remove('hidden');
+    syncEnginesJsonFromData();
+  }else{
+    egList?.classList.remove('hidden');
+    egJson?.classList.add('hidden');
+    egJsonLabel?.classList.add('hidden');
+    try{
+      if(egJson.value.trim()){
+        syncEnginesDataFromJson();
+      }
+    }catch(e){
+      alert(`JSON 파싱 실패: ${String(e?.message || e)}`);
+      setMode('egMode', 'json');
+      setEgMode('json');
+      return;
+    }
+    renderEnginesList();
+  }
+}
+
+$all('input[name="egMode"]').forEach((r)=>{
+  r.addEventListener('change', ()=>{
+    setEgMode(r.value);
+  });
+});
+
+async function loadEnginesIntoEditor(){
+  const stored = getEnginesFromLocalStorage();
+  const data = stored || (await getEnginesDefaultFromFile());
+  egData = data;
+  syncEnginesJsonFromData();
+  renderEnginesList();
+}
+
+egLoad.addEventListener('click', async ()=>{
+  try{
+    await loadEnginesIntoEditor();
+  }catch(e){
+    alert(String(e?.message || e));
+  }
+});
+
+egApply.addEventListener('click', ()=>{
+  try{
+    const data = JSON.parse(egJson.value || 'null');
+    validateEnginesData(data);
+    egData = data;
+    localStorage.setItem(SEARCH_ENGINES_STORAGE_KEY, JSON.stringify(data));
+    alert('검색 엔진 저장 완료: 홈으로 돌아가면 반영됩니다.');
+  }catch(e){
+    alert(`적용 실패: ${String(e?.message || e)}`);
+  }
+});
+
+egExport.addEventListener('click', ()=>{
+  try{
+    const data = JSON.parse(egJson.value || 'null');
+    validateEnginesData(data);
+    downloadJson('engines.json', data);
+  }catch(e){
+    alert(`Export 실패: ${String(e?.message || e)}`);
+  }
+});
+
+egImport.addEventListener('change', async ()=>{
+  const file = egImport.files?.[0];
+  if(!file) return;
+  try{
+    const data = await readJsonFile(file);
+    validateEnginesData(data);
+    egData = data;
+    syncEnginesJsonFromData();
+    renderEnginesList();
+    alert('Import 완료(에디터에 반영). 필요하면 “적용”을 눌러 저장하세요.');
+  }catch(e){
+    alert(`Import 실패: ${String(e?.message || e)}`);
+  }finally{
+    egImport.value = '';
+  }
+});
+
+egReset.addEventListener('click', async ()=>{
+  try{
+    if(!confirm('localStorage(searchEngines)를 삭제하고 기본값(config/engines.json)으로 되돌릴까요?')) return;
+    localStorage.removeItem(SEARCH_ENGINES_STORAGE_KEY);
+    await loadEnginesIntoEditor();
+    alert('초기화 완료: 검색 엔진은 기본값(config/engines.json)으로 표시됩니다.');
+  }catch(e){
+    alert(`초기화 실패: ${String(e?.message || e)}`);
+  }
+});
+
 // theme (홈과 동일한 localStorage 키 사용) - 편집기에서는 토글 버튼 없이 적용만
 if(localStorage.getItem('theme') === 'dark'){
   document.body.classList.add('dark');
@@ -644,5 +914,7 @@ if(localStorage.getItem('theme') === 'dark'){
 setEditorTab('top');
 setTopMode('tree');
 setScMode('list');
+setEgMode('list');
 loadTopIntoEditor().catch(()=>{});
 loadShortcutsIntoEditor();
+loadEnginesIntoEditor();

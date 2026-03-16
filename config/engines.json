@@ -1,0 +1,39 @@
+{
+  "engines": {
+    "naver": {
+      "label": "네이버",
+      "domain": "naver.com",
+      "urlPattern": "https://search.naver.com/search.naver?query="
+    },
+    "daum": {
+      "label": "다음",
+      "domain": "daum.net",
+      "urlPattern": "https://search.daum.net/search?q="
+    },
+    "google": {
+      "label": "구글",
+      "domain": "google.com",
+      "urlPattern": "https://www.google.com/search?q="
+    },
+    "bing": {
+      "label": "빙",
+      "domain": "bing.com",
+      "urlPattern": "https://www.bing.com/search?q="
+    },
+    "youtube": {
+      "label": "유튜브",
+      "domain": "youtube.com",
+      "urlPattern": "https://www.youtube.com/results?search_query="
+    },
+    "github": {
+      "label": "GitHub",
+      "domain": "github.com",
+      "urlPattern": "https://github.com/search?q="
+    },
+    "wiki": {
+      "label": "위키백과",
+      "domain": "wikipedia.org",
+      "urlPattern": "https://ko.wikipedia.org/w/index.php?search="
+    }
+  }
+}

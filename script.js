@@ -72,41 +72,101 @@ function applyFavicon(imgEl, url, size = 32) {
 }
 
 /* ── Search engines ─────────────────────────────────────── */
-const engines = {
-  naver:   { label: '네이버',  domain: 'naver.com',     url: q => `https://search.naver.com/search.naver?query=${encodeURIComponent(q)}` },
-  daum:    { label: '다음',    domain: 'daum.net',      url: q => `https://search.daum.net/search?q=${encodeURIComponent(q)}` },
-  google:  { label: '구글',    domain: 'google.com',    url: q => `https://www.google.com/search?q=${encodeURIComponent(q)}` },
-  bing:    { label: '빙',      domain: 'bing.com',      url: q => `https://www.bing.com/search?q=${encodeURIComponent(q)}` },
-  youtube: { label: '유튜브',  domain: 'youtube.com',   url: q => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}` },
-  github:  { label: 'GitHub',  domain: 'github.com',    url: q => `https://github.com/search?q=${encodeURIComponent(q)}` },
-  wiki:    { label: '위키백과', domain: 'wikipedia.org', url: q => `https://ko.wikipedia.org/w/index.php?search=${encodeURIComponent(q)}` },
-};
+let engines = {}; // 동적 로드될 객체
+const SEARCH_ENGINES_KEY = 'searchEngines';
 
-let currentEngine = localStorage.getItem('engine') || 'naver';
 const engineBtn   = document.getElementById('engineBtn');
 const engineIcon  = document.getElementById('engineIcon');
 const engineMenu  = document.getElementById('engineMenu');
-const engineItems = document.querySelectorAll('.engine-item');
+let engineItems   = []; // 동적 생성 후 채워짐
 
 function applyEngine(key) {
-  currentEngine = key;
-  localStorage.setItem('engine', key);
   const e = engines[key];
+  if (!e) return;
+  
+  localStorage.setItem('engine', key);
   engineIcon.src = `https://www.google.com/s2/favicons?domain=${e.domain}&sz=64`;
   engineIcon.alt = e.label;
-  engineItems.forEach(it => it.classList.toggle('active', it.dataset.engine === key));
+  
+  // 메뉴 아이템 활성화 상태 업데이트
+  document.querySelectorAll('.engine-item').forEach(it => {
+    it.classList.toggle('active', it.dataset.engine === key);
+  });
 }
-applyEngine(currentEngine);
+
+function renderEngineMenu() {
+  if (!engineMenu) return;
+  engineMenu.innerHTML = '';
+  
+  Object.keys(engines).forEach(key => {
+    const e = engines[key];
+    const btn = document.createElement('button');
+    btn.className = 'engine-item';
+    btn.dataset.engine = key;
+    btn.setAttribute('role', 'option');
+    
+    const img = document.createElement('img');
+    img.src = `https://www.google.com/s2/favicons?domain=${e.domain}&sz=32`;
+    img.className = 'engine-item-icon';
+    img.alt = '';
+    
+    btn.appendChild(img);
+    btn.append(e.label);
+    
+    btn.onclick = (ev) => {
+      ev.stopPropagation();
+      applyEngine(key);
+      engineMenu.classList.add('hidden');
+      input.focus();
+    };
+    
+    engineMenu.appendChild(btn);
+  });
+  
+  // 현재 선택된 엔진 적용
+  const saved = localStorage.getItem('engine');
+  const currentEngine = (saved && engines[saved]) ? saved : Object.keys(engines)[0];
+  applyEngine(currentEngine);
+}
+
+async function loadEnginesJson() {
+  try {
+    // 1. localStorage 확인
+    const stored = localStorage.getItem(SEARCH_ENGINES_KEY);
+    if (stored) {
+      const data = JSON.parse(stored);
+      if (data && data.engines) {
+        engines = data.engines;
+        renderEngineMenu();
+        return;
+      }
+    }
+    
+    // 2. config/engines.json 확인
+    const res = await fetch('./config/engines.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    engines = data.engines || {};
+  } catch (e) {
+    // Fallback: 기존 하드코딩된 값 일부 유지
+    engines = {
+      naver: { label: '네이버', domain: 'naver.com', urlPattern: 'https://search.naver.com/search.naver?query=' },
+      google: { label: '구글', domain: 'google.com', urlPattern: 'https://www.google.com/search?q=' }
+    };
+  }
+  renderEngineMenu();
+}
 
 engineBtn.onclick = e => { e.stopPropagation(); engineMenu.classList.toggle('hidden'); };
-engineItems.forEach(item => {
-  item.onclick = () => { applyEngine(item.dataset.engine); engineMenu.classList.add('hidden'); input.focus(); };
-});
 document.addEventListener('click', () => engineMenu.classList.add('hidden'));
+
 form.addEventListener('submit', e => {
   e.preventDefault();
   const q = input.value.trim();
-  if (q) location.href = engines[currentEngine].url(q);
+  const currentKey = localStorage.getItem('engine') || Object.keys(engines)[0];
+  if (q && engines[currentKey]) {
+    location.href = engines[currentKey].urlPattern + encodeURIComponent(q);
+  }
 });
 
 /* ── Bookmarks ──────────────────────────────────────────── */
@@ -442,6 +502,7 @@ async function loadGoogleNews() {
 
 document.addEventListener('click', () => document.querySelectorAll('.engine-menu, .top-folder-menu').forEach(el => el.classList.add('hidden')));
 
+loadEnginesJson();
 loadShortcutsJson();
 loadBookmarksJson();
 loadGoogleNews();

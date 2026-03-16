@@ -41,6 +41,7 @@
     <section class="tabs" aria-label="편집 섹션">
       <button class="tab active" type="button" data-tab="top">북마크</button>
       <button class="tab" type="button" data-tab="shortcuts">바로가기</button>
+      <button class="tab" type="button" data-tab="engines">검색 엔진</button>
     </section>
 
     <section class="panel" data-panel="top">
@@ -85,6 +86,27 @@
       <div id="scList" class="list"></div>
       <label class="label" id="scJsonLabel">shortcuts.json 형식(JSON)</label>
       <textarea id="scJson" class="editor hidden" spellcheck="false"></textarea>
+    </section>
+
+    <section class="panel hidden" data-panel="engines">
+      <p class="hint">
+        우선순위: <code>localStorage(searchEngines)</code> → 없으면 <code>config/engines.json</code> (기본값).<br />
+        사용자가 직접 검색 엔진을 구성할 수 있습니다. "적용"을 누르면 홈 화면에 즉시 반영됩니다.
+      </p>
+      <div class="mode-row">
+        <label class="mode"><input type="radio" name="egMode" value="list" checked> 리스트 편집</label>
+        <label class="mode"><input type="radio" name="egMode" value="json"> JSON 편집</label>
+      </div>
+      <div class="actions">
+        <button class="btn" type="button" id="egLoad">리로드</button>
+        <button class="btn" type="button" id="egApply">적용</button>
+        <button class="btn" type="button" id="egExport">내보내기</button>
+        <label class="btn file">불러오기 <input id="egImport" type="file" accept="application/json" /></label>
+        <button class="btn danger" type="button" id="egReset">초기화</button>
+      </div>
+      <div id="egList" class="list"></div>
+      <label class="label" id="egJsonLabel">engines.json 형식(JSON)</label>
+      <textarea id="egJson" class="editor hidden" spellcheck="false"></textarea>
     </section>
   </main>
 

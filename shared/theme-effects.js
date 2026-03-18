@@ -108,4 +108,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     animate();
   }
+
+  // 3. Auto-Roast Title Effect
+  const mainLogo = document.querySelector('.logo');
+  if (mainLogo) {
+    setInterval(() => {
+      mainLogo.classList.add('auto-roast');
+      setTimeout(() => {
+        mainLogo.classList.remove('auto-roast');
+      }, 2500); // 2.5 seconds duration
+    }, 12000); // 12 seconds interval
+  }
 });

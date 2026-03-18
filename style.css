@@ -661,7 +661,7 @@ body.dark #embers-canvas {
 .logo {
   transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease;
 }
-.logo:hover {
+.logo:hover, .logo.auto-roast {
   transform: translateY(-3px);
   color: #d97706; /* 노릇노릇한 주황색 톤 */
   text-shadow: 0 4px 15px rgba(217, 119, 6, 0.4);
@@ -669,15 +669,15 @@ body.dark #embers-canvas {
 .logo-icon {
   transition: transform 0.3s ease, filter 0.3s ease;
 }
-.logo:hover .logo-icon {
+.logo:hover .logo-icon, .logo.auto-roast .logo-icon {
   transform: scale(1.1) rotate(5deg);
   filter: drop-shadow(0 4px 8px rgba(217, 119, 6, 0.4)) hue-rotate(-10deg) saturate(1.5);
 }
-body.dark .logo:hover {
+body.dark .logo:hover, body.dark .logo.auto-roast {
   color: #fb923c;
   text-shadow: 0 4px 15px rgba(251, 146, 60, 0.4);
 }
-body.dark .logo:hover .logo-icon {
+body.dark .logo:hover .logo-icon, body.dark .logo.auto-roast .logo-icon {
   filter: drop-shadow(0 4px 8px rgba(251, 146, 60, 0.4)) hue-rotate(-10deg) saturate(1.5);
 }
 

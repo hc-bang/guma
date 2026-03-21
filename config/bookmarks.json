@@ -279,6 +279,10 @@
         {
           "name": "OneDrive",
           "url": "https://onedrive.live.com/"
+        },
+        {
+          "name": "Expo",
+          "url": "https://expo.dev/"
         }
       ]
     }

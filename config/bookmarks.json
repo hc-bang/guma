@@ -205,6 +205,23 @@
       ]
     },
     {
+      "name": "저장소",
+      "items": [
+        {
+          "name": "Google 드라이브",
+          "url": "https://drive.google.com/drive/"
+        },
+        {
+          "name": "네이버 MYBOX",
+          "url": "https://mybox.naver.com/"
+        },
+        {
+          "name": "OneDrive",
+          "url": "https://onedrive.live.com/"
+        }
+      ]
+    },
+    {
       "name": "설치",
       "items": [
         {
@@ -262,27 +279,6 @@
         {
           "name": "Rufus | 부팅 USB",
           "url": "https://rufus.ie/ko/"
-        }
-      ]
-    },
-    {
-      "name": "저장소",
-      "items": [
-        {
-          "name": "Google 드라이브",
-          "url": "https://drive.google.com/drive/"
-        },
-        {
-          "name": "네이버 MYBOX",
-          "url": "https://mybox.naver.com/"
-        },
-        {
-          "name": "OneDrive",
-          "url": "https://onedrive.live.com/"
-        },
-        {
-          "name": "Expo",
-          "url": "https://expo.dev/"
         }
       ]
     }

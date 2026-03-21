@@ -67,16 +67,22 @@
       "desc": "부팅 USB 제작 Windows x64 (4.13)"
     },
     {
-      "group": "GUMA™/gallery_manager",
+      "group": "설치/미디어",
       "file": "https://exiftool.org/exiftool-13.52_64.zip",
       "display": "exiftool-13.52_64.zip",
-      "desc": "exiftool 13.52 64-bit Windows"
+      "desc": "이미지·오디오·비디오 등 다양한 파일에서 EXIF, IPTC, XMP 등 메타데이터를 읽고 쓸 수 있는 명령줄 도구"
     },
     {
-      "group": "GUMA™/gallery_manager",
+      "group": "설치/미디어",
       "file": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip",
       "display": "ffmpeg-master-latest-win64-gpl-shared.zip",
-      "desc": "FFmpeg master latest win64 gpl shared"
+      "desc": "비디오·오디오 파일을 읽고, 필터링하고, 트랜스코딩하는 등 다양한 멀티미디어 처리를 수행하는 명령줄 도구"
+    },
+    {
+      "group": "GUMA™/도구",
+      "file": "https://drive.google.com/file/d/1qNi8GxDbWl5v6Bad6m5JfRCr1r5dP9fx/view?usp=drive_link",
+      "display": "ClipDown",
+      "desc": "유투브 동영상/음원 다운로드 도구"
     }
   ]
 }

@@ -74,6 +74,10 @@
           "url": "https://claude.ai"
         },
         {
+          "name": "lovable",
+          "url": "https://lovable.dev/"
+        },
+        {
           "name": "grok",
           "url": "https://grok.com/"
         },

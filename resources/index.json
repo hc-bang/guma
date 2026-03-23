@@ -89,6 +89,12 @@
       "file": "https://drive.google.com/file/d/1NumgKj663m54NL5cqk7kZ6qwkCniDG3o/view?usp=drive_link",
       "display": "gTorrent",
       "desc": "토렌트 다운로드"
+    },
+    {
+      "group": "GUMA™/도구",
+      "file": "https://drive.google.com/file/d/1-0wpY9py8AJwZgkGgaftNngm9ApROXxb/view?usp=drive_link",
+      "display": "gSplitter",
+      "desc": "오디오 파일 분할 (자동감지 O)"
     }
   ]
 }

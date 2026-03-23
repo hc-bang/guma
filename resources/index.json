@@ -80,9 +80,15 @@
     },
     {
       "group": "GUMA™/도구",
-      "file": "https://drive.google.com/file/d/1qNi8GxDbWl5v6Bad6m5JfRCr1r5dP9fx/view?usp=drive_link",
-      "display": "ClipDown",
-      "desc": "유투브 동영상/음원 다운로드 도구"
+      "file": "https://drive.google.com/file/d/1eCzRZ1XjQD_GTcroy51wMp3xiZFo7rW_/view?usp=drive_link",
+      "display": "gClipDown",
+      "desc": "유투브 동영상/음원 다운로드"
+    },
+    {
+      "group": "GUMA™/도구",
+      "file": "https://drive.google.com/file/d/1NumgKj663m54NL5cqk7kZ6qwkCniDG3o/view?usp=drive_link",
+      "display": "gTorrent",
+      "desc": "토렌트 다운로드"
     }
   ]
 }

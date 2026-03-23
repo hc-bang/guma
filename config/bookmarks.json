@@ -70,12 +70,12 @@
           "url": "https://www.genspark.ai/agents?type=ai_chat"
         },
         {
-          "name": "Claude",
-          "url": "https://claude.ai"
-        },
-        {
           "name": "lovable",
           "url": "https://lovable.dev/"
+        },
+        {
+          "name": "Claude",
+          "url": "https://claude.ai"
         },
         {
           "name": "grok",

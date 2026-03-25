@@ -1,148 +1,53 @@
 # GUMA™ — 나만의 브라우저 시작 페이지
 
-> 정적 파일만으로 동작하는 개인 홈페이지 / 새 탭 페이지입니다.  
-> 서버, 빌드 도구, 백엔드 없이 GitHub Pages 등에 바로 배포할 수 있습니다.
+> 정적 파일만으로 동작하는 개인 홈페이지 및 새 탭 페이지입니다.  
+> 서버 관리 없이 GitHub Pages 등에 바로 배포하여 사용할 수 있는 전문가용 대시보드입니다.
 
 ---
 
-## 주요 기능
+## 📘 상세 문서 (Links)
 
-| 기능 | 설명 |
-|------|------|
-| **검색** | 네이버 / 다음 / 구글 / 빙 / 유튜브 / GitHub / 위키백과 — 드롭다운으로 엔진 전환 |
-| **상단 북마크 바** | `config/bookmarks.json` 또는 환경설정에서 관리. 링크 · 폴더(드롭다운) · 중첩 폴더 지원 |
-| **바로가기 그리드** | 메인 화면 아이콘 그리드. 우클릭으로 삭제, ＋ 버튼으로 추가 (최대 15개) |
-| **다크 / 라이트 모드** | 시스템 설정 자동 감지 + 수동 전환, `localStorage` 저장 |
-| **슬라이드 메뉴** | `menu.json`으로 네비게이션 항목 관리. 모든 서브 페이지에 동일 메뉴 표시 |
-| **환경설정** | 상단 북마크 · 바로가기 GUI/JSON 편집, 내보내기 · 불러오기 |
-| **문서 뷰어** | Markdown 파일 트리 탐색 + 렌더링 (marked.js + highlight.js) |
-| **자료실** | 폴더 기반 트리 탐색 및 파일 카드형 UI (외부 링크 호환, 다운로드) |
-| **실시간 이슈 (뉴스)** | Google 뉴스 RSS 기반 상위 5개 기사 카드 표시. 30분 캐싱으로 API 호출 최소화 |
-| **도구 모음** | Key Generator · URL Encoder · JSON Formatter · JSON↔Base64 · JWT Debugger |
+프로젝트에 대한 보다 자세한 정보는 아래 문서들을 참조하십시오.
+
+- **[현재 프로젝트 상태](.docs/PROJECT_STATUS.md)**: 실시간 작업 현황 및 To-Do 리스트
+- **[개발자용 관리 가이드](.docs/MANAGER_GUIDE.md)**: 설치, 배포, 구성 관리 및 콘텐츠 추가 방법
+- **[일반 사용자 가이드](.docs/USER_GUIDE.md)**: 주요 기능 설명 및 개인화 설정 안내
 
 ---
 
-## 파일 구조
+## 🚀 주요 기능
 
-```
-/
-├── index.html          # 메인 홈 (검색 + 바로가기)
-├── style.css           # 홈 공통 스타일 (CSS 변수 기반)
-├── script.js           # 홈 동작 스크립트
-├── favicon.svg         # 파비콘
-├── menu.json           # 슬라이드 메뉴 네비게이션 항목
-│
-├── shared/
-│   └── topbar.js       # 공통 슬라이드 메뉴 / 테마 토글 모듈
-│
-├── config/
-│   ├── index.html      # 환경설정 페이지
-│   ├── config.css      # 서브 페이지 공통 스타일
-│   ├── config.js       # 환경설정 스크립트
-│   ├── bookmarks.json  # 상단 북마크 기본값 (편집 가능)
-│   └── shortcuts.json  # 하단 바로가기 기본값 (편집 가능)
-│
-├── posts/
-│   ├── index.html      # 문서 목록 + 뷰어
-│   ├── index.json      # 문서 파일 목록 인덱스
-│   ├── viewer.html     # 단독 Markdown 뷰어
-│   └── {카테고리}/     # Markdown 파일 폴더
-│
-├── resources/
-│   ├── index.html      # 자료실 목록 + 파일 카드형 뷰
-│   └── index.json      # 자료 파일 목록 인덱스 (외부 URL 지원)
-│
-└── tools/
-    ├── index.html      # 도구 목록 + iframe 뷰어
-    ├── index.json      # 도구 파일 목록 인덱스
-    ├── tool.css        # 도구 페이지 공통 CSS 변수
-    ├── key-generator/
-    ├── url-encoder/
-    ├── json-formatter/
-    ├── json-base64-converter/
-    └── jwt-debugger/
-```
+- **통합 검색**: 다중 검색 엔진 전환 및 빠른 검색
+- **GUI 환경설정**: 북마크, 바로가기 관리 및 데이터 백업/복원
+- **문서 및 자료실**: Markdown 기반 문서 렌더링 및 트리 구조 자료 탐색
+- **유틸리티 도구**: JWT 디버거, JSON 포맷터 등 개발 편의 도구 내장
+- **심미적 디자인**: 다크 모드 지원 및 반응형 애니메이션 레이아웃
 
 ---
 
-## 빠른 시작
-
-### GitHub Pages 배포
-
-1. 저장소를 Fork 하거나 이 파일들을 새 저장소에 업로드합니다.
-2. 저장소 → **Settings → Pages → Source: `main` 브랜치 루트** 선택.
-3. `https://{username}.github.io/{repo}/` 에서 확인합니다.
-
-### 로컬 실행
+## ⚙️ 빠른 시작 (Quick Start)
 
 ```bash
-# Python 3
+# 로컬 테스트 (Python 3)
 python -m http.server 80
-# 또는
-npx serve .
 ```
 
-> `file://` 프로토콜은 fetch() 제한으로 일부 기능이 동작하지 않습니다.  
-> 반드시 로컬 HTTP 서버를 통해 확인하세요.
-
-### 브라우저 새 탭 페이지로 설정
-
-| 브라우저 | 방법 |
-|----------|------|
-| Chrome | [New Tab Redirect](https://chrome.google.com/webstore/detail/new-tab-redirect/icpgjfneehieebagbmdbhnlpiopdcmna) 확장 설치 후 URL 입력 |
-| Firefox | `about:preferences` → 홈 → 사용자 지정 URL 입력 |
-| Edge | 설정 → 새 탭 → 사용자 지정 URL |
+> [!IMPORTANT]
+> 로컬 파일 관리(`file://`) 프로토콜에서는 보안 제약으로 인해 일부 기능이 제한됩니다. 반드시 로컬 HTTP 서버 환경에서 실행해 주세요.
 
 ---
 
-## 데이터 관리
+## 🛠️ 기술 스택
 
-### 상단 북마크 (`config/bookmarks.json`)
+- **Frontend**: Vanilla HTML/CSS/JavaScript
+- **Docs**: Markdown (Marked.js + Highlight.js)
+- **Icons**: CSS Shape & Custom SVGs
+- **Deployment**: Any Static Hosting (GitHub Pages Recommended)
 
-`config/bookmarks.json`을 직접 편집하거나 **환경설정 → 북마크** 에서 GUI로 관리합니다.
+---
 
-```json
-{
-  "top": [
-    { "name": "네이버", "url": "https://naver.com" },
-    {
-      "name": "지도",
-      "items": [
-        { "name": "네이버지도", "url": "https://map.naver.com" },
-        { "name": "카카오맵",   "url": "https://map.kakao.com" }
-      ]
-    }
-  ]
-}
-```
-
-- **링크**: `{ "name": "이름", "url": "https://..." }`
-- **폴더**: `{ "name": "폴더명", "items": [...] }` — 중첩 폴더 지원
-
-환경설정에서 적용하면 `localStorage`에 저장되어 `config/bookmarks.json`보다 우선합니다.  
-"초기화" 버튼을 누르면 `localStorage`를 삭제하고 `config/bookmarks.json`으로 돌아갑니다.
-
-### 슬라이드 메뉴 (`menu.json`)
-
-모든 서브 페이지(환경설정 · 문서 · 도구)의 슬라이드 메뉴는 `menu.json`에서 관리합니다.
-
-```json
-{
-  "nav": [
-    { "label": "환경설정", "href": "config/", "icon": "settings"  },
-    { "label": "문서",     "href": "posts/",  "icon": "document"  },
-    { "label": "도구",     "href": "tools/",  "icon": "tool"      }
-  ]
-}
-```
-
-`icon` 키: `settings` · `document` · `tool` · `home` (추가 아이콘은 `shared/topbar.js` → `ICONS` 맵 확인)
-
-### 바로가기 그리드 (`config/shortcuts.json`)
-
-메인 화면에서 직접 추가(＋)·삭제(우클릭)하거나 **환경설정 → 바로가기** 에서 관리합니다.
-기본값 데이터는 `config/shortcuts.json`에서 관리하며, 환경설정을 통해 브라우저 `localStorage`에 개별 저장할 수 있습니다.
-- "초기화" 버튼을 누르면 저장된 위치 설정을 지우고 다시 `config/shortcuts.json` 값을 불러옵니다.
+## 📄 라이선스
+이 프로젝트는 개인 사용 및 커스터마이징을 목적으로 공개되었습니다.
 
 ---
 

@@ -6,6 +6,21 @@
       "display": "README"
     },
     {
+      "group": "GUMA™",
+      "file": "../.docs/MANAGER_GUIDE.md",
+      "display": "개발/관리자 가이드"
+    },
+    {
+      "group": "GUMA™",
+      "file": "../.docs/USER_GUIDE.md",
+      "display": "사용자 이용 가이드"
+    },
+    {
+      "group": "GUMA™",
+      "file": "../.docs/PROJECT_STATUS.md",
+      "display": "프로젝트 상태 보고서"
+    },
+    {
       "group": "가이드 문서",
       "file": "files/Docker.md",
       "display": "Docker"
@@ -19,6 +34,11 @@
       "group": "가이드 문서",
       "file": "files/Ollama.md",
       "display": "Ollama"
+    },
+    {
+      "group": "가이드 문서",
+      "file": "files/powershell-guide.md",
+      "display": "PowerShell 가이드"
     },
     {
       "group": "매뉴얼",

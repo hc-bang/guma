@@ -43,6 +43,18 @@
       "desc": "Git for Windows/x64 Setup (2.53.0)"
     },
     {
+      "group": "설치/개발 환경",
+      "file": "https://nodejs.org/dist/v22.22.2/node-v22.22.2-x64.msi",
+      "display": "Node.js",
+      "desc": "Node.js v22.22.2 Windows x64"
+    },
+    {
+      "group": "설치/개발 환경",
+      "file": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe",
+      "display": "Python",
+      "desc": "Python 3.12.10 Windows x64"
+    },
+    {
       "group": "설치/일반 도구",
       "file": "https://drive.google.com/file/d/1ZvkrPBpk0obwNCUDjNBIytCIvhjxztRM/view?usp=sharing",
       "display": "Microsoft Office 2024",

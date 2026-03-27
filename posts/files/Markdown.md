@@ -4,30 +4,11 @@
 
 ---
 
-## 목차
-- [마크다운 가이드](#마크다운-가이드)
-  - [목차](#목차)
-  - [소개](#소개)
-  - [헤더(Header)](#헤더header)
-  - [텍스트 서식](#텍스트-서식)
-  - [목록(Lists)](#목록lists)
-    - [순서 없는 목록](#순서-없는-목록)
-    - [순서 있는 목록](#순서-있는-목록)
-  - [링크와 이미지(Links \& Images)](#링크와-이미지links--images)
-  - [코드(Code)](#코드code)
-    - [인라인 코드](#인라인-코드)
-    - [코드 블록](#코드-블록)
-  - [인용구(Blockquote)](#인용구blockquote)
-  - [표(Table)](#표table)
-  - [수평선(Horizontal Rule)](#수평선horizontal-rule)
-  - [체크리스트(Task List)](#체크리스트task-list)
-  - [팁 \& 베스트 프랙티스](#팁--베스트-프랙티스)
-  - [참고 자료](#참고-자료)
-
----
-
 ## 소개
 마크다운은 가볍고 직관적인 텍스트 마크업 언어로, 간단한 문법으로 문서를 작성하고 HTML로 변환할 수 있습니다.
+
+##### 참고 자료
+- MarkLiveEdit: https://markdownlivepreview.dev
 
 ---
 
@@ -139,15 +120,3 @@ ___
 ```
 
 ---
-
-## 팁 & 베스트 프랙티스
-- 문서 최상단에 목차를 넣으면 길어지는 문서에서 유용합니다.  
-- 코드 블록에는 언어를 명시해 구문 강조(syntax highlighting)를 활용하세요.  
-- 적절한 줄바꿈(`  `)과 빈 줄을 사용해 가독성을 높이세요.  
-
----
-
-## 참고 자료
-- Markdown Guide: https://www.markdownguide.org  
-- GitHub Flavored Markdown: https://guides.github.com/features/mastering-markdown/  
-- CommonMark: https://commonmark.org

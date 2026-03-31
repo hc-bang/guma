@@ -226,6 +226,19 @@
       ]
     },
     {
+      "name": "도구",
+      "items": [
+        {
+          "name": "eml viewer",
+          "url": "https://www.encryptomatic.com/viewer/"
+        },
+        {
+          "name": "markdown",
+          "url": "https://markdown.kr/"
+        }
+      ]
+    },
+    {
       "name": "설치",
       "items": [
         {

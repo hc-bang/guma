@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- bfcache 방지: 브라우저가 페이지를 메모리에서 복원하지 않도록 설정 -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>GUMA™ 게임</title>
+  <link rel="icon" href="../favicon.svg" />
+  <!-- 환경설정 페이지와 동일한 스타일 세트 사용 -->
+  <link rel="stylesheet" href="../style.css?v=1.1" />
+  <link rel="stylesheet" href="../config/config.css?v=1.1" />
+  <link rel="stylesheet" href="../shared/tree.css?v=1.1" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="title"><span class="title-icon icon-svg" aria-hidden="true"><svg width="16" height="16"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M6 12h4M8 10v4M15 13h.01M18 11h.01M2 6h20v12H2z" />
+          </svg></span>게임</h1>
+    </div>
+    <div class="topbar-right">
+      <a class="btn icon-btn" href="../" aria-label="홈으로"><span class="icon-svg" aria-hidden="true"><svg width="15"
+            height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9,22 9,12 15,12 15,22" />
+          </svg></span></a>
+      <button id="themeToggle" class="btn icon-btn" type="button" aria-label="모드 토글"><span class="icon-svg"
+          aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg></span></button>
+      <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴"><span class="icon-svg"
+          aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg></span></button>
+    </div>
+  </header>
+
+  <div id="sidepanelOverlay" class="sidepanel-overlay"></div>
+  <aside id="sidepanel" class="sidepanel" aria-label="메뉴">
+    <div class="sidepanel-title">메뉴</div>
+    <div id="sidepanel-nav" class="sidepanel-actions"></div>
+  </aside>
+
+  <main class="container games">
+    <aside class="panel games-left" aria-label="게임 목록">
+      <div class="games-left-title">
+        <span class="games-left-title-icon icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg></span>
+        <span class="games-left-title-text">목록</span>
+      </div>
+      <div id="gameContainer" class="game-list">
+        <p class="tree-loading">목록을 불러오는 중...</p>
+      </div>
+    </aside>
+
+    <section class="panel games-right">
+      <div id="gameViewer" class="game-viewer">
+        <p class="hint">게임을 선택하세요.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="../shared/tree.js?v=1.1"></script>
+  <script>
+    const container = document.getElementById('gameContainer');
+    const viewer = document.getElementById('gameViewer');
+    // mapping from tree display path (group/.../file) -> actual file path to load in iframe
+    let displayMap = {};
+
+    function setTitle(file) {
+      const base = (file || '').replace(/\/?index\.html$/i, '').replace(/\.html$/i, '').replace(/[-_\/]+/g, ' ').trim() || '게임';
+      document.title = `GUMA™ 게임 - ${base}`;
+    }
+
+    function getFileParam() {
+      const params = new URLSearchParams(location.search);
+      return params.get('file') || '';
+    }
+
+    function setFileParam(file, replace = false) {
+      const u = new URL(location.href);
+      if (file) u.searchParams.set('file', file);
+      else u.searchParams.delete('file');
+      if (replace) history.replaceState({ file }, '', u);
+      else history.pushState({ file }, '', u);
+    }
+
+    function loadGame(file) {
+      if (!viewer) return;
+      if (!file) {
+        viewer.innerHTML = '<p class="hint">게임을 선택하세요.</p>';
+        setTitle('');
+        return;
+      }
+
+      setTitle(file);
+      // 파일 경로가 폴더/index.html 형태라면 그대로 쓰고,
+      // 만약 폴더명만 들어오면 index.html을 붙임.
+      const src = file.endsWith('/index.html') || file.toLowerCase().endsWith('.html') ? `./${file}` : `./${file}/index.html`;
+      viewer.innerHTML = `<iframe src="${src}" class="game-frame"></iframe>`;
+      const iframe = viewer.querySelector('iframe');
+      if (iframe) {
+        iframe.addEventListener('load', () => {
+          const theme = localStorage.getItem('theme') || (document.body.classList.contains('dark') ? 'dark' : 'light');
+          try { iframe.contentWindow.postMessage({ type: 'themeChange', theme }, '*'); } catch (e) { }
+        });
+      }
+    }
+
+    function setActive(file) {
+      if (!container) return;
+      container.querySelectorAll('a.tree-file').forEach((a) => {
+        const displayKey = a.dataset.display;
+        const actual = a.dataset.file;
+        const matches = (displayKey && displayKey === file) || (actual && actual === file) || (displayMap[file] && actual === displayMap[file]);
+        a.classList.toggle('active', !!matches);
+      });
+    }
+
+    const computeLeafKeyFromFilePath = GTree.computeLeafKeyFromFilePath;
+
+    // 트리 렌더링
+    function renderGameTree(node) {
+      return GTree.renderTree(node, {
+        onLeaf: (key, item, parentPath) => {
+          const meta = item.__meta || {};
+          const filePath = meta.file || (parentPath + key);
+          const leafFromFile = computeLeafKeyFromFilePath(filePath);
+          const displayKey = key || leafFromFile || (String(filePath).split('/').filter(Boolean).pop() || filePath);
+          const displayPathResolved = parentPath + displayKey;
+          const actualFile = (displayMap[displayPathResolved]) ? displayMap[displayPathResolved] : (meta.file || displayPathResolved);
+
+          let label = (meta.display && String(meta.display).trim()) || String(displayKey);
+          label = label.replace(/[-_]+/g, ' ');
+
+          const a = GTree.createFileLink(label);
+          a.dataset.display = displayPathResolved;
+          a.dataset.file = actualFile;
+          a.href = '#';
+          a.onclick = e => {
+            e.preventDefault();
+            setFileParam(displayPathResolved);
+            setActive(displayPathResolved);
+            loadGame(actualFile);
+          };
+          return a;
+        }
+      });
+    }
+
+    // index.json에서 목록을 읽어 트리로 렌더링
+    async function loadGameIndex() {
+      if (!container) return;
+      try {
+        const res = await fetch('./index.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const j = await res.json();
+        const raw = Array.isArray(j.files) ? j.files : [];
+        const entries = raw.map(item => {
+          if (typeof item === 'string') return { file: item, display: undefined, group: undefined };
+          if (item && typeof item === 'object') {
+            return {
+              file: item.file || item.path || item.filepath || '',
+              display: item.display || undefined,
+              group: item.group || item.category || undefined
+            };
+          }
+          return null;
+        }).filter(e => e && e.file);
+
+        displayMap = {};
+        entries.forEach(entry => {
+          const filePath = String(entry.file || '');
+          const leafBase = computeLeafKeyFromFilePath(filePath);
+          const group = entry.group ? String(entry.group).trim() : '';
+          const key = group ? `${group}/${leafBase}` : leafBase;
+          displayMap[key] = entry.file;
+        });
+
+        if (entries.length === 0) {
+          container.innerHTML = '<p class="tree-empty">등록된 게임이 없습니다.</p>';
+          return;
+        }
+        const tree = GTree.buildTreeFromEntries(entries);
+        container.innerHTML = '';
+        container.appendChild(renderGameTree(tree));
+
+        // 초기 파라미터 처리
+        const initial = getFileParam();
+        if (initial) {
+          const targetActual = displayMap[initial] ? displayMap[initial] : initial;
+          const activeKey = displayMap[initial] ? initial : targetActual;
+          setActive(activeKey);
+          loadGame(targetActual);
+          GTree.expandToActive(container, a => a.dataset.display === activeKey || a.dataset.file === targetActual);
+        }
+      } catch (e) {
+        console.error(e);
+        container.innerHTML = `<p class="tree-empty tree-error">❌ ${String(e?.message || e)}</p>`;
+      }
+    }
+
+    window.addEventListener('popstate', (e) => {
+      const f = (e.state && e.state.file) ? e.state.file : getFileParam();
+      const targetActual = (typeof displayMap !== 'undefined' && displayMap[f]) ? displayMap[f] : f;
+      const activeKey = (typeof displayMap !== 'undefined' && displayMap[f]) ? f : targetActual;
+      setActive(activeKey);
+      loadGame(targetActual);
+    });
+
+    loadGameIndex();
+  </script>
+
+  <style>
+    .game-list {
+      margin: 0;
+      list-style: none;
+      padding: 0;
+      width: 100%;
+    }
+
+    .container.games {
+      max-width: 100%;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 900px) {
+      .container.games {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .games-left {
+      position: sticky;
+      top: 56px;
+      max-height: calc(100dvh - 72px);
+      overflow: auto;
+      padding: 10px;
+    }
+
+    .games-left-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 2px 2px 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+      font-weight: 800;
+      letter-spacing: .2px;
+      font-size: 13px;
+      user-select: none;
+    }
+
+    .games-left-title-icon {
+      width: 18px;
+      height: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    @media (max-width: 900px) {
+      .games-left {
+        position: static;
+        max-height: none;
+      }
+    }
+
+    .games-right {
+      min-height: calc(100dvh - 110px);
+      padding: 14px;
+    }
+
+    .game-viewer {
+      width: 100%;
+      height: 100%;
+      min-height: calc(100dvh - 110px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .game-frame {
+      width: 100%;
+      height: calc(100dvh - 110px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    body .tree-file.active {
+      border-left: none !important;
+      font-weight: 600 !important;
+      box-shadow: none !important;
+      background: color-mix(in srgb, var(--accent) 12%, var(--panel)) !important;
+    }
+
+    .hint {
+      color: color-mix(in srgb, var(--text) 60%, transparent);
+      font-size: 14px;
+    }
+  </style>
+  <script>window.GUMA = { root: '../', page: 'games' };</script>
+  <script src="../shared/topbar.js" defer></script>
+  <script>
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) {
+        window.location.reload();
+      }
+    });
+  </script>
+</body>
+
+</html>

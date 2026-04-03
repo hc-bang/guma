@@ -48,6 +48,9 @@
       <rect x="1" y="3" width="22" height="5"/>
       <line x1="10" y1="12" x2="14" y2="12"/>
     </svg>`,
+    gamepad: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 12h4M8 10v4M15 13h.01M18 11h.01M2 6h20v12H2z" />
+    </svg>`,
   };
 
   /* ── 설정 ───────────────────────────────────────────── */
@@ -144,6 +147,7 @@
         { label: '문서',     href: 'posts/',  icon: 'document'  },
         { label: '도구',     href: 'tools/',  icon: 'tool'      },
         { label: '자료실',   href: 'resources/', icon: 'archive' },
+        { label: '게임',     href: 'games/',  icon: 'gamepad' },
       ]);
     }
   }

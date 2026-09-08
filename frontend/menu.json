@@ -6,11 +6,6 @@
       "icon": "document"
     },
     {
-      "label": "도구",
-      "href": "tools/",
-      "icon": "tool"
-    },
-    {
       "label": "자료실",
       "href": "resources/",
       "icon": "archive"

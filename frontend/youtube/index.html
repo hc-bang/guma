@@ -880,12 +880,24 @@
 
         targetBtn.innerHTML = `<span>💾 파일 저장 중...</span>`;
         const blob = await response.blob();
+        
+        // 1순위: 현재 카드에 표시된 실제 영상 제목 가져오기
+        const currentTitle = document.getElementById('yt-card-title')?.textContent?.trim() || '';
+        const safeTitle = currentTitle.replace(/[\\/:*?"<>|]/g, '_');
+        let filename = safeTitle ? `${safeTitle}.${formatType}` : `youtube_${formatType}_${Date.now()}.${formatType}`;
+
+        // 2순위: Content-Disposition 헤더가 있으면 디코딩 적용
         const disposition = response.headers.get('content-disposition') || '';
-        let filename = `youtube_${formatType}_${Date.now()}.${formatType}`;
-        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (match && match[1]) {
-          filename = decodeURIComponent(match[1].replace(/['"]/g, ''));
+        if (disposition) {
+          const matchUtf8 = disposition.match(/filename\*=UTF-8''([^;\n]*)/i);
+          const matchNormal = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/i);
+          if (matchUtf8 && matchUtf8[1]) {
+            filename = decodeURIComponent(matchUtf8[1]);
+          } else if (matchNormal && matchNormal[1]) {
+            filename = decodeURIComponent(matchNormal[1].replace(/['"]/g, ''));
+          }
         }
+
 
         const blobUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');

@@ -689,7 +689,8 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
         base_ydl_opts['cookiefile'] = cookie_file
         base_ydl_opts['extractor_args'] = {
             'youtube': {
-                'player_client': ['android', 'web'],
+                'player_client': ['android', 'ios'],
+                'player_skip': ['webpage', 'configs'],
                 'lang': ['ko']
             }
         }
@@ -718,10 +719,10 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
         media_type = "audio/mpeg"
         default_ext = "mp3"
     else:
-        # mp4 format: 코덱 제한 없이 최고화질 비디오+오디오 결합 후 mp4로 출력
+        # mp4 format: 1080p/720p 고화질 우선 결합
         ydl_opts = {
             **base_ydl_opts,
-            'format': 'bestvideo*+bestaudio/best',
+            'format': 'bestvideo[height<=1080]+bestaudio/best[height<=1080]/bestvideo*+bestaudio/best',
             'merge_output_format': 'mp4',
         }
         if FFMPEG_PATH:
@@ -729,6 +730,7 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
 
         media_type = "video/mp4"
         default_ext = "mp4"
+
 
     try:
         try:
@@ -774,6 +776,7 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
                 raise HTTPException(status_code=500, detail="다운로드된 파일을 찾을 수 없습니다.")
 
         clean_filename = f"{title}.{default_ext}"
+        quoted_filename = urllib.parse.quote(clean_filename)
 
         # 백그라운드 태스크로 파일 전송 후 임시 파일 자동 삭제
         if background_tasks:
@@ -782,8 +785,12 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
         return FileResponse(
             path=downloaded_file,
             filename=clean_filename,
-            media_type=media_type
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f"attachment; filename=\"{quoted_filename}\"; filename*=UTF-8''{quoted_filename}"
+            }
         )
+
 
     except Exception as e:
         err_msg = str(e)

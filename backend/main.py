@@ -32,10 +32,13 @@ app.include_router(youtube.router)
 
 @app.get("/")
 def read_root():
+    import yt_dlp
     return {
         "status": "online",
         "service": "GUMA™ Backend API",
-        "version": "1.0.0",
+        "version": "1.0.1",
+        "commit": "140cb0f-check",
+        "yt_dlp_version": getattr(yt_dlp, '__version__', 'unknown'),
         "message": "FastAPI 백엔드 서버가 성공적으로 가동되었습니다."
     }
 

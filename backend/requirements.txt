@@ -3,7 +3,5 @@ uvicorn[standard]>=0.22.0
 psycopg2-binary>=2.9.6
 pydantic>=2.0.0
 python-dotenv>=1.0.0
-yt-dlp>=2024.0.0
+yt-dlp>=2026.08.01
 imageio-ffmpeg>=0.4.8
-
-

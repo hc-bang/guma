@@ -687,10 +687,9 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
 
     if cookie_file and os.path.exists(cookie_file):
         base_ydl_opts['cookiefile'] = cookie_file
+        # 쿠키 인증 시에는 웹페이지를 건너뛰지 않고 온전한 세션으로 플레이어 응답 획득
         base_ydl_opts['extractor_args'] = {
             'youtube': {
-                'player_client': ['android', 'ios'],
-                'player_skip': ['webpage', 'configs'],
                 'lang': ['ko']
             }
         }
@@ -731,30 +730,27 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
         media_type = "video/mp4"
         default_ext = "mp4"
 
-
     try:
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
         except Exception as first_err:
             first_err_msg = str(first_err)
-            # 쿠키가 없고 봇 차단 발생 시 tv_embedded로 2차 시도
-            if not cookie_file and any(k in first_err_msg for k in ["봇이 아님", "Sign in to confirm", "bot"]):
-                fallback_opts = {
-                    **ydl_opts,
-                    'format': 'ba/bestaudio/best' if format_type.lower() == 'mp3' else '18/best[ext=mp4]/best',
-                    'extractor_args': {
-                        'youtube': {
-                            'player_client': ['tv_embedded', 'android'],
-                            'player_skip': ['webpage', 'configs'],
-                            'lang': ['ko']
-                        }
+            print(f"[YouTube] 1차 다운로드 실패 ({first_err_msg}), 2차 모바일 안전 폴백 시도...")
+            # 2차 시도: android 클라이언트 + 포맷 18/best 안전 폴백
+            fallback_opts = {
+                **ydl_opts,
+                'format': 'ba/bestaudio/best' if format_type.lower() == 'mp3' else '18/best[height<=1080]/best',
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['android', 'ios'],
+                        'lang': ['ko']
                     }
                 }
-                with yt_dlp.YoutubeDL(fallback_opts) as ydl:
-                    info = ydl.extract_info(url, download=True)
-            else:
-                raise first_err
+            }
+            with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+
 
         title = info.get("title", "video").replace("/", "_").replace("\\", "_")
         

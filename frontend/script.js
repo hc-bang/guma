@@ -288,8 +288,9 @@ function createFolderItem(folder) {
   btn.onclick = e => {
     e.stopPropagation();
     e.preventDefault();
-    // 호버 이벤트 구동 중 클릭 시 toggle 되어 하위 메뉴가 접히는 버그 방지 (강제 유지)
-    document.querySelectorAll('.top-folder-submenu').forEach(el => el !== sub && el.classList.add('hidden'));
+    document.querySelectorAll('.top-folder-submenu').forEach(el => {
+      if (el !== sub && !el.contains(sub)) el.classList.add('hidden');
+    });
     sub.classList.remove('hidden');
   };
   wrap.addEventListener('mouseenter', openSub);

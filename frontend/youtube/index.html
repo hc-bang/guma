@@ -108,6 +108,23 @@
       .yt-input-group {
         flex-direction: column;
       }
+      .yt-thumb {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 16 / 9;
+      }
+      .yt-actions {
+        flex-direction: column;
+        width: 100%;
+      }
+      .yt-dl-btn {
+        width: 100% !important;
+        flex: 1 1 auto !important;
+      }
+      .yt-channel-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+        gap: 10px !important;
+      }
     }
     .yt-thumb {
       width: 220px;
@@ -492,7 +509,7 @@
   <script>
     const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
       ? 'http://127.0.0.1:8000'
-      : (window.GUMA_API_BASE || 'https://guma-backend.onrender.com');
+      : (window.GUMA_API_BASE || 'https://guma.onrender.com');
     let currentVideoUrl = '';
 
     const urlInput = document.getElementById('yt-url');

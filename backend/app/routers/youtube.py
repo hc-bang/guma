@@ -8,14 +8,59 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, HTTPException
+import tempfile
+from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import yt_dlp
+
+# ffmpeg 바이너리 자동 로딩 (imageio-ffmpeg 지원)
+FFMPEG_PATH = None
+try:
+    import imageio_ffmpeg
+    FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
+except Exception:
+    pass
 
 router = APIRouter(
     prefix="/api/youtube",
     tags=["YouTube"]
 )
+
+def get_youtube_cookie_path() -> Optional[str]:
+    """
+    1. YOUTUBE_COOKIES 환경 변수 (텍스트 형태의 Netscape 쿠키)
+    2. 로컬 디렉터리의 cookies.txt 파일 (backend/cookies.txt 또는 루트 cookies.txt)
+    위 순서로 쿠키 파일 경로를 반환합니다.
+    """
+    env_cookies = os.environ.get("YOUTUBE_COOKIES", "").strip()
+    if env_cookies:
+        try:
+            temp_cookie = os.path.join(tempfile.gettempdir(), "guma_yt_cookies.txt")
+            with open(temp_cookie, "w", encoding="utf-8") as f:
+                f.write(env_cookies)
+            return temp_cookie
+        except Exception as e:
+            print(f"쿠키 환경변수 임시 파일 생성 실패: {e}")
+
+    local_cookie_candidates = [
+        os.path.join(os.getcwd(), "backend", "cookies.txt"),
+        os.path.join(os.getcwd(), "cookies.txt"),
+    ]
+    for c in local_cookie_candidates:
+        if os.path.exists(c):
+            return c
+
+    return None
+
+def cleanup_file(path: str):
+    """다운로드 완료 후 임시 파일을 삭제합니다."""
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception as e:
+        print(f"임시 파일 삭제 실패 ({path}): {e}")
+
 
 
 class VideoInfoRequest(BaseModel):
@@ -591,5 +636,138 @@ def get_subscription_feed(req: FeedRequest):
         "offset": offset,
         "limit": limit
     }
+
+@router.get("/download")
+def download_video(url: str, format_type: str = "mp4", background_tasks: BackgroundTasks = None):
+    """
+    선택한 유튜브 포맷(mp4 비디오 또는 mp3 오디오)으로 변환/다운로드하여 스트리밍 파일을 반환합니다.
+    Render 등 데이터센터 IP의 봇 차단 우회를 위해 등록된 YOUTUBE_COOKIES 또는 로컬 cookies.txt를 자동 주입합니다.
+    """
+    if not url:
+        raise HTTPException(status_code=400, detail="유효한 유튜브 URL이 필요합니다.")
+
+    temp_dir = tempfile.gettempdir()
+    out_tmpl = os.path.join(temp_dir, 'guma_yt_%(id)s_%(ext)s')
+
+    cookie_file = get_youtube_cookie_path()
+
+    base_ydl_opts = {
+        'outtmpl': out_tmpl,
+        'quiet': True,
+        'no_warnings': True,
+        'no_check_certificates': True,
+        'http_headers': {
+            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        }
+    }
+
+    if cookie_file and os.path.exists(cookie_file):
+        base_ydl_opts['cookiefile'] = cookie_file
+    else:
+        # 쿠키가 없을 때는 모바일 클라이언트로 1차 시도
+        base_ydl_opts['extractor_args'] = {
+            'youtube': {
+                'player_client': ['android', 'ios'],
+                'player_skip': ['webpage', 'configs'],
+                'lang': ['ko']
+            }
+        }
+
+    if format_type.lower() == "mp3":
+        ydl_opts = {
+            **base_ydl_opts,
+            'format': 'ba/bestaudio/best',
+        }
+        if FFMPEG_PATH:
+            ydl_opts['ffmpeg_location'] = FFMPEG_PATH
+            ydl_opts['postprocessors'] = [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }]
+        media_type = "audio/mpeg"
+        default_ext = "mp3"
+    else:
+        # mp4 format
+        if FFMPEG_PATH:
+            format_spec = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+        else:
+            format_spec = 'best[ext=mp4]/best'
+
+        ydl_opts = {
+            **base_ydl_opts,
+            'format': format_spec,
+        }
+        if FFMPEG_PATH:
+            ydl_opts['ffmpeg_location'] = FFMPEG_PATH
+            ydl_opts['merge_output_format'] = 'mp4'
+
+        media_type = "video/mp4"
+        default_ext = "mp4"
+
+    try:
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+        except Exception as first_err:
+            first_err_msg = str(first_err)
+            # 쿠키가 없고 봇 차단 발생 시 tv_embedded로 2차 시도
+            if not cookie_file and any(k in first_err_msg for k in ["봇이 아님", "Sign in to confirm", "bot"]):
+                fallback_opts = {
+                    **ydl_opts,
+                    'format': 'ba/bestaudio/best' if format_type.lower() == 'mp3' else '18/best[ext=mp4]/best',
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['tv_embedded', 'android'],
+                            'player_skip': ['webpage', 'configs'],
+                            'lang': ['ko']
+                        }
+                    }
+                }
+                with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+            else:
+                raise first_err
+
+        title = info.get("title", "video").replace("/", "_").replace("\\", "_")
+        
+        # 실제 생성된 파일 경로 찾기
+        downloaded_file = ydl.prepare_filename(info)
+        
+        # mp3 변환 후 확장자 보정
+        if format_type.lower() == "mp3" and FFMPEG_PATH:
+            base, _ = os.path.splitext(downloaded_file)
+            downloaded_file = base + ".mp3"
+
+        if not os.path.exists(downloaded_file):
+            # 백업 탐색
+            video_id = info.get("id", "")
+            files = [os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.startswith(f"guma_yt_{video_id}")]
+            if files:
+                downloaded_file = files[0]
+            else:
+                raise HTTPException(status_code=500, detail="다운로드된 파일을 찾을 수 없습니다.")
+
+        clean_filename = f"{title}.{default_ext}"
+
+        # 백그라운드 태스크로 파일 전송 후 임시 파일 자동 삭제
+        if background_tasks:
+            background_tasks.add_task(cleanup_file, downloaded_file)
+
+        return FileResponse(
+            path=downloaded_file,
+            filename=clean_filename,
+            media_type=media_type
+        )
+
+    except Exception as e:
+        err_msg = str(e)
+        if any(k in err_msg for k in ["봇이 아님", "Sign in to confirm", "bot"]):
+            raise HTTPException(
+                status_code=403,
+                detail="유튜브 다운로드 실패 (봇 차단): 클라우드 서버 IP가 감지되었습니다. Render 환경 변수(YOUTUBE_COOKIES)에 쿠키를 등록해 주세요."
+            )
+        raise HTTPException(status_code=500, detail=f"유튜브 다운로드 실패: {err_msg}")
+
 
 

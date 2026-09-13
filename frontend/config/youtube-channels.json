@@ -2,35 +2,35 @@
   "channels": [
     {
       "name": "보다",
-      "url": "https://www.youtube.com/@보다BODA/videos"
+      "url": "@보다BODA"
     },
     {
       "name": "매불쇼",
-      "url": "https://www.youtube.com/@maebulshow/videos"
+      "url": "@maebulshow"
     },
     {
       "name": "장르만 여의도",
-      "url": "https://www.youtube.com/@JTBCSHOW/videos"
+      "url": "@JTBCSHOW"
     },
     {
       "name": "정영진의 나쁜질문",
-      "url": "https://www.youtube.com/@정영진의나쁜질문/videos"
+      "url": "@정영진의나쁜질문"
     },
     {
       "name": "웃다가!",
-      "url": "https://www.youtube.com/@StudioPickle/videos"
+      "url": "@StudioPickle"
     },
     {
       "name": "제목없음TV",
-      "url": "https://www.youtube.com/@dony_untitled/videos"
+      "url": "@dony_untitled"
     },
     {
       "name": "14F",
-      "url": "https://www.youtube.com/@14FMBC/videos"
+      "url": "@14FMBC"
     },
     {
       "name": "지식인사이드",
-      "url": "https://www.youtube.com/@지식인사이드/videos"
+      "url": "@지식인사이드"
     }
   ]
 }

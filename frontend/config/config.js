@@ -950,11 +950,14 @@ function fileFormatToChannels(obj){
 function normalizeChannelUrl(url){
   let u = String(url || '').trim();
   if(!u) return '';
-  if(u.startsWith('@')){
-    return `https://www.youtube.com/${u}/videos`;
+  // 풀 URL이 입력되더라도 @핸들만 깔끔하게 추출 (예: https://www.youtube.com/@보다BODA/videos -> @보다BODA)
+  if(u.includes('@')){
+    const match = u.match(/(@[^\/?&#\s]+)/);
+    if(match) return match[1];
   }
-  if(!/^https?:\/\//i.test(u)){
-    return 'https://www.youtube.com/' + u;
+  // @ 없이 영문/숫자 핸들만 입력된 경우 @ 부착 (단, http 링크가 아닌 경우)
+  if(!/^https?:\/\//i.test(u) && !u.startsWith('@')){
+    return '@' + u;
   }
   return u;
 }
@@ -1017,7 +1020,7 @@ function renderChannelRow(item, index){
   urlField.className = 'field';
   urlField.style.flex = '2';
   const urlInput = document.createElement('input');
-  urlInput.placeholder = 'URL 또는 @핸들';
+  urlInput.placeholder = '@핸들 (예: @보다BODA)';
   urlInput.value = item?.url || '';
   urlInput.oninput = ()=>{
     item.url = urlInput.value;

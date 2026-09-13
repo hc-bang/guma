@@ -61,9 +61,16 @@ def resolve_channel_id(ch_url: str = "", ch_id: Optional[str] = None) -> Optiona
     if clean_url in CHANNEL_ID_CACHE:
         return CHANNEL_ID_CACHE[clean_url]
 
+    # @핸들이나 단순 텍스트인 경우 유튜브 채널 URL로 보정
+    target_url = clean_url
+    if target_url.startswith("@"):
+        target_url = f"https://www.youtube.com/{target_url}"
+    elif not target_url.startswith("http"):
+        target_url = f"https://www.youtube.com/@{target_url.lstrip('/')}"
+
     # 1. URL 자체에 /channel/UC... 가 포함되어 있는 경우 즉시 추출
-    if "/channel/" in clean_url:
-        parts = clean_url.split("/channel/")
+    if "/channel/" in target_url:
+        parts = target_url.split("/channel/")
         candidate = parts[1].split("/")[0]
         if candidate.startswith("UC"):
             CHANNEL_ID_CACHE[clean_url] = candidate
@@ -79,7 +86,7 @@ def resolve_channel_id(ch_url: str = "", ch_id: Optional[str] = None) -> Optiona
             'no_check_certificates': True
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(clean_url, download=False)
+            info = ydl.extract_info(target_url, download=False)
             extracted_id = info.get('channel_id') or (info.get('id') if str(info.get('id', '')).startswith('UC') else None)
             if extracted_id:
                 CHANNEL_ID_CACHE[clean_url] = extracted_id
@@ -161,6 +168,10 @@ def get_video_info(req: VideoInfoRequest):
                 "url": clean_url
             }
     except Exception as e:
+        err_msg = str(e)
+        if any(k in err_msg for k in ["회원 전용", "가입하여", "subscriber_only", "members-only", "Join this channel"]):
+            raise HTTPException(status_code=403, detail="이 영상은 채널 유료 회원(멤버십) 전용 콘텐츠로, 일반 다운로드가 지원되지 않습니다.")
+
         # 2차 시도: 봇 차단(Sign in to confirm you're not a bot) 발생 시 유튜브 공식 oEmbed API로 무차단 폴백
         try:
             oe_url = f"https://www.youtube.com/oembed?url={clean_url}&format=json"
@@ -190,7 +201,7 @@ def get_video_info(req: VideoInfoRequest):
         except Exception:
             pass
 
-        raise HTTPException(status_code=500, detail=f"유튜브 영상 분석 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"유튜브 영상 분석 실패: {err_msg}")
 
 @router.post("/channel")
 def get_channel_videos(req: ChannelRequest):
@@ -334,6 +345,14 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
     # 1. 채널 ID 동적 해석 및 런타임 캐시 활용 (하드코딩 없음)
     ch_id = resolve_channel_id(ch_url, ch_id)
 
+    # 핸들(@) 또는 커스텀 URL 보정
+    target_ch_url = ch_url
+    if target_ch_url:
+        if target_ch_url.startswith("@"):
+            target_ch_url = f"https://www.youtube.com/{target_ch_url}"
+        elif not target_ch_url.startswith("http"):
+            target_ch_url = f"https://www.youtube.com/@{target_ch_url.lstrip('/')}"
+
     # 3. 채널 ID로 YouTube Atom RSS 피드 조회 (언어 왜곡 없이 한국어 원본 보장)
     if ch_id:
         url = f"https://www.youtube.com/feeds/videos.xml?channel_id={ch_id}"
@@ -372,7 +391,7 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                     "url": f"https://www.youtube.com/watch?v={vid}",
                     "published": pub,
                     "channel_name": ch.name or channel_title,
-                    "channel_url": ch_url or f"https://www.youtube.com/channel/{ch_id}",
+                    "channel_url": target_ch_url or (f"https://www.youtube.com/channel/{ch_id}" if ch_id else ""),
                     "thumbnail": thumb,
                     "view_count": views,
                     "duration": 0
@@ -383,11 +402,11 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
             pass
 
     # 4. RSS 실패 시 yt-dlp flat extraction 폴백 (한국어 강제 헤더 및 쿠키 설정)
-    if ch_url:
+    if target_ch_url:
         try:
             ydl_opts = {
                 'extract_flat': True,
-                'playlistend': 10,
+                'playlistend': 15,
                 'quiet': True,
                 'no_warnings': True,
                 'no_check_certificates': True,
@@ -397,21 +416,28 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                 },
                 'extractor_args': {
                     'youtube': {
+                        'player_client': ['android', 'ios', 'mweb', 'web'],
                         'lang': ['ko']
                     }
                 }
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(ch_url, download=False)
+                info = ydl.extract_info(target_ch_url, download=False)
                 ch_title = ch.name or info.get("title") or "유튜브 채널"
                 entries = info.get("entries") or []
                 fallback_videos = []
                 for entry in entries:
                     if not entry:
                         continue
+                    
+                    # 멤버십/회원 전용 영상 필터링 (다운로드 불가 영상 제외)
+                    availability = entry.get("availability")
+                    if availability in ("subscriber_only", "needs_auth", "unlisted_subscriber_only"):
+                        continue
+
                     vid = entry.get("id") or ""
                     v_title = entry.get("title") or ""
-                    if any(kw in v_title.lower() for kw in ["멤버십", "회원전용", "멤버 전용"]):
+                    if any(kw in v_title.lower() for kw in ["멤버십", "회원전용", "멤버 전용", "rs 멤버"]):
                         continue
                     thumb = f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
                     if entry.get("thumbnails") and len(entry["thumbnails"]) > 0:
@@ -422,7 +448,7 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                         "url": entry.get("url") if entry.get("url") and "http" in entry.get("url") else f"https://www.youtube.com/watch?v={vid}",
                         "published": "",
                         "channel_name": ch_title,
-                        "channel_url": ch_url,
+                        "channel_url": target_ch_url or (f"https://www.youtube.com/channel/{ch_id}" if ch_id else ""),
                         "thumbnail": thumb,
                         "view_count": entry.get("view_count") or 0,
                         "duration": entry.get("duration") or 0

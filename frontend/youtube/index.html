@@ -580,19 +580,9 @@
       }
     });
 
-    // 관심 채널 목록 기본값 (표시 명칭과 URL/핸들만 설정)
-    const DEFAULT_CHANNELS = [
-      { name: '보다', url: 'https://www.youtube.com/@보다BODA/videos' },
-      { name: '매불쇼', url: 'https://www.youtube.com/@maebulshow/videos' },
-      { name: '장르만 여의도', url: 'https://www.youtube.com/@JTBCSHOW/videos' },
-      { name: '정영진의 나쁜질문', url: 'https://www.youtube.com/@정영진의나쁜질문/videos' },
-      { name: '웃다가!', url: 'https://www.youtube.com/@StudioPickle/videos' },
-      { name: '제목없음TV', url: 'https://www.youtube.com/@dony_untitled/videos' },
-      { name: '14F', url: 'https://www.youtube.com/@14FMBC/videos' },
-      { name: '지식인사이드', url: 'https://www.youtube.com/@지식인사이드/videos' }
-    ];
-
     const ALL_FEED_ID = '__ALL_FEED__';
+    let channelsList = [];
+    let activeChannelUrl = ALL_FEED_ID;
 
     // 상대 시간 계산 (예: 24분 전, 3시간 전, 2일 전)
     function formatRelativeTime(isoDateStr) {
@@ -629,24 +619,21 @@
             const res = await fetch('../config/youtube-channels.json', { cache: 'no-store' });
             if (res.ok) {
               const data = await res.json();
-              channelsList = data.channels || DEFAULT_CHANNELS;
+              channelsList = data.channels || [];
             } else {
-              channelsList = DEFAULT_CHANNELS;
+              channelsList = [];
             }
           } catch (e) {
-            channelsList = DEFAULT_CHANNELS;
+            channelsList = [];
           }
         }
       } catch (e) {
-        channelsList = DEFAULT_CHANNELS;
+        channelsList = [];
       }
       activeChannelUrl = ALL_FEED_ID;
       renderChannelTabs();
       resetAndLoadChannel();
     }
-
-    let channelsList = DEFAULT_CHANNELS;
-    let activeChannelUrl = ALL_FEED_ID;
 
     function renderChannelTabs() {
       const bar = document.getElementById('yt-channel-bar');

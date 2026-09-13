@@ -1,8 +1,11 @@
 import os
+import re
+import json
 import tempfile
 import datetime
 import time
 import urllib.request
+import urllib.parse
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Dict, Any
@@ -174,16 +177,18 @@ def get_video_info(req: VideoInfoRequest):
 
         # 2차 시도: 봇 차단(Sign in to confirm you're not a bot) 발생 시 유튜브 공식 oEmbed API로 무차단 폴백
         try:
-            oe_url = f"https://www.youtube.com/oembed?url={clean_url}&format=json"
-            oe_req = urllib.request.Request(oe_url, headers={'User-Agent': 'Mozilla/5.0'})
+            vid_id = ""
+            if "v=" in clean_url:
+                vid_id = clean_url.split("v=")[1].split("&")[0]
+            elif "youtu.be/" in clean_url:
+                vid_id = clean_url.split("youtu.be/")[1].split("?")[0]
+            
+            canonical_url = f"https://www.youtube.com/watch?v={vid_id}" if vid_id else clean_url
+            encoded_url = urllib.parse.quote(canonical_url, safe='')
+            oe_url = f"https://www.youtube.com/oembed?url={encoded_url}&format=json"
+            oe_req = urllib.request.Request(oe_url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
             with urllib.request.urlopen(oe_req, timeout=5) as resp:
                 oe_data = json.loads(resp.read().decode('utf-8'))
-                
-                vid_id = ""
-                if "v=" in clean_url:
-                    vid_id = clean_url.split("v=")[1].split("&")[0]
-                elif "youtu.be/" in clean_url:
-                    vid_id = clean_url.split("youtu.be/")[1].split("?")[0]
                 
                 thumb = oe_data.get("thumbnail_url") or (f"https://i.ytimg.com/vi/{vid_id}/hqdefault.jpg" if vid_id else "")
                 
@@ -337,71 +342,166 @@ def get_channel_videos(req: ChannelRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"채널 영상 추출 실패: 채널 핸들/URL을 확인하세요. ({str(e)})")
 
+def safe_youtube_url(raw_url: str) -> str:
+    """한글 핸들이나 다양한 채널 URL 형식을 안전하게 인코딩된 /videos URL로 정규화합니다."""
+    clean = (raw_url or "").strip()
+    if clean.startswith("@"):
+        handle = clean.lstrip("@")
+        return f"https://www.youtube.com/@{urllib.parse.quote(handle)}/videos"
+    elif not clean.startswith("http"):
+        handle = clean.lstrip("/")
+        return f"https://www.youtube.com/@{urllib.parse.quote(handle)}/videos"
+    else:
+        parts = clean.split("/@")
+        if len(parts) == 2:
+            base = parts[0]
+            handle_and_path = parts[1].split("/")
+            handle = handle_and_path[0]
+            quoted_handle = urllib.parse.quote(handle)
+            return f"{base}/@{quoted_handle}/videos"
+        else:
+            base = clean.split('?')[0].rstrip('/')
+            if not base.endswith('/videos'):
+                base += '/videos'
+            return base
+
+def parse_duration_to_seconds(duration_str: str) -> int:
+    """'1:17:50' 또는 '46:30' 형태의 재생시간 텍스트를 초 단위로 변환합니다."""
+    if not duration_str:
+        return 0
+    parts = duration_str.split(':')
+    try:
+        if len(parts) == 3:
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        elif len(parts) == 2:
+            return int(parts[0]) * 60 + int(parts[1])
+    except Exception:
+        pass
+    return 0
+
+def parse_relative_time_to_seconds(time_str: str) -> int:
+    """'방금 전', '5분 전', '2시간 전', '1일 전', '3주 전', '2개월 전' 등을 경과 초로 변환하여 정렬에 사용"""
+    if not time_str:
+        return 999999999
+    digits = re.findall(r'\d+', time_str)
+    n = int(digits[0]) if digits else 1
+    if any(u in time_str for u in ['초', 'second']):
+        return n
+    if any(u in time_str for u in ['분', 'minute']):
+        return n * 60
+    if any(u in time_str for u in ['시간', 'hour']):
+        return n * 3600
+    if any(u in time_str for u in ['일', 'day']):
+        return n * 86400
+    if any(u in time_str for u in ['주', 'week']):
+        return n * 604800
+    if any(u in time_str for u in ['개월', '달', 'month']):
+        return n * 2592000
+    if any(u in time_str for u in ['년', 'year']):
+        return n * 31536000
+    return 999999999
+
 def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
-    ch_id = ch.channel_id
     ch_url = ch.url or ""
     ch_name = ch.name or ""
-    
-    # 1. 채널 ID 동적 해석 및 런타임 캐시 활용 (하드코딩 없음)
-    ch_id = resolve_channel_id(ch_url, ch_id)
 
-    # 핸들(@) 또는 커스텀 URL 보정
-    target_ch_url = ch_url
+    target_ch_url = safe_youtube_url(ch_url)
+
+    # 1. 초고속 직접 파싱 (유튜브 Initial Data를 분석하여 한국어 원본 제목, 시간, 조회수, 썸네일을 0.5초 만에 추출)
     if target_ch_url:
-        if target_ch_url.startswith("@"):
-            target_ch_url = f"https://www.youtube.com/{target_ch_url}"
-        elif not target_ch_url.startswith("http"):
-            target_ch_url = f"https://www.youtube.com/@{target_ch_url.lstrip('/')}"
-
-    # 3. 채널 ID로 YouTube Atom RSS 피드 조회 (언어 왜곡 없이 한국어 원본 보장)
-    if ch_id:
-        url = f"https://www.youtube.com/feeds/videos.xml?channel_id={ch_id}"
-        req = urllib.request.Request(url)
         try:
-            xml_data = urllib.request.urlopen(req, timeout=6).read()
-            root = ET.fromstring(xml_data)
-            ns = {
-                'atom': 'http://www.w3.org/2005/Atom',
-                'yt': 'http://www.youtube.com/xml/schemas/2015',
-                'media': 'http://search.yahoo.com/mrss/'
-            }
-            channel_title = ch.name or (root.find('atom:title', ns).text if root.find('atom:title', ns) is not None else "유튜브 채널")
-            videos = []
-            for e in root.findall('atom:entry', ns):
-                vid_el = e.find('yt:videoId', ns)
-                vid = vid_el.text if vid_el is not None else ""
-                title_el = e.find('atom:title', ns)
-                title = title_el.text if title_el is not None else "제목 없음"
-                
-                if any(kw in title.lower() for kw in ["멤버십", "회원전용", "멤버 전용"]):
-                    continue
-                
-                pub_el = e.find('atom:published', ns)
-                pub = pub_el.text if pub_el is not None else ""
-                
-                thumb_elem = e.find('.//media:thumbnail', ns)
-                thumb = thumb_elem.attrib['url'] if thumb_elem is not None and 'url' in thumb_elem.attrib else f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
-                
-                views_elem = e.find('.//media:statistics', ns)
-                views = int(views_elem.attrib.get('views', 0)) if views_elem is not None else 0
+            req = urllib.request.Request(target_ch_url, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+                'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+            })
+            html = urllib.request.urlopen(req, timeout=5).read().decode('utf-8', errors='ignore')
+            m = re.search(r'var ytInitialData = ({.*?});</script>', html)
+            if m:
+                data = json.loads(m.group(1))
+                parsed_videos = []
+                tabs = data.get('contents', {}).get('twoColumnBrowseResultsRenderer', {}).get('tabs', [])
+                for tab in tabs:
+                    tab_renderer = tab.get('tabRenderer', {})
+                    if not tab_renderer.get('selected'):
+                        continue
+                    contents = tab_renderer.get('content', {}).get('richGridRenderer', {}).get('contents', [])
+                    for item in contents:
+                        rich_item = item.get('richItemRenderer', {}).get('content', {})
+                        lockup = rich_item.get('lockupViewModel')
+                        if not lockup:
+                            continue
+                        vid = lockup.get('contentId')
+                        meta = lockup.get('metadata', {}).get('lockupMetadataViewModel', {})
+                        title = meta.get('title', {}).get('content', '')
+                        
+                        # 1. 회원전용/멤버십 영상 제외
+                        if any(kw in title.lower() for kw in ['멤버십', '회원전용', '멤버 전용', 'rs 멤버']):
+                            continue
 
-                videos.append({
-                    "id": vid,
-                    "title": title,
-                    "url": f"https://www.youtube.com/watch?v={vid}",
-                    "published": pub,
-                    "channel_name": ch.name or channel_title,
-                    "channel_url": target_ch_url or (f"https://www.youtube.com/channel/{ch_id}" if ch_id else ""),
-                    "thumbnail": thumb,
-                    "view_count": views,
-                    "duration": 0
-                })
-            if videos:
-                return videos
+                        # 2. 쇼츠(Shorts) 태그 제외
+                        if '#shorts' in title.lower():
+                            continue
+                        
+                        content_image = lockup.get('contentImage', {}).get('thumbnailViewModel', {})
+                        thumb_sources = content_image.get('image', {}).get('sources', [])
+                        thumb = thumb_sources[-1].get('url') if thumb_sources else f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+                        
+                        duration_text = ""
+                        for ov in content_image.get('overlays', []):
+                            for b in ov.get('thumbnailBottomOverlayViewModel', {}).get('badges', []):
+                                duration_text = b.get('thumbnailBadgeViewModel', {}).get('text', '')
+
+                        # 3. 쇼츠(Shorts) 길이 필터 (60초 이하 또는 SHORTS 배지 제외)
+                        dur_sec = parse_duration_to_seconds(duration_text)
+                        if duration_text.upper() == 'SHORTS' or (dur_sec > 0 and dur_sec <= 60):
+                            continue
+                        
+                        meta_rows = meta.get('metadata', {}).get('contentMetadataViewModel', {}).get('metadataRows', [])
+                        views_text = ""
+                        time_text = ""
+                        if meta_rows:
+                            for p in meta_rows[0].get('metadataParts', []):
+                                txt = p.get('text', {}).get('content', '')
+                                if '조회수' in txt or 'views' in txt:
+                                    views_text = txt.replace('조회수', '').replace('views', '').strip()
+                                elif any(kw in txt for kw in ['전', 'ago', '스트리밍', '라이브']):
+                                    time_text = txt
+                                elif not time_text:
+                                    time_text = txt
+
+                        if vid and title:
+                            numeric_views = 0
+                            if '만' in views_text:
+                                try:
+                                    numeric_views = int(float(re.findall(r'[\d\.]+', views_text)[0]) * 10000)
+                                except Exception:
+                                    pass
+                            else:
+                                digits = re.findall(r'\d+', views_text.replace(',', ''))
+                                if digits:
+                                    numeric_views = int(digits[0])
+
+                            parsed_videos.append({
+                                'id': vid,
+                                'title': title,
+                                'url': f"https://www.youtube.com/watch?v={vid}",
+                                'channel_name': ch_name or "유튜브 채널",
+                                'channel_url': target_ch_url,
+                                'thumbnail': thumb,
+                                'duration_text': duration_text,
+                                'duration': dur_sec,
+                                'views_text': views_text,
+                                'view_count': numeric_views,
+                                'time_text': time_text,
+                                'published': time_text,
+                                'elapsed_seconds': parse_relative_time_to_seconds(time_text)
+                            })
+                if parsed_videos:
+                    return parsed_videos
         except Exception:
             pass
 
-    # 4. RSS 실패 시 yt-dlp flat extraction 폴백 (한국어 강제 헤더 및 쿠키 설정)
+    # 2. yt-dlp flat extraction (폴백)
     if target_ch_url:
         try:
             ydl_opts = {
@@ -413,45 +513,48 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                 'http_headers': {
                     'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
                     'Cookie': 'PREF=hl=ko&gl=KR;'
-                },
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['android', 'ios', 'mweb', 'web'],
-                        'lang': ['ko']
-                    }
                 }
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(target_ch_url, download=False)
-                ch_title = ch.name or info.get("title") or "유튜브 채널"
+                ch_title = ch_name or info.get("title") or "유튜브 채널"
                 entries = info.get("entries") or []
                 fallback_videos = []
-                for entry in entries:
+                for idx, entry in enumerate(entries):
                     if not entry:
                         continue
-                    
-                    # 멤버십/회원 전용 영상 필터링 (다운로드 불가 영상 제외)
-                    availability = entry.get("availability")
-                    if availability in ("subscriber_only", "needs_auth", "unlisted_subscriber_only"):
+                    if entry.get("_type") == "playlist":
+                        continue
+                    vid = entry.get("id") or ""
+                    if not vid or vid.startswith("UC"):
+                        continue
+                    v_title = entry.get("title") or ""
+                    if any(v_title.endswith(s) for s in [" - 동영상", " - 라이브", " - Shorts", " - Videos", " - Live"]):
+                        continue
+                    if any(kw in v_title.lower() for kw in ["멤버십", "회원전용", "멤버 전용", "rs 멤버", "#shorts"]):
                         continue
 
-                    vid = entry.get("id") or ""
-                    v_title = entry.get("title") or ""
-                    if any(kw in v_title.lower() for kw in ["멤버십", "회원전용", "멤버 전용", "rs 멤버"]):
+                    dur = entry.get("duration") or 0
+                    if 0 < dur <= 60:
                         continue
+
                     thumb = f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
                     if entry.get("thumbnails") and len(entry["thumbnails"]) > 0:
                         thumb = entry["thumbnails"][-1].get("url", thumb)
+
                     fallback_videos.append({
                         "id": vid,
                         "title": v_title,
                         "url": entry.get("url") if entry.get("url") and "http" in entry.get("url") else f"https://www.youtube.com/watch?v={vid}",
                         "published": "",
                         "channel_name": ch_title,
-                        "channel_url": target_ch_url or (f"https://www.youtube.com/channel/{ch_id}" if ch_id else ""),
+                        "channel_url": target_ch_url,
                         "thumbnail": thumb,
                         "view_count": entry.get("view_count") or 0,
-                        "duration": entry.get("duration") or 0
+                        "duration": dur,
+                        "duration_text": "",
+                        "time_text": "",
+                        "elapsed_seconds": idx * 3600
                     })
                 return fallback_videos
         except Exception:
@@ -485,8 +588,8 @@ def get_subscription_feed(req: FeedRequest):
             channel_results = list(executor.map(fetch_single_channel_feed, req.channels))
         
         all_videos = [v for sub in channel_results for v in sub]
-        # published ISO 날짜 기준 내림차순(최신순) 정렬
-        all_videos.sort(key=lambda x: x.get("published", ""), reverse=True)
+        # 상대 경과 시간(elapsed_seconds) 기준 오름차순(가장 적은 시간 경과 = 최신순) 정렬
+        all_videos.sort(key=lambda x: x.get("elapsed_seconds", 999999999))
         FEED_CACHE[cache_key] = {
             "timestamp": time.time(),
             "videos": all_videos

@@ -929,7 +929,18 @@ const ytExport = $('#ytExport');
 const ytImport = $('#ytImport');
 const ytReset = $('#ytReset');
 
-let ytData = [];
+const DEFAULT_YT_CHANNELS = [
+  { name: '보다', url: '@보다BODA' },
+  { name: '매불쇼', url: '@maebulshow' },
+  { name: '장르만 여의도', url: '@JTBCSHOW' },
+  { name: '정영진의 나쁜질문', url: '@정영진의나쁜질문' },
+  { name: '웃다가!', url: '@StudioPickle' },
+  { name: '제목없음TV', url: '@dony_untitled' },
+  { name: '14F', url: '@14FMBC' },
+  { name: '지식인사이드', url: '@지식인사이드' }
+];
+
+let ytData = DEFAULT_YT_CHANNELS.slice();
 
 function channelsToFileFormat(arr){
   return {
@@ -967,20 +978,27 @@ function getChannelsFromLocalStorage(){
     const raw = localStorage.getItem(YT_CHANNELS_STORAGE_KEY);
     if(!raw) return null;
     const list = JSON.parse(raw);
-    if(!Array.isArray(list)) return null;
-    validateChannelsData({ channels: list });
-    return list;
+    if(!Array.isArray(list) || list.length === 0) return null;
+    const cleaned = list.map(it => ({
+      name: String(it.name || '').trim(),
+      url: String(it.url || '').trim()
+    })).filter(it => it.name && it.url);
+    return cleaned.length > 0 ? cleaned : null;
   }catch(e){
     return null;
   }
 }
 
 async function getChannelsDefaultFromFile(){
-  const res = await fetch('./youtube-channels.json', { cache: 'no-store' });
-  if(!res.ok) throw new Error(`config/youtube-channels.json 로드 실패 (HTTP ${res.status})`);
-  const data = await res.json();
-  validateChannelsData(data);
-  return data.channels || [];
+  try{
+    const res = await fetch('./youtube-channels.json', { cache: 'no-store' });
+    if(!res.ok) return DEFAULT_YT_CHANNELS.slice();
+    const data = await res.json();
+    validateChannelsData(data);
+    return data.channels || DEFAULT_YT_CHANNELS.slice();
+  }catch(e){
+    return DEFAULT_YT_CHANNELS.slice();
+  }
 }
 
 function syncChannelsJsonFromData(){
@@ -1120,9 +1138,15 @@ $all('input[name="ytMode"]').forEach((r)=>{
 });
 
 async function loadChannelsIntoEditor(){
-  const stored = getChannelsFromLocalStorage();
-  const data = stored || (await getChannelsDefaultFromFile());
-  ytData = data;
+  try{
+    let data = getChannelsFromLocalStorage();
+    if(!data || data.length === 0){
+      data = await getChannelsDefaultFromFile();
+    }
+    ytData = (data && data.length > 0) ? data : DEFAULT_YT_CHANNELS.map(c => ({ ...c }));
+  }catch(e){
+    ytData = DEFAULT_YT_CHANNELS.map(c => ({ ...c }));
+  }
   syncChannelsJsonFromData();
   renderChannelsList();
 }
@@ -1185,10 +1209,12 @@ ytImport?.addEventListener('change', async ()=>{
 
 ytReset?.addEventListener('click', async ()=>{
   try{
-    if(!confirm('localStorage(guma_yt_channels)를 삭제하고 기본값(config/youtube-channels.json)으로 되돌릴까요?')) return;
+    if(!confirm('유튜브 채널 설정을 기본값(8개 채널)으로 초기화하시겠습니까?')) return;
     localStorage.removeItem(YT_CHANNELS_STORAGE_KEY);
-    await loadChannelsIntoEditor();
-    alert('초기화 완료: 기본 채널 목록으로 복원되었습니다.');
+    ytData = DEFAULT_YT_CHANNELS.map(c => ({ ...c }));
+    syncChannelsJsonFromData();
+    renderChannelsList();
+    alert('초기화 완료: 기본 8개 채널 목록으로 복원되었습니다.');
   }catch(e){
     alert(`초기화 실패: ${String(e?.message || e)}`);
   }

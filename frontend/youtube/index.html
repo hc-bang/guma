@@ -519,12 +519,18 @@
       urlInput.focus();
     });
 
-    // 시간 포맷팅 (초 -> MM:SS)
+    // 시간 포맷팅 (초 -> H:MM:SS 또는 MM:SS)
     function formatDuration(seconds) {
       if (!seconds) return '00:00';
-      const m = Math.floor(seconds / 60);
-      const s = Math.floor(seconds % 60);
-      return `${m}:${s < 10 ? '0' : ''}${s}`;
+      const sec = Math.floor(Number(seconds) || 0);
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      const pad = (n) => n < 10 ? '0' + n : n;
+      if (h > 0) {
+        return `${h}:${pad(m)}:${pad(s)}`;
+      }
+      return `${m}:${pad(s)}`;
     }
 
     // 영상 분석 요청
@@ -585,10 +591,14 @@
     let activeChannelUrl = ALL_FEED_ID;
 
     // 상대 시간 계산 (예: 24분 전, 3시간 전, 2일 전)
-    function formatRelativeTime(isoDateStr) {
-      if (!isoDateStr) return '';
+    function formatRelativeTime(dateOrStr) {
+      if (!dateOrStr) return '';
+      if (typeof dateOrStr === 'string' && (dateOrStr.includes('전') || dateOrStr.includes('ago') || dateOrStr.includes('스트리밍') || dateOrStr.includes('라이브'))) {
+        return dateOrStr;
+      }
       try {
-        const published = new Date(isoDateStr);
+        const published = new Date(dateOrStr);
+        if (isNaN(published.getTime())) return String(dateOrStr);
         const now = new Date();
         const diffSec = Math.floor((now - published) / 1000);
         if (diffSec < 60) return '방금 전';
@@ -688,26 +698,13 @@
       chHasMore = true;
       chLoading = false;
 
-      if (!loader) return;
-      loader.style.display = 'block';
-
-      if (activeChannelUrl === ALL_FEED_ID) {
-        loader.innerHTML = `
-          <button id="btn-initial-load" class="yt-btn-load-more" onclick="loadMoreChannelVideos()">
-            <span>🎬 최신 구독 영상 불러오기 (${channelsList.length}개 채널)</span>
-          </button>
-        `;
-      } else if (activeChannelUrl && channelsList && channelsList.length > 0) {
-        const currentCh = channelsList.find(c => c.url === activeChannelUrl) || channelsList[0];
-        const chName = currentCh ? currentCh.name : '선택된 채널';
-        loader.innerHTML = `
-          <button id="btn-initial-load" class="yt-btn-load-more" onclick="loadMoreChannelVideos()">
-            <span>🎬 '${chName}' 최근 영상 불러오기</span>
-          </button>
-        `;
-      } else {
-        loader.style.display = 'none';
+      if (!channelsList || channelsList.length === 0) {
+        if (loader) loader.style.display = 'none';
+        return;
       }
+
+      // 첫 번째 목록은 번거로운 버튼 클릭 없이 자동으로 즉시 조회
+      loadMoreChannelVideos();
     }
 
     // 최근 영상 페이징 로딩
@@ -773,12 +770,13 @@
           const card = document.createElement('div');
           card.className = 'yt-ch-card';
 
-          let viewsText = '';
-          if (v.view_count) {
+          let viewsText = (v.views_text || '').replace(/^조회수\s*/, '').trim();
+          if (!viewsText && v.view_count) {
             viewsText = v.view_count >= 10000 ? `${(v.view_count / 10000).toFixed(1)}만회` : `${v.view_count.toLocaleString()}회`;
           }
 
-          const relTime = formatRelativeTime(v.published);
+          const relTime = formatRelativeTime(v.time_text || v.published);
+          const durationStr = v.duration_text || (v.duration ? formatDuration(v.duration) : '');
           const chBadgeHtml = (v.channel_name)
             ? `<div class="yt-ch-badge">📺 ${v.channel_name}</div>`
             : '';
@@ -790,16 +788,26 @@
               <div class="yt-ch-title" title="${v.title}">${v.title}</div>
               <div class="yt-ch-meta">
                 <span>${viewsText ? '👁️ ' + viewsText : ''}</span>
-                <span>${relTime ? '🕒 ' + relTime : (v.duration ? '⏱️ ' + formatDuration(v.duration) : '')}</span>
+                <span>${relTime ? '🕒 ' + relTime : (durationStr ? '⏱️ ' + durationStr : '')}</span>
               </div>
             </div>
           `;
 
+          // 카드 클릭 시 불필요한 서버 재호출 없이 0초 만에 상단 결과 카드 표시 (봇 차단 에러 원천 방지)
           card.addEventListener('click', () => {
             urlInput.value = v.url;
             clearBtn.style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
-            analyzeBtn.click();
+
+            currentVideoUrl = v.url;
+            document.getElementById('yt-thumb').src = v.thumbnail;
+            document.getElementById('yt-card-title').textContent = v.title;
+            document.getElementById('yt-card-uploader').textContent = `👤 ${v.channel_name || '유튜브 채널'}`;
+            document.getElementById('yt-card-duration').textContent = durationStr ? `⏱️ ${durationStr}` : '';
+            document.getElementById('yt-card-views').textContent = viewsText ? `👁️ ${viewsText}` : '';
+            document.getElementById('yt-card-date').textContent = relTime ? `📅 ${relTime}` : (v.published ? `📅 ${v.published.split('T')[0]}` : '');
+            document.getElementById('yt-card-quality').textContent = 'HD';
+            resultCard.style.display = 'block';
           });
 
           container.appendChild(card);

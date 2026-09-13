@@ -96,6 +96,9 @@ body{
   display:flex;
   gap:10px;
   margin: 8px 0 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
 }
 
 .tab{
@@ -106,6 +109,8 @@ body{
   border-radius: 10px;
   cursor:pointer;
   font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tab.active{

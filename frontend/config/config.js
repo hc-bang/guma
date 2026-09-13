@@ -1,6 +1,7 @@
 const TOP_BOOKMARKS_STORAGE_KEY = 'topBookmarks';
 const SHORTCUTS_STORAGE_KEY = 'bookmarks';
 const SEARCH_ENGINES_STORAGE_KEY = 'searchEngines';
+const YT_CHANNELS_STORAGE_KEY = 'guma_yt_channels';
 
 function $(sel){
   return document.querySelector(sel);
@@ -60,6 +61,19 @@ function validateEnginesData(data){
   Object.keys(data.engines).forEach(key => {
     const e = data.engines[key];
     if (!e.label || !e.domain || !e.urlPattern) throw new Error(`engines['${key}'] 의 필수 값이 누락되었습니다.`);
+  });
+}
+
+function validateChannelsData(data){
+  if(!data || typeof data !== 'object') throw new Error('유튜브 채널 데이터는 객체 또는 배열이어야 합니다.');
+  const list = Array.isArray(data) ? data : data.channels;
+  if(!Array.isArray(list)) throw new Error('{ "channels": [...] } 형식이어야 합니다.');
+  list.forEach((it, idx)=>{
+    if(!it || typeof it !== 'object') throw new Error(`channels[${idx}]는 객체여야 합니다.`);
+    const name = String(it.name || '').trim();
+    const url = String(it.url || '').trim();
+    if(!name) throw new Error(`channels[${idx}].name 이 비어있습니다.`);
+    if(!url) throw new Error(`channels[${idx}].url 이 비어있습니다.`);
   });
 }
 
@@ -905,16 +919,290 @@ egReset.addEventListener('click', async ()=>{
   }
 });
 
+// --- YouTube Channels ---
+const ytJson = $('#ytJson');
+const ytJsonLabel = $('#ytJsonLabel');
+const ytList = $('#ytList');
+const ytLoad = $('#ytLoad');
+const ytApply = $('#ytApply');
+const ytExport = $('#ytExport');
+const ytImport = $('#ytImport');
+const ytReset = $('#ytReset');
+
+let ytData = [];
+
+function channelsToFileFormat(arr){
+  return { channels: arr };
+}
+
+function fileFormatToChannels(obj){
+  if(!obj || typeof obj !== 'object') throw new Error('youtube channels 파일은 객체여야 합니다.');
+  if(Array.isArray(obj)) return obj;
+  if(!Array.isArray(obj.channels)) throw new Error('{ "channels": [...] } 형식이어야 합니다.');
+  return obj.channels;
+}
+
+function normalizeChannelUrl(url){
+  let u = String(url || '').trim();
+  if(!u) return '';
+  if(u.startsWith('@')){
+    return `https://www.youtube.com/${u}/videos`;
+  }
+  if(!/^https?:\/\//i.test(u)){
+    return 'https://www.youtube.com/' + u;
+  }
+  return u;
+}
+
+function getChannelsFromLocalStorage(){
+  try{
+    const raw = localStorage.getItem(YT_CHANNELS_STORAGE_KEY);
+    if(!raw) return null;
+    const list = JSON.parse(raw);
+    if(!Array.isArray(list)) return null;
+    validateChannelsData({ channels: list });
+    return list;
+  }catch(e){
+    return null;
+  }
+}
+
+async function getChannelsDefaultFromFile(){
+  const res = await fetch('./youtube-channels.json', { cache: 'no-store' });
+  if(!res.ok) throw new Error(`config/youtube-channels.json 로드 실패 (HTTP ${res.status})`);
+  const data = await res.json();
+  validateChannelsData(data);
+  return data.channels || [];
+}
+
+function syncChannelsJsonFromData(){
+  if(ytJson) ytJson.value = JSON.stringify(channelsToFileFormat(ytData), null, 2);
+}
+
+function syncChannelsDataFromJson(){
+  const obj = JSON.parse(ytJson?.value || 'null');
+  const arr = fileFormatToChannels(obj);
+  ytData = arr;
+}
+
+function renderChannelRow(item, index){
+  const node = document.createElement('div');
+  node.className = 'node';
+
+  const header = document.createElement('div');
+  header.className = 'node-header';
+
+  const badge = document.createElement('span');
+  badge.className = 'node-badge';
+  badge.textContent = 'CHANNEL';
+
+  const nameField = document.createElement('div');
+  nameField.className = 'field';
+  nameField.style.flex = '1';
+  const nameInput = document.createElement('input');
+  nameInput.placeholder = '채널 이름 (예: PBA TV)';
+  nameInput.value = item?.name || '';
+  nameInput.oninput = ()=>{
+    item.name = nameInput.value;
+    syncChannelsJsonFromData();
+  };
+  nameField.appendChild(nameInput);
+
+  const urlField = document.createElement('div');
+  urlField.className = 'field';
+  urlField.style.flex = '2';
+  const urlInput = document.createElement('input');
+  urlInput.placeholder = 'URL 또는 @핸들';
+  urlInput.value = item?.url || '';
+  urlInput.oninput = ()=>{
+    item.url = urlInput.value;
+    syncChannelsJsonFromData();
+  };
+  urlField.appendChild(urlInput);
+
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'mini danger';
+  delBtn.textContent = '삭제';
+  delBtn.onclick = ()=>{
+    ytData.splice(index, 1);
+    syncChannelsJsonFromData();
+    renderChannelsList();
+  };
+
+  header.appendChild(badge);
+  header.appendChild(nameField);
+  header.appendChild(urlField);
+  header.appendChild(delBtn);
+
+  node.appendChild(header);
+  return node;
+}
+
+function renderChannelsList(){
+  if(!ytList) return;
+  ytList.innerHTML = '';
+
+  const top = document.createElement('div');
+  top.className = 'node';
+
+  const header = document.createElement('div');
+  header.className = 'node-header';
+
+  const badge = document.createElement('span');
+  badge.className = 'node-badge';
+  badge.textContent = `CHANNELS (${ytData.length})`;
+
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'mini';
+  addBtn.textContent = '채널 추가';
+  addBtn.onclick = ()=>{
+    ytData.push({
+      id: 'custom-' + Date.now(),
+      name: '새 채널',
+      url: 'https://www.youtube.com/@'
+    });
+    syncChannelsJsonFromData();
+    renderChannelsList();
+  };
+
+  header.appendChild(badge);
+  header.appendChild(addBtn);
+  top.appendChild(header);
+
+  const children = document.createElement('div');
+  children.className = 'node-children';
+
+  ytData.forEach((it, idx)=>{
+    children.appendChild(renderChannelRow(it, idx));
+  });
+
+  top.appendChild(children);
+  ytList.appendChild(top);
+}
+
+function setYtMode(mode){
+  if(mode === 'json'){
+    ytList?.classList.add('hidden');
+    ytJson?.classList.remove('hidden');
+    ytJsonLabel?.classList.remove('hidden');
+    syncChannelsJsonFromData();
+  }else{
+    ytList?.classList.remove('hidden');
+    ytJson?.classList.add('hidden');
+    ytJsonLabel?.classList.add('hidden');
+    try{
+      if(ytJson?.value.trim()){
+        syncChannelsDataFromJson();
+      }
+    }catch(e){
+      alert(`JSON 파싱 실패: ${String(e?.message || e)}`);
+      setMode('ytMode', 'json');
+      setYtMode('json');
+      return;
+    }
+    renderChannelsList();
+  }
+}
+
+$all('input[name="ytMode"]').forEach((r)=>{
+  r.addEventListener('change', ()=>{
+    setYtMode(r.value);
+  });
+});
+
+async function loadChannelsIntoEditor(){
+  const stored = getChannelsFromLocalStorage();
+  const data = stored || (await getChannelsDefaultFromFile());
+  ytData = data;
+  syncChannelsJsonFromData();
+  renderChannelsList();
+}
+
+ytLoad?.addEventListener('click', async ()=>{
+  try{
+    await loadChannelsIntoEditor();
+  }catch(e){
+    alert(String(e?.message || e));
+  }
+});
+
+ytApply?.addEventListener('click', ()=>{
+  try{
+    const obj = JSON.parse(ytJson?.value || 'null');
+    const arr = fileFormatToChannels(obj);
+    arr.forEach(c => {
+      c.url = normalizeChannelUrl(c.url);
+      if(!c.id) c.id = 'ch-' + Date.now() + Math.random().toString(36).slice(2, 6);
+    });
+    validateChannelsData({ channels: arr });
+    ytData = arr;
+    localStorage.setItem(YT_CHANNELS_STORAGE_KEY, JSON.stringify(arr));
+    syncChannelsJsonFromData();
+    renderChannelsList();
+    alert('유튜브 채널 저장 완료: 유튜브 다운로더 페이지에 즉시 반영됩니다.');
+  }catch(e){
+    alert(`적용 실패: ${String(e?.message || e)}`);
+  }
+});
+
+ytExport?.addEventListener('click', ()=>{
+  try{
+    const obj = JSON.parse(ytJson?.value || 'null');
+    const arr = fileFormatToChannels(obj);
+    validateChannelsData({ channels: arr });
+    downloadJson('youtube-channels.json', { channels: arr });
+  }catch(e){
+    alert(`Export 실패: ${String(e?.message || e)}`);
+  }
+});
+
+ytImport?.addEventListener('change', async ()=>{
+  const file = ytImport?.files?.[0];
+  if(!file) return;
+  try{
+    const data = await readJsonFile(file);
+    const arr = fileFormatToChannels(data);
+    validateChannelsData({ channels: arr });
+    ytData = arr;
+    syncChannelsJsonFromData();
+    renderChannelsList();
+    alert('Import 완료(에디터에 반영). 필요하면 “적용”을 눌러 저장하세요.');
+  }catch(e){
+    alert(`Import 실패: ${String(e?.message || e)}`);
+  }finally{
+    if(ytImport) ytImport.value = '';
+  }
+});
+
+ytReset?.addEventListener('click', async ()=>{
+  try{
+    if(!confirm('localStorage(guma_yt_channels)를 삭제하고 기본값(config/youtube-channels.json)으로 되돌릴까요?')) return;
+    localStorage.removeItem(YT_CHANNELS_STORAGE_KEY);
+    await loadChannelsIntoEditor();
+    alert('초기화 완료: 기본 채널 목록으로 복원되었습니다.');
+  }catch(e){
+    alert(`초기화 실패: ${String(e?.message || e)}`);
+  }
+});
+
 // theme (홈과 동일한 localStorage 키 사용) - 편집기에서는 토글 버튼 없이 적용만
 if(localStorage.getItem('theme') === 'dark'){
   document.body.classList.add('dark');
 }
 
+// URL 쿼리 파라미터로 초기 탭 지정 지원 (?tab=youtube 등)
+const urlParams = new URLSearchParams(window.location.search);
+const initialTab = urlParams.get('tab') || 'top';
+
 // init
-setEditorTab('top');
+setEditorTab(initialTab);
 setTopMode('tree');
 setScMode('list');
 setEgMode('list');
+setYtMode('list');
 loadTopIntoEditor().catch(()=>{});
 loadShortcutsIntoEditor();
 loadEnginesIntoEditor();
+loadChannelsIntoEditor();

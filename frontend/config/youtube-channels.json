@@ -1,0 +1,60 @@
+{
+  "channels": [
+    {
+      "id": "custom-1789261209042",
+      "name": "보다",
+      "url": "https://www.youtube.com/@보다BODA/videos",
+      "channel_id": "UCoCvTlU0KpNYwnMIgs7MPrA",
+      "isDefault": true
+    },
+    {
+      "id": "custom-1789265730315",
+      "name": "매불쇼",
+      "url": "https://www.youtube.com/@maebulshow/videos",
+      "channel_id": "UCMYhq9OyGI5UEz_NTAoHY7A",
+      "isDefault": true
+    },
+    {
+      "id": "custom-1789265774053",
+      "name": "장르만 여의도",
+      "url": "https://www.youtube.com/@JTBCSHOW/videos",
+      "channel_id": "UCsqWTNmoaNPvsfeCgaD7BpQ",
+      "isDefault": true
+    },
+    {
+      "id": "custom-1789265800709",
+      "name": "정영진의 나쁜질문",
+      "url": "https://www.youtube.com/@정영진의나쁜질문/videos",
+      "channel_id": "UCmkOpe3VTehtoIVUuHvdhOw",
+      "isDefault": true
+    },
+    {
+      "id": "custom-1789265826510",
+      "name": "웃다가!",
+      "url": "https://www.youtube.com/@StudioPickle/videos",
+      "channel_id": "UCpcD2T7V2TTzaT4ZMQEOm1w",
+      "isDefault": true
+    },
+    {
+      "id": "custom-1789265866679",
+      "name": "제목없음TV",
+      "url": "https://www.youtube.com/@dony_untitled/videos",
+      "channel_id": "UCsbNh54XE17pOZrdqW3VyXQ",
+      "isDefault": true
+    },
+    {
+      "id": "custom-1789265886704",
+      "name": "14F",
+      "url": "https://www.youtube.com/@14FMBC/videos",
+      "channel_id": "UCLKuglhGlMmDteQKoniENIQ",
+      "isDefault": true
+    },
+    {
+      "id": "custom-1789265909329",
+      "name": "지식인사이드",
+      "url": "https://www.youtube.com/@지식인사이드/videos",
+      "channel_id": "UCA_hgsFzmynpv1zkvA5A7jA",
+      "isDefault": true
+    }
+  ]
+}

@@ -1,6 +1,11 @@
 import os
 import tempfile
 import datetime
+import time
+import urllib.request
+import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -26,6 +31,21 @@ class ChannelRequest(BaseModel):
     channel_url: str = "https://www.youtube.com/@RSBilliards/videos"
     limit: int = 10
     offset: int = 0
+
+class ChannelItem(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    url: Optional[str] = None
+    channel_id: Optional[str] = None
+
+class FeedRequest(BaseModel):
+    channels: List[ChannelItem] = []
+    limit: int = 12
+    offset: int = 0
+
+# 채널 ID 및 통합 피드 인메모리 캐시
+CHANNEL_ID_CACHE: Dict[str, str] = {}
+FEED_CACHE: Dict[Any, Dict[str, Any]] = {}
 
 def cleanup_file(path: str):
     """다운로드 완료 후 임시 파일을 삭제합니다."""
@@ -213,6 +233,158 @@ def get_channel_videos(req: ChannelRequest):
             }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"채널 영상 추출 실패: 채널 핸들/URL을 확인하세요. ({str(e)})")
+
+def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
+    ch_id = ch.channel_id
+    ch_url = ch.url or ""
+    
+    if not ch_id and ch_url:
+        ch_id = CHANNEL_ID_CACHE.get(ch_url)
+        if not ch_id:
+            try:
+                with yt_dlp.YoutubeDL({'extract_flat': True, 'playlistend': 1, 'quiet': True, 'no_warnings': True}) as ydl:
+                    info = ydl.extract_info(ch_url, download=False)
+                    ch_id = info.get('channel_id') or info.get('id')
+                    if ch_id:
+                        CHANNEL_ID_CACHE[ch_url] = ch_id
+            except Exception:
+                pass
+
+    if ch_id:
+        url = f"https://www.youtube.com/feeds/videos.xml?channel_id={ch_id}"
+        req = urllib.request.Request(url)
+        try:
+            xml_data = urllib.request.urlopen(req, timeout=6).read()
+            root = ET.fromstring(xml_data)
+            ns = {
+                'atom': 'http://www.w3.org/2005/Atom',
+                'yt': 'http://www.youtube.com/xml/schemas/2015',
+                'media': 'http://search.yahoo.com/mrss/'
+            }
+            channel_title = ch.name or (root.find('atom:title', ns).text if root.find('atom:title', ns) is not None else "유튜브 채널")
+            videos = []
+            for e in root.findall('atom:entry', ns):
+                vid_el = e.find('yt:videoId', ns)
+                vid = vid_el.text if vid_el is not None else ""
+                title_el = e.find('atom:title', ns)
+                title = title_el.text if title_el is not None else "제목 없음"
+                
+                if any(kw in title.lower() for kw in ["멤버십", "회원전용", "멤버 전용"]):
+                    continue
+                
+                pub_el = e.find('atom:published', ns)
+                pub = pub_el.text if pub_el is not None else ""
+                
+                thumb_elem = e.find('.//media:thumbnail', ns)
+                thumb = thumb_elem.attrib['url'] if thumb_elem is not None and 'url' in thumb_elem.attrib else f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+                
+                views_elem = e.find('.//media:statistics', ns)
+                views = int(views_elem.attrib.get('views', 0)) if views_elem is not None else 0
+
+                videos.append({
+                    "id": vid,
+                    "title": title,
+                    "url": f"https://www.youtube.com/watch?v={vid}",
+                    "published": pub,
+                    "channel_name": ch.name or channel_title,
+                    "channel_url": ch_url or f"https://www.youtube.com/channel/{ch_id}",
+                    "thumbnail": thumb,
+                    "view_count": views,
+                    "duration": 0
+                })
+            if videos:
+                return videos
+        except Exception:
+            pass
+
+    # RSS 실패 시 yt-dlp flat extraction 폴백
+    if ch_url:
+        try:
+            ydl_opts = {
+                'extract_flat': True,
+                'playlistend': 10,
+                'quiet': True,
+                'no_warnings': True,
+                'no_check_certificates': True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(ch_url, download=False)
+                ch_title = ch.name or info.get("title") or "유튜브 채널"
+                entries = info.get("entries") or []
+                fallback_videos = []
+                for entry in entries:
+                    if not entry:
+                        continue
+                    vid = entry.get("id") or ""
+                    v_title = entry.get("title") or ""
+                    if any(kw in v_title.lower() for kw in ["멤버십", "회원전용", "멤버 전용"]):
+                        continue
+                    thumb = f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+                    if entry.get("thumbnails") and len(entry["thumbnails"]) > 0:
+                        thumb = entry["thumbnails"][-1].get("url", thumb)
+                    fallback_videos.append({
+                        "id": vid,
+                        "title": v_title,
+                        "url": entry.get("url") if entry.get("url") and "http" in entry.get("url") else f"https://www.youtube.com/watch?v={vid}",
+                        "published": "",
+                        "channel_name": ch_title,
+                        "channel_url": ch_url,
+                        "thumbnail": thumb,
+                        "view_count": entry.get("view_count") or 0,
+                        "duration": entry.get("duration") or 0
+                    })
+                return fallback_videos
+        except Exception:
+            pass
+
+    return []
+
+@router.post("/feed")
+def get_subscription_feed(req: FeedRequest):
+    """
+    등록된 여러 유튜브 채널의 최신 영상을 채널 구분 없이 최신 발행일시 순으로 통합하여 페이징 반환합니다.
+    """
+    if not req.channels:
+        return {
+            "success": True,
+            "videos": [],
+            "total_count": 0,
+            "has_more": False,
+            "offset": 0,
+            "limit": req.limit
+        }
+
+    cache_key = tuple(sorted((c.channel_id or c.url or "") for c in req.channels))
+    cached = FEED_CACHE.get(cache_key)
+
+    # 5분(300초) 이내 캐시 유효
+    if cached and (time.time() - cached.get("timestamp", 0) < 300):
+        all_videos = cached.get("videos", [])
+    else:
+        with ThreadPoolExecutor(max_workers=min(10, len(req.channels))) as executor:
+            channel_results = list(executor.map(fetch_single_channel_feed, req.channels))
+        
+        all_videos = [v for sub in channel_results for v in sub]
+        # published ISO 날짜 기준 내림차순(최신순) 정렬
+        all_videos.sort(key=lambda x: x.get("published", ""), reverse=True)
+        FEED_CACHE[cache_key] = {
+            "timestamp": time.time(),
+            "videos": all_videos
+        }
+
+    offset = req.offset or 0
+    limit = req.limit or 12
+    sliced = all_videos[offset : offset + limit]
+    has_more = len(all_videos) > (offset + limit)
+
+    return {
+        "success": True,
+        "videos": sliced,
+        "total_count": len(all_videos),
+        "has_more": has_more,
+        "offset": offset,
+        "limit": limit
+    }
 
 @router.get("/download")
 def download_video(url: str, format_type: str = "mp4", background_tasks: BackgroundTasks = None):

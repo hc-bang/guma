@@ -672,12 +672,27 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
         'no_warnings': True,
         'no_check_certificates': True,
         'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
             'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Sec-Ch-Ua': '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
         }
     }
 
     if cookie_file and os.path.exists(cookie_file):
         base_ydl_opts['cookiefile'] = cookie_file
+        base_ydl_opts['extractor_args'] = {
+            'youtube': {
+                'player_client': ['web', 'mweb'],
+                'lang': ['ko']
+            }
+        }
     else:
         # 쿠키가 없을 때는 모바일 클라이언트로 1차 시도
         base_ydl_opts['extractor_args'] = {
@@ -687,6 +702,7 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
                 'lang': ['ko']
             }
         }
+
 
     if format_type.lower() == "mp3":
         ydl_opts = {

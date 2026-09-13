@@ -29,29 +29,44 @@ router = APIRouter(
 
 def get_youtube_cookie_path() -> Optional[str]:
     """
-    1. YOUTUBE_COOKIES 환경 변수 (텍스트 형태의 Netscape 쿠키)
-    2. 로컬 디렉터리의 cookies.txt 파일 (backend/cookies.txt 또는 루트 cookies.txt)
+    1. YOUTUBE_COOKIES 환경 변수 (개행문자 및 인코딩 보정)
+    2. Render Secret Files 경로 (/etc/secrets/cookies.txt)
+    3. 로컬 디렉터리의 cookies.txt 파일 (backend/cookies.txt 또는 루트 cookies.txt)
     위 순서로 쿠키 파일 경로를 반환합니다.
     """
     env_cookies = os.environ.get("YOUTUBE_COOKIES", "").strip()
     if env_cookies:
         try:
+            # 리터럴 문자열 '\n'으로 들어온 경우 실제 개행으로 복원
+            if "\\n" in env_cookies and "\n" not in env_cookies:
+                env_cookies = env_cookies.replace("\\r\\n", "\n").replace("\\n", "\n")
+            
             temp_cookie = os.path.join(tempfile.gettempdir(), "guma_yt_cookies.txt")
             with open(temp_cookie, "w", encoding="utf-8") as f:
                 f.write(env_cookies)
+            
+            size = os.path.getsize(temp_cookie)
+            print(f"[YouTube] YOUTUBE_COOKIES 환경 변수 쿠키 적용 완료 (크기: {size} bytes)")
             return temp_cookie
         except Exception as e:
-            print(f"쿠키 환경변수 임시 파일 생성 실패: {e}")
+            print(f"[YouTube] 쿠키 환경변수 임시 파일 생성 실패: {e}")
 
-    local_cookie_candidates = [
+    # Render Secret Files 및 로컬 파일 탐색
+    cookie_candidates = [
+        "/etc/secrets/cookies.txt",
+        "/etc/secrets/YOUTUBE_COOKIES",
         os.path.join(os.getcwd(), "backend", "cookies.txt"),
         os.path.join(os.getcwd(), "cookies.txt"),
     ]
-    for c in local_cookie_candidates:
+    for c in cookie_candidates:
         if os.path.exists(c):
+            size = os.path.getsize(c)
+            print(f"[YouTube] 쿠키 파일 감지 및 적용: {c} (크기: {size} bytes)")
             return c
 
+    print("[YouTube] 쿠키 파일이 설정되지 않았습니다.")
     return None
+
 
 def cleanup_file(path: str):
     """다운로드 완료 후 임시 파일을 삭제합니다."""
@@ -762,12 +777,17 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
 
     except Exception as e:
         err_msg = str(e)
+        cookie_status = f"[쿠키 파일 적용됨: {os.path.getsize(cookie_file)}B]" if (cookie_file and os.path.exists(cookie_file)) else "[쿠키 미감지]"
+        print(f"[YouTube Download Error] {cookie_status}: {err_msg}")
+
         if any(k in err_msg for k in ["봇이 아님", "Sign in to confirm", "bot"]):
-            raise HTTPException(
-                status_code=403,
-                detail="유튜브 다운로드 실패 (봇 차단): 클라우드 서버 IP가 감지되었습니다. Render 환경 변수(YOUTUBE_COOKIES)에 쿠키를 등록해 주세요."
-            )
+            if cookie_file and os.path.exists(cookie_file):
+                detail_msg = f"유튜브 다운로드 실패: 쿠키가 적용되었으나 구글이 거부했습니다. {cookie_status}. (유튜브 웹에서 로그인 상태를 확인하고 쿠키를 다시 추출해 주세요.)"
+            else:
+                detail_msg = f"유튜브 다운로드 실패: Render 서버가 아직 쿠키를 읽지 못했습니다. {cookie_status}. (Render 대시보드 Environment의 Save 후 재배포 완료를 잠시 기다려 주세요.)"
+            raise HTTPException(status_code=403, detail=detail_msg)
         raise HTTPException(status_code=500, detail=f"유튜브 다운로드 실패: {err_msg}")
+
 
 
 

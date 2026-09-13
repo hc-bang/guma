@@ -1,7 +1,6 @@
 import os
 import re
 import json
-import tempfile
 import datetime
 import time
 import urllib.request
@@ -9,23 +8,15 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import yt_dlp
 
-# ffmpeg 바이너리 자동 로딩 (imageio-ffmpeg 지원)
-FFMPEG_PATH = None
-try:
-    import imageio_ffmpeg
-    FFMPEG_PATH = imageio_ffmpeg.get_ffmpeg_exe()
-except Exception:
-    pass
-
 router = APIRouter(
     prefix="/api/youtube",
-    tags=["YouTube Downloader"]
+    tags=["YouTube"]
 )
+
 
 class VideoInfoRequest(BaseModel):
     url: str
@@ -98,14 +89,6 @@ def resolve_channel_id(ch_url: str = "", ch_id: Optional[str] = None) -> Optiona
         pass
 
     return None
-
-def cleanup_file(path: str):
-    """다운로드 완료 후 임시 파일을 삭제합니다."""
-    try:
-        if os.path.exists(path):
-            os.remove(path)
-    except Exception as e:
-        print(f"임시 파일 삭제 실패 ({path}): {e}")
 
 @router.post("/info")
 def get_video_info(req: VideoInfoRequest):
@@ -609,116 +592,4 @@ def get_subscription_feed(req: FeedRequest):
         "limit": limit
     }
 
-@router.get("/download")
-def download_video(url: str, format_type: str = "mp4", background_tasks: BackgroundTasks = None):
-    """
-    선택한 유튜브 포맷(mp4 비디오 또는 mp3 오디오)으로 변환/다운로드하여 스트리밍 파일을 반환합니다.
-    """
-    if not url:
-        raise HTTPException(status_code=400, detail="유효한 유튜브 URL이 필요합니다.")
 
-    temp_dir = tempfile.gettempdir()
-    out_tmpl = os.path.join(temp_dir, 'guma_yt_%(id)s_%(ext)s')
-
-    base_ydl_opts = {
-        'outtmpl': out_tmpl,
-        'quiet': True,
-        'no_warnings': True,
-        'no_check_certificates': True,
-        'http_headers': {
-            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        },
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['android', 'ios'],
-                'player_skip': ['webpage', 'configs'],
-                'lang': ['ko']
-            }
-        }
-    }
-
-    if format_type.lower() == "mp3":
-        ydl_opts = {
-            **base_ydl_opts,
-            'format': 'ba/bestaudio/best',
-        }
-        if FFMPEG_PATH:
-            ydl_opts['ffmpeg_location'] = FFMPEG_PATH
-            ydl_opts['postprocessors'] = [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }]
-        media_type = "audio/mpeg"
-        default_ext = "mp3"
-    else:
-        # mp4 format
-        if FFMPEG_PATH:
-            format_spec = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
-        else:
-            format_spec = 'best[ext=mp4]/best'
-
-        ydl_opts = {
-            **base_ydl_opts,
-            'format': format_spec,
-        }
-        if FFMPEG_PATH:
-            ydl_opts['ffmpeg_location'] = FFMPEG_PATH
-            ydl_opts['merge_output_format'] = 'mp4'
-
-        media_type = "video/mp4"
-        default_ext = "mp4"
-
-    try:
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-        except Exception as first_err:
-            # 봇 차단(Sign in to confirm...) 발생 시 tv_embedded 또는 호환 포맷으로 2차 폴백 시도
-            fallback_opts = {
-                **ydl_opts,
-                'format': 'ba/bestaudio/best' if format_type.lower() == 'mp3' else '18/best[ext=mp4]/best',
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['tv_embedded', 'android'],
-                        'player_skip': ['webpage', 'configs'],
-                        'lang': ['ko']
-                    }
-                }
-            }
-            with yt_dlp.YoutubeDL(fallback_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-
-        title = info.get("title", "video").replace("/", "_").replace("\\", "_")
-        
-        # 실제 생성된 파일 경로 찾기
-        downloaded_file = ydl.prepare_filename(info)
-        
-        # mp3 변환 후 확장자 보정
-        if format_type.lower() == "mp3" and FFMPEG_PATH:
-            base, _ = os.path.splitext(downloaded_file)
-            downloaded_file = base + ".mp3"
-
-        if not os.path.exists(downloaded_file):
-            # 백업: temp_dir 내에서 패턴에 맞는 파일 탐색
-            video_id = info.get("id", "")
-            files = [os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.startswith(f"guma_yt_{video_id}")]
-            if files:
-                downloaded_file = files[0]
-            else:
-                raise HTTPException(status_code=500, detail="다운로드된 파일을 찾을 수 없습니다.")
-
-        clean_filename = f"{title}.{default_ext}"
-
-        # 백그라운드 태스크로 파일 다운로드 후 임시 파일 자동 삭제
-        if background_tasks:
-            background_tasks.add_task(cleanup_file, downloaded_file)
-
-        return FileResponse(
-            path=downloaded_file,
-            filename=clean_filename,
-            media_type=media_type
-        )
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"유튜브 다운로드 실패: {str(e)}")

@@ -393,6 +393,97 @@
       color: var(--accent);
       font-weight: 700;
     }
+
+    /* Direct Download Modal (Cobalt Bridge) */
+    .yt-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .yt-modal {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      max-width: 440px;
+      width: 100%;
+      padding: 22px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+      animation: modalFadeIn .18s ease;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .yt-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .yt-modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text);
+    }
+    .yt-modal-close {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: var(--muted);
+      line-height: 1;
+      padding: 0 4px;
+    }
+    .yt-modal-body {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .yt-modal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .yt-btn-cobalt {
+      background: #ff4b4b;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 11px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity .18s;
+      text-decoration: none;
+    }
+    .yt-btn-cobalt:hover {
+      opacity: 0.9;
+    }
+    .yt-btn-copy {
+      background: var(--btn);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
   </style>
 </head>
 
@@ -473,10 +564,12 @@
                 <span id="yt-card-quality" class="yt-quality-badge">HD</span>
               </div>
             </div>
-            <div class="yt-actions">
-              <button id="btn-dl-mp4" class="yt-dl-btn">MP4 다운로드</button>
-              <button id="btn-dl-mp3" class="yt-dl-btn">MP3 다운로드</button>
+            <div class="yt-actions" style="flex-wrap: wrap; gap: 8px;">
+              <button id="btn-dl-mp4" class="yt-dl-btn" style="flex: 0 0 150px; width: 150px; font-weight: 700;">🎬 MP4 다운로드</button>
+              <button id="btn-dl-mp3" class="yt-dl-btn" style="flex: 0 0 150px; width: 150px; font-weight: 700;">🎵 MP3 다운로드</button>
             </div>
+
+
           </div>
         </div>
       </div>
@@ -494,10 +587,39 @@
       <!-- Video Grid & Loader -->
       <div id="rs-billiards-list" class="yt-channel-grid"></div>
       <div id="rs-billiards-loader" class="yt-channel-loading" style="margin-top: 16px;">최근 영상을 불러오는 중...</div>
+  </div>
+  </div>
+
+  <!-- Direct Download Modal (Cobalt Bridge) -->
+  <div id="direct-dl-modal" class="yt-modal-overlay" onclick="handleModalOverlayClick(event)">
+    <div class="yt-modal">
+      <div class="yt-modal-header">
+        <div class="yt-modal-title">⚡ 클라이언트 다이렉트 다운로드</div>
+        <button class="yt-modal-close" onclick="closeDirectDownloadModal()">&times;</button>
+      </div>
+      <div class="yt-modal-body">
+        <div style="background:color-mix(in srgb, var(--accent) 12%, var(--panel)); border:1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); border-radius:10px; padding:12px; margin-bottom:14px;">
+          <div style="font-weight:700; color:var(--accent); margin-bottom:4px; font-size:13px;">🛡️ 데이터센터 봇 차단 우회 연동</div>
+          <div style="font-size:12px; color:var(--text); line-height:1.45;">
+            Render 서버 IP가 유튜브 봇 차단된 경우, 내 브라우저에서 무광고 오픈소스 미디어 다운로더(Cobalt)를 통해 영상을 안전하게 직접 내려받습니다.
+          </div>
+        </div>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">다운로드 대상 영상:</div>
+        <div id="modal-video-title" style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px; word-break:break-all;"></div>
+      </div>
+      <div class="yt-modal-actions">
+        <a id="modal-cobalt-link" href="#" target="_blank" rel="noopener noreferrer" class="yt-btn-cobalt">
+          <span>🚀 Cobalt 다이렉트 다운로더 열기</span>
+        </a>
+        <button id="modal-copy-btn" class="yt-btn-copy" onclick="copyModalUrl()">
+          <span>📋 영상 주소 복사하기</span>
+        </button>
+      </div>
     </div>
   </div>
 
   <script>
+
     const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
       ? 'http://127.0.0.1:8000'
       : (window.GUMA_API_BASE || 'https://guma.onrender.com');
@@ -841,42 +963,81 @@
 
     initChannels();
 
-    // 다운로드 실행 함수
-    async function triggerDownload(formatType) {
-      if (!currentVideoUrl) return;
+    // 다이렉트 다운로드 모달 제어
+    function showDirectDownloadModal(targetUrl, formatType = 'mp4') {
+      const modal = document.getElementById('direct-dl-modal');
+      const titleEl = document.getElementById('modal-video-title');
+      const linkEl = document.getElementById('modal-cobalt-link');
+      
+      const currentTitle = document.getElementById('yt-card-title')?.textContent || '선택한 유튜브 영상';
+      if (titleEl) titleEl.textContent = currentTitle;
 
-      const mp4Btn = document.getElementById('btn-dl-mp4');
-      const mp3Btn = document.getElementById('btn-dl-mp3');
-      const targetBtn = formatType === 'mp4' ? mp4Btn : mp3Btn;
-      const originalText = targetBtn.innerHTML;
+      const cleanUrl = targetUrl || currentVideoUrl;
+      if (linkEl) {
+        // Cobalt 웹 UI로 다이렉트 연결 (타겟 URL 자동 전달)
+        linkEl.href = `https://cobalt.tools/#${encodeURIComponent(cleanUrl)}`;
+      }
 
-      targetBtn.disabled = true;
-      mp4Btn.disabled = true;
-      mp3Btn.disabled = true;
-      targetBtn.innerHTML = `<span>⏳ 다운로드 중...</span>`;
+      // 모바일/PC 어디서든 즉시 붙여넣을 수 있도록 클립보드 복사 자동 시도
+      if (navigator.clipboard && cleanUrl) {
+        navigator.clipboard.writeText(cleanUrl).catch(() => {});
+      }
 
-      try {
-        const downloadUrl = `${API_BASE}/api/youtube/download?url=${encodeURIComponent(currentVideoUrl)}&format_type=${formatType}`;
+      if (modal) modal.style.display = 'flex';
+    }
 
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = '';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      } catch (err) {
-        alert(`다운로드 오류: ${err.message}`);
-      } finally {
-        setTimeout(() => {
-          targetBtn.innerHTML = originalText;
-          mp4Btn.disabled = false;
-          mp3Btn.disabled = false;
-        }, 3000);
+    function closeDirectDownloadModal() {
+      const modal = document.getElementById('direct-dl-modal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function handleModalOverlayClick(e) {
+      if (e.target.id === 'direct-dl-modal') {
+        closeDirectDownloadModal();
       }
     }
 
-    document.getElementById('btn-dl-mp4').addEventListener('click', () => triggerDownload('mp4'));
-    document.getElementById('btn-dl-mp3').addEventListener('click', () => triggerDownload('mp3'));
+    function copyModalUrl() {
+      const cleanUrl = currentVideoUrl;
+      if (!cleanUrl) return;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(cleanUrl).then(() => {
+          const btn = document.getElementById('modal-copy-btn');
+          if (btn) {
+            const old = btn.innerHTML;
+            btn.innerHTML = '<span>✅ 주소가 복사되었습니다!</span>';
+            setTimeout(() => { btn.innerHTML = old; }, 2000);
+          }
+        });
+      }
+    }
+
+    // 2단계 대기 없이 즉시 새로운 방식(클라이언트 다이렉트 브릿지 / Cobalt)으로 다운로드 실행
+    function triggerDirectDownload(formatType = 'mp4') {
+      if (!currentVideoUrl) {
+        alert('먼저 영상을 선택하거나 URL을 분석하세요.');
+        return;
+      }
+
+      const cleanUrl = currentVideoUrl;
+      const cobaltUrl = `https://cobalt.tools/#${encodeURIComponent(cleanUrl)}`;
+
+      // 1. 영상 주소 클립보드 자동 복사
+      if (navigator.clipboard && cleanUrl) {
+        navigator.clipboard.writeText(cleanUrl).catch(() => {});
+      }
+
+      // 2. 0초 만에 Cobalt 다운로더 새 탭 오픈
+      const newWin = window.open(cobaltUrl, '_blank');
+
+      // 3. 브라우저 팝업 차단이 걸렸거나 모바일 보조를 위해 모달도 함께 표시
+      showDirectDownloadModal(cleanUrl, formatType);
+    }
+
+    document.getElementById('btn-dl-mp4').addEventListener('click', () => triggerDirectDownload('mp4'));
+    document.getElementById('btn-dl-mp3').addEventListener('click', () => triggerDirectDownload('mp3'));
+
+
   </script>
 </body>
 

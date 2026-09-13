@@ -43,9 +43,51 @@ class FeedRequest(BaseModel):
     limit: int = 12
     offset: int = 0
 
-# 채널 ID 및 통합 피드 인메모리 캐시
+# 채널 ID 및 통합 피드 런타임 캐시 (동적 학습 및 인메모리 보관)
 CHANNEL_ID_CACHE: Dict[str, str] = {}
 FEED_CACHE: Dict[Any, Dict[str, Any]] = {}
+
+def resolve_channel_id(ch_url: str = "", ch_id: Optional[str] = None) -> Optional[str]:
+    """
+    채널 URL 또는 기존 ID로부터 고유 채널 ID(UC...)를 동적으로 추출하고 런타임 캐시합니다.
+    특정 채널을 하드코딩하지 않고 완전 동적으로 동작합니다.
+    """
+    if ch_id and str(ch_id).startswith("UC"):
+        return ch_id
+    if not ch_url:
+        return None
+
+    clean_url = ch_url.split("?")[0].rstrip("/")
+    if clean_url in CHANNEL_ID_CACHE:
+        return CHANNEL_ID_CACHE[clean_url]
+
+    # 1. URL 자체에 /channel/UC... 가 포함되어 있는 경우 즉시 추출
+    if "/channel/" in clean_url:
+        parts = clean_url.split("/channel/")
+        candidate = parts[1].split("/")[0]
+        if candidate.startswith("UC"):
+            CHANNEL_ID_CACHE[clean_url] = candidate
+            return candidate
+
+    # 2. 핸들(@) 또는 커스텀 URL인 경우 yt-dlp로 채널 메타데이터 1회 동적 해석
+    try:
+        ydl_opts = {
+            'extract_flat': True,
+            'playlistend': 1,
+            'quiet': True,
+            'no_warnings': True,
+            'no_check_certificates': True
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(clean_url, download=False)
+            extracted_id = info.get('channel_id') or (info.get('id') if str(info.get('id', '')).startswith('UC') else None)
+            if extracted_id:
+                CHANNEL_ID_CACHE[clean_url] = extracted_id
+                return extracted_id
+    except Exception:
+        pass
+
+    return None
 
 def cleanup_file(path: str):
     """다운로드 완료 후 임시 파일을 삭제합니다."""
@@ -59,20 +101,26 @@ def cleanup_file(path: str):
 def get_video_info(req: VideoInfoRequest):
     """
     유튜브 URL의 영상 메타데이터(제목, 썸네일, 재생시간, 채널명, 조회수, 등록일, 화질)를 추출합니다.
+    클라우드/데이터센터 IP의 봇 차단(Sign in to confirm you're not a bot) 우회를 위해 모바일 클라이언트 및 oEmbed 폴백을 적용합니다.
     """
     if not req.url:
         raise HTTPException(status_code=400, detail="유효한 유튜브 URL을 입력하세요.")
 
+    clean_url = req.url.strip()
+
+    # 1차 시도: yt-dlp 다중 클라이언트 (android, ios, mweb)로 봇 탐지 우회
     ydl_opts = {
         'dump_single_json': True,
         'no_warnings': True,
         'quiet': True,
         'no_check_certificates': True,
         'http_headers': {
-            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
         },
         'extractor_args': {
             'youtube': {
+                'player_client': ['android', 'ios', 'mweb', 'web'],
                 'lang': ['ko']
             }
         }
@@ -80,7 +128,7 @@ def get_video_info(req: VideoInfoRequest):
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(req.url, download=False)
+            info = ydl.extract_info(clean_url, download=False)
             
             # 업로드 날짜 포맷팅 (YYYYMMDD -> YYYY-MM-DD)
             raw_date = info.get("upload_date", "")
@@ -110,9 +158,38 @@ def get_video_info(req: VideoInfoRequest):
                 "view_count": info.get("view_count", 0),
                 "upload_date": upload_date,
                 "quality": quality,
-                "url": req.url
+                "url": clean_url
             }
     except Exception as e:
+        # 2차 시도: 봇 차단(Sign in to confirm you're not a bot) 발생 시 유튜브 공식 oEmbed API로 무차단 폴백
+        try:
+            oe_url = f"https://www.youtube.com/oembed?url={clean_url}&format=json"
+            oe_req = urllib.request.Request(oe_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(oe_req, timeout=5) as resp:
+                oe_data = json.loads(resp.read().decode('utf-8'))
+                
+                vid_id = ""
+                if "v=" in clean_url:
+                    vid_id = clean_url.split("v=")[1].split("&")[0]
+                elif "youtu.be/" in clean_url:
+                    vid_id = clean_url.split("youtu.be/")[1].split("?")[0]
+                
+                thumb = oe_data.get("thumbnail_url") or (f"https://i.ytimg.com/vi/{vid_id}/hqdefault.jpg" if vid_id else "")
+                
+                return {
+                    "success": True,
+                    "title": oe_data.get("title", "유튜브 동영상"),
+                    "thumbnail": thumb,
+                    "duration": 0,
+                    "uploader": oe_data.get("author_name", "알 수 없는 채널"),
+                    "view_count": 0,
+                    "upload_date": "",
+                    "quality": "HD",
+                    "url": clean_url
+                }
+        except Exception:
+            pass
+
         raise HTTPException(status_code=500, detail=f"유튜브 영상 분석 실패: {str(e)}")
 
 @router.post("/channel")
@@ -150,6 +227,20 @@ def get_channel_videos(req: ChannelRequest):
     offset = req.offset or 0
     target_count = offset + limit + 1  # has_more 탐색을 위해 1개 더 수집
 
+    # 채널 ID가 캐시되어 있거나 식별 가능한 경우 RSS 우선 조회 (초고속 및 언어 보존)
+    matched_ch_id = CHANNEL_ID_CACHE.get(raw_url.split("?")[0].rstrip("/"))
+    if matched_ch_id and offset == 0 and limit <= 15:
+        rss_vids = fetch_single_channel_feed(ChannelItem(channel_id=matched_ch_id, url=raw_url))
+        if rss_vids:
+            return {
+                "success": True,
+                "channel_title": rss_vids[0].get("channel_name", "유튜브 채널"),
+                "videos": rss_vids[:limit],
+                "has_more": len(rss_vids) > limit,
+                "offset": offset,
+                "limit": limit
+            }
+
     ydl_opts = {
         'extract_flat': True,
         'playlistend': max(target_count * 4, 30),  # 멤버십 전용 스킵을 고려해 충분한 개수 탐색
@@ -158,7 +249,8 @@ def get_channel_videos(req: ChannelRequest):
         'no_warnings': True,
         'no_check_certificates': True,
         'http_headers': {
-            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Cookie': 'PREF=hl=ko&gl=KR;'
         },
         'extractor_args': {
             'youtube': {
@@ -237,19 +329,12 @@ def get_channel_videos(req: ChannelRequest):
 def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
     ch_id = ch.channel_id
     ch_url = ch.url or ""
+    ch_name = ch.name or ""
     
-    if not ch_id and ch_url:
-        ch_id = CHANNEL_ID_CACHE.get(ch_url)
-        if not ch_id:
-            try:
-                with yt_dlp.YoutubeDL({'extract_flat': True, 'playlistend': 1, 'quiet': True, 'no_warnings': True}) as ydl:
-                    info = ydl.extract_info(ch_url, download=False)
-                    ch_id = info.get('channel_id') or info.get('id')
-                    if ch_id:
-                        CHANNEL_ID_CACHE[ch_url] = ch_id
-            except Exception:
-                pass
+    # 1. 채널 ID 동적 해석 및 런타임 캐시 활용 (하드코딩 없음)
+    ch_id = resolve_channel_id(ch_url, ch_id)
 
+    # 3. 채널 ID로 YouTube Atom RSS 피드 조회 (언어 왜곡 없이 한국어 원본 보장)
     if ch_id:
         url = f"https://www.youtube.com/feeds/videos.xml?channel_id={ch_id}"
         req = urllib.request.Request(url)
@@ -297,7 +382,7 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
         except Exception:
             pass
 
-    # RSS 실패 시 yt-dlp flat extraction 폴백
+    # 4. RSS 실패 시 yt-dlp flat extraction 폴백 (한국어 강제 헤더 및 쿠키 설정)
     if ch_url:
         try:
             ydl_opts = {
@@ -306,6 +391,15 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                 'quiet': True,
                 'no_warnings': True,
                 'no_check_certificates': True,
+                'http_headers': {
+                    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+                    'Cookie': 'PREF=hl=ko&gl=KR;'
+                },
+                'extractor_args': {
+                    'youtube': {
+                        'lang': ['ko']
+                    }
+                }
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(ch_url, download=False)
@@ -397,13 +491,27 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
     temp_dir = tempfile.gettempdir()
     out_tmpl = os.path.join(temp_dir, 'guma_yt_%(id)s_%(ext)s')
 
+    base_ydl_opts = {
+        'outtmpl': out_tmpl,
+        'quiet': True,
+        'no_warnings': True,
+        'no_check_certificates': True,
+        'http_headers': {
+            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        },
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'ios', 'mweb', 'web'],
+                'lang': ['ko']
+            }
+        }
+    }
+
     if format_type.lower() == "mp3":
         ydl_opts = {
+            **base_ydl_opts,
             'format': 'bestaudio/best',
-            'outtmpl': out_tmpl,
-            'quiet': True,
-            'no_warnings': True,
-            'no_check_certificates': True,
         }
         if FFMPEG_PATH:
             ydl_opts['ffmpeg_location'] = FFMPEG_PATH
@@ -422,11 +530,8 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
             format_spec = 'best[ext=mp4]/best'
 
         ydl_opts = {
+            **base_ydl_opts,
             'format': format_spec,
-            'outtmpl': out_tmpl,
-            'quiet': True,
-            'no_warnings': True,
-            'no_check_certificates': True,
         }
         if FFMPEG_PATH:
             ydl_opts['ffmpeg_location'] = FFMPEG_PATH

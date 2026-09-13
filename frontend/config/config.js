@@ -932,7 +932,12 @@ const ytReset = $('#ytReset');
 let ytData = [];
 
 function channelsToFileFormat(arr){
-  return { channels: arr };
+  return {
+    channels: (arr || []).map(c => ({
+      name: String(c.name || '').trim(),
+      url: c.url || ''
+    }))
+  };
 }
 
 function fileFormatToChannels(obj){
@@ -1059,9 +1064,8 @@ function renderChannelsList(){
   addBtn.textContent = '채널 추가';
   addBtn.onclick = ()=>{
     ytData.push({
-      id: 'custom-' + Date.now(),
       name: '새 채널',
-      url: 'https://www.youtube.com/@'
+      url: '@'
     });
     syncChannelsJsonFromData();
     renderChannelsList();
@@ -1132,13 +1136,13 @@ ytApply?.addEventListener('click', ()=>{
   try{
     const obj = JSON.parse(ytJson?.value || 'null');
     const arr = fileFormatToChannels(obj);
-    arr.forEach(c => {
-      c.url = normalizeChannelUrl(c.url);
-      if(!c.id) c.id = 'ch-' + Date.now() + Math.random().toString(36).slice(2, 6);
-    });
-    validateChannelsData({ channels: arr });
-    ytData = arr;
-    localStorage.setItem(YT_CHANNELS_STORAGE_KEY, JSON.stringify(arr));
+    const cleaned = arr.map(c => ({
+      name: String(c.name || '').trim(),
+      url: normalizeChannelUrl(c.url)
+    })).filter(c => c.name && c.url);
+    validateChannelsData({ channels: cleaned });
+    ytData = cleaned;
+    localStorage.setItem(YT_CHANNELS_STORAGE_KEY, JSON.stringify(cleaned));
     syncChannelsJsonFromData();
     renderChannelsList();
     alert('유튜브 채널 저장 완료: 유튜브 다운로더 페이지에 즉시 반영됩니다.');

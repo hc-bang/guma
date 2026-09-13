@@ -5,6 +5,13 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 
 $PORT = "80"
 $VENV_PYTHON = ".\.venv\Scripts\python.exe"
+$LOG_DIR = ".\logs"
+
+function Ensure-LogDir {
+    if (-not (Test-Path $LOG_DIR)) {
+        New-Item -ItemType Directory -Path $LOG_DIR -Force | Out-Null
+    }
+}
 
 function Print-TaskResult {
     if ($LASTEXITCODE -eq 0) {
@@ -14,8 +21,27 @@ function Print-TaskResult {
     }
 }
 
+function Get-CloudflaredPath {
+    $cmd = Get-Command cloudflared -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+
+    $paths = @(
+        "C:\Program Files (x86)\cloudflared\cloudflared.exe",
+        "C:\Program Files\cloudflared\cloudflared.exe"
+    )
+    foreach ($p in $paths) {
+        if (Test-Path $p) { return $p }
+    }
+    return $null
+}
+
+# ==========================================
+# 1, 2, 3: 백엔드/웹 통합 서버 제어 (포트 80)
+# ==========================================
+
 function Start-UnifiedServer {
-    # 1. 유효성 검사
+    Ensure-LogDir
+
     if (-not (Test-Path ".\frontend")) {
         Write-Host "[ERROR] frontend 디렉터리가 존재하지 않습니다." -ForegroundColor Red
         return
@@ -29,20 +55,14 @@ function Start-UnifiedServer {
         return
     }
 
-    # 2. 포트 80 점유 여부 확인
+    # 포트 점유 여부 점검
     $conn = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
     if ($conn) {
         $pids = ($conn | Select-Object -ExpandProperty OwningProcess -Unique) -join ", "
-        Write-Host "[WARN] 포트 $PORT 을 사용하는 다른 프로세스가 이미 실행 중입니다. (PID: $pids)" -ForegroundColor Yellow
-        Write-Host "[HINT] IIS 웹 서버, Skype, 기타 웹 서버가 포트 80을 점유하고 있는지 확인하세요." -ForegroundColor Gray
-        $reChoice = Read-Host "강제로 점유 프로세스를 종료하고 시작할까요? (y/N)"
+        Write-Host "[WARN] 포트 $PORT 을 사용하는 서버가 이미 실행 중입니다. (PID: $pids)" -ForegroundColor Yellow
+        $reChoice = Read-Host "기존 서버를 종료하고 새로 시작할까요? (y/N)"
         if ($reChoice -eq "y" -or $reChoice -eq "Y") {
-            foreach ($procId in ($conn | Select-Object -ExpandProperty OwningProcess -Unique)) {
-                if ($procId -gt 4) {
-                    cmd.exe /c "taskkill /F /PID $procId /T" 2>$null | Out-Null
-                    Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-                }
-            }
+            Stop-UnifiedServer
             Start-Sleep -Seconds 1
         } else {
             Write-Host "[INFO] 서버 시작을 취소했습니다." -ForegroundColor Gray
@@ -50,36 +70,277 @@ function Start-UnifiedServer {
         }
     }
 
-    # 3. README.md 동기화
+    # README.md 동기화
     if (Test-Path ".\README.md") {
         Copy-Item -Path ".\README.md" -Destination ".\frontend\README.md" -Force
     }
 
-    # 4. 안내 출력
-    Write-Host ""
-    Write-Host "=================================================" -ForegroundColor Green
-    Write-Host "✔ GUMA™ 단일 통합 서버 실행 (Port $PORT)" -ForegroundColor Green
-    Write-Host "  [종료 안내] 서버를 중지하려면 언제든지 Ctrl + C 를 누르세요." -ForegroundColor Yellow
-    Write-Host "=================================================" -ForegroundColor Green
-    Write-Host ""
+    Write-Host "[INFO] GUMA™ 단일 통합 서버(포트 $PORT)를 백그라운드로 시작합니다..." -ForegroundColor Cyan
 
-    # 5. 포그라운드 실행 (실시간 로그 표시 및 Ctrl+C 로 정상 종료 지원)
-    & $VENV_PYTHON -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT --reload
+    $serverProc = Start-Process $VENV_PYTHON -ArgumentList "-m uvicorn backend.main:app --host 0.0.0.0 --port $PORT" `
+        -WindowStyle Hidden `
+        -PassThru
 
-    Write-Host "`n[INFO] 서버가 안전하게 중지되었습니다." -ForegroundColor Cyan
+    if ($serverProc) {
+        $serverProc.Id | Out-File -FilePath (Join-Path $LOG_DIR "server.pid") -Encoding ASCII
+    }
+
+    Start-Sleep -Seconds 2
+    $checkConn = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
+    if ($checkConn) {
+        Write-Host ""
+        Write-Host "=================================================" -ForegroundColor Green
+        Write-Host "✔ GUMA™ 단일 통합 서버 백그라운드 실행 완료" -ForegroundColor Green
+        Write-Host "  - 서비스 상태 : 정상 가동 중 (포트 $PORT)" -ForegroundColor White
+        Write-Host "  - 로컬 웹 주소: http://localhost" -ForegroundColor White
+        Write-Host "=================================================" -ForegroundColor Green
+    } else {
+        Write-Host "[WARN] 서버 프로세스를 시작했으나 포트 $PORT 응답 대기 중입니다. 3번 메뉴로 상태를 확인하세요." -ForegroundColor Yellow
+    }
 }
+
+function Stop-UnifiedServer {
+    Write-Host "[INFO] GUMA™ 통합 서버(포트 $PORT)를 점검하고 종료합니다..." -ForegroundColor Cyan
+    $stopped = 0
+
+    # 1. server.pid 프로세스 트리 종료
+    $pidFile = Join-Path $LOG_DIR "server.pid"
+    if (Test-Path $pidFile) {
+        $savedPid = (Get-Content $pidFile -Raw -ErrorAction SilentlyContinue)
+        $pIdNum = 0
+        if ($savedPid -and [int]::TryParse($savedPid.Trim(), [ref]$pIdNum) -and $pIdNum -gt 4) {
+            cmd.exe /c "taskkill /F /PID $pIdNum /T" 2>$null | Out-Null
+            $stopped++
+        }
+        Remove-Item -Path $pidFile -Force -ErrorAction SilentlyContinue
+    }
+
+    # 2. 포트 점유 프로세스 종료
+    $conns = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
+    if ($conns) {
+        $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique
+        foreach ($procId in $pids) {
+            if ($procId -gt 4) {
+                cmd.exe /c "taskkill /F /PID $procId /T" 2>$null | Out-Null
+                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+                Write-Host "  ✔ 포트 $PORT 서버 프로세스 종료 완료 (PID: $procId)" -ForegroundColor Green
+                $stopped++
+            }
+        }
+    }
+
+    # 3. uvicorn 관련 프로세스 정리
+    Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object {
+        $_.CommandLine -like "*backend.main:app*" -or $_.CommandLine -like "*uvicorn*"
+    } | ForEach-Object {
+        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+        $stopped++
+    }
+
+    Start-Sleep -Milliseconds 500
+    if ($stopped -gt 0) {
+        Write-Host "[INFO] 서버가 안전하게 종료되었습니다. (포트 $PORT 해제)" -ForegroundColor Green
+    } else {
+        Write-Host "[INFO] 현재 실행 중인 서버가 없습니다." -ForegroundColor Yellow
+    }
+}
+
+function Check-UnifiedServer {
+    Write-Host "================================================" -ForegroundColor Cyan
+    Write-Host "■  GUMA™ 통합 서버 상태 점검" -ForegroundColor Yellow
+    Write-Host "================================================" -ForegroundColor Cyan
+
+    $conn = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
+    if ($conn) {
+        $pids = ($conn | Select-Object -ExpandProperty OwningProcess -Unique) -join ", "
+        Write-Host "✔ 통합 웹 서버 (Port $PORT):" -ForegroundColor Green
+        Write-Host "  - 상태         : 정상 가동 중 (RUNNING, Background)" -ForegroundColor Green
+        Write-Host "  - 접속 주소    : http://localhost" -ForegroundColor White
+        Write-Host "  - 프로세스 PID : $pids" -ForegroundColor Gray
+    } else {
+        Write-Host "✖ 통합 웹 서버 (Port $PORT):" -ForegroundColor Red
+        Write-Host "  - 상태         : 중지됨 (STOPPED)" -ForegroundColor Red
+    }
+    Write-Host "================================================" -ForegroundColor Cyan
+}
+
+# ==========================================
+# 11, 12, 13: Cloudflare 터널 제어
+# ==========================================
+
+function Start-CloudflareTunnel {
+    Ensure-LogDir
+    $cfPath = Get-CloudflaredPath
+
+    if (-not $cfPath) {
+        Write-Host "[ERROR] cloudflared 실행 파일을 찾을 수 없습니다." -ForegroundColor Red
+        Write-Host "[HINT] 93번 메뉴를 실행하여 cloudflared를 먼저 설치하세요." -ForegroundColor Yellow
+        return
+    }
+
+    # 이미 실행 중인지 확인
+    $existing = Get-Process -Name cloudflared -ErrorAction SilentlyContinue
+    if ($existing) {
+        $pids = ($existing | Select-Object -ExpandProperty Id) -join ", "
+        Write-Host "[WARN] Cloudflare 터널이 이미 실행 중입니다. (PID: $pids)" -ForegroundColor Yellow
+        $urlFile = Join-Path $LOG_DIR "tunnel_url.txt"
+        if (Test-Path $urlFile) {
+            $curUrl = Get-Content $urlFile -Raw -ErrorAction SilentlyContinue
+            Write-Host "  - 현재 터널 주소: $curUrl" -ForegroundColor Cyan
+        }
+        $reChoice = Read-Host "기존 터널을 재시작할까요? (y/N)"
+        if ($reChoice -eq "y" -or $reChoice -eq "Y") {
+            Stop-CloudflareTunnel
+            Start-Sleep -Seconds 1
+        } else {
+            return
+        }
+    }
+
+    Write-Host "[INFO] Cloudflare 터널을 백그라운드로 시작합니다..." -ForegroundColor Cyan
+
+    $tunnelLog = Join-Path $LOG_DIR "tunnel.log"
+    if (Test-Path $tunnelLog) { Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue }
+
+    # cloudflared는 터널 접속 URL을 stderr로 출력함
+    $cfProc = Start-Process $cfPath -ArgumentList "tunnel --url http://localhost:$PORT" `
+        -RedirectStandardError $tunnelLog `
+        -WindowStyle Hidden `
+        -PassThru
+
+    if ($cfProc) {
+        $cfProc.Id | Out-File -FilePath (Join-Path $LOG_DIR "tunnel.pid") -Encoding ASCII
+    }
+
+    # URL 발급 대기 (최대 10초)
+    Write-Host "[INFO] 외부 전용 보안 URL을 발급받는 중입니다..." -ForegroundColor Gray
+    $tunnelUrl = ""
+    for ($i = 0; $i -lt 10; $i++) {
+        Start-Sleep -Seconds 1
+        if (Test-Path $tunnelLog) {
+            $logContent = Get-Content $tunnelLog -Raw -ErrorAction SilentlyContinue
+            if ($logContent -match 'https://[a-zA-Z0-9-]+\.trycloudflare\.com') {
+                $tunnelUrl = $matches[0]
+                break
+            }
+        }
+    }
+
+    Write-Host ""
+    Write-Host "=================================================" -ForegroundColor Green
+    Write-Host "✔ Cloudflare 터널 백그라운드 가동 완료" -ForegroundColor Green
+    if ($tunnelUrl) {
+        $tunnelUrl | Out-File -FilePath (Join-Path $LOG_DIR "tunnel_url.txt") -Encoding UTF8
+        Write-Host "  - 외부 전용 주소: $tunnelUrl" -ForegroundColor Cyan
+        Write-Host "  - 안내: 스마트폰이나 외부 어디서든 위 주소로 접속 가능합니다." -ForegroundColor White
+    } else {
+        Write-Host "  - 터널 프로세스가 시작되었습니다. 주소 확인은 13번 메뉴를 이용하세요." -ForegroundColor Yellow
+    }
+    Write-Host "=================================================" -ForegroundColor Green
+}
+
+function Stop-CloudflareTunnel {
+    Write-Host "[INFO] Cloudflare 터널을 점검하고 종료합니다..." -ForegroundColor Cyan
+    $stopped = 0
+
+    $pidFile = Join-Path $LOG_DIR "tunnel.pid"
+    if (Test-Path $pidFile) {
+        $savedPid = (Get-Content $pidFile -Raw -ErrorAction SilentlyContinue)
+        $pIdNum = 0
+        if ($savedPid -and [int]::TryParse($savedPid.Trim(), [ref]$pIdNum) -and $pIdNum -gt 4) {
+            cmd.exe /c "taskkill /F /PID $pIdNum /T" 2>$null | Out-Null
+            $stopped++
+        }
+        Remove-Item -Path $pidFile -Force -ErrorAction SilentlyContinue
+    }
+
+    cmd.exe /c "taskkill /F /IM cloudflared.exe /T" 2>$null | Out-Null
+    Get-Process -Name cloudflared -ErrorAction SilentlyContinue | ForEach-Object {
+        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+        $stopped++
+    }
+
+    $urlFile = Join-Path $LOG_DIR "tunnel_url.txt"
+    if (Test-Path $urlFile) { Remove-Item $urlFile -Force -ErrorAction SilentlyContinue }
+
+    Start-Sleep -Milliseconds 500
+    if ($stopped -gt 0) {
+        Write-Host "[INFO] Cloudflare 터널이 정상적으로 종료되었습니다." -ForegroundColor Green
+    } else {
+        Write-Host "[INFO] 현재 실행 중인 Cloudflare 터널이 없습니다." -ForegroundColor Yellow
+    }
+}
+
+function Check-CloudflareTunnel {
+    Write-Host "================================================" -ForegroundColor Cyan
+    Write-Host "■  Cloudflare 터널 상태 점검" -ForegroundColor Yellow
+    Write-Host "================================================" -ForegroundColor Cyan
+
+    $procs = Get-Process -Name cloudflared -ErrorAction SilentlyContinue
+    if ($procs) {
+        $pids = ($procs | Select-Object -ExpandProperty Id) -join ", "
+        $urlFile = Join-Path $LOG_DIR "tunnel_url.txt"
+        $curUrl = "확인 중 (잠시 후 다시 조회하세요)"
+        if (Test-Path $urlFile) {
+            $curUrl = (Get-Content $urlFile -Raw -ErrorAction SilentlyContinue).Trim()
+        } elseif (Test-Path (Join-Path $LOG_DIR "tunnel.log")) {
+            $logContent = Get-Content (Join-Path $LOG_DIR "tunnel.log") -Raw -ErrorAction SilentlyContinue
+            if ($logContent -match 'https://[a-zA-Z0-9-]+\.trycloudflare\.com') {
+                $curUrl = $matches[0]
+            }
+        }
+
+        Write-Host "✔ Cloudflare 터널:" -ForegroundColor Green
+        Write-Host "  - 상태         : 정상 가동 중 (RUNNING, Background)" -ForegroundColor Green
+        Write-Host "  - 외부 접속 URL: $curUrl" -ForegroundColor Cyan
+        Write-Host "  - 프로세스 PID : $pids" -ForegroundColor Gray
+    } else {
+        Write-Host "✖ Cloudflare 터널:" -ForegroundColor Red
+        Write-Host "  - 상태         : 중지됨 (STOPPED)" -ForegroundColor Red
+    }
+    Write-Host "================================================" -ForegroundColor Cyan
+}
+
+# ==========================================
+# 91, 92, 93: 환경 및 패키지 설정
+# ==========================================
+
+function Install-CloudflaredTool {
+    Write-Host "[INFO] winget 도구를 통해 Cloudflare(cloudflared) 설치를 시작합니다..." -ForegroundColor Cyan
+    winget install --id Cloudflare.cloudflared
+    Print-TaskResult
+
+    $path = Get-CloudflaredPath
+    if ($path) {
+        Write-Host "[INFO] cloudflared 설치가 정상 확인되었습니다. (경로: $path)" -ForegroundColor Green
+    } else {
+        Write-Host "[WARN] 설치 완료 후 현재 터미널을 재시작해야 명령어가 인식될 수 있습니다." -ForegroundColor Yellow
+    }
+}
+
+# ==========================================
+# 메뉴 루프
+# ==========================================
 
 function Show-Menu {
     Clear-Host
     Write-Host "================================================" -ForegroundColor Cyan
-    Write-Host "■  GUMA™ 통합 서버 관리 대시보드" -ForegroundColor Yellow
+    Write-Host "■  GUMA™ 단일 통합 서버 관리 대시보드" -ForegroundColor Yellow
     Write-Host "================================================" -ForegroundColor Cyan
-    Write-Host "■  서버 제어 (포트: $PORT)" -ForegroundColor DarkCyan
-    Write-Host " 1. 서버 실행 (통합 웹 + API, Foreground)"
+    Write-Host "■  통합 웹 서버 제어 (포트: $PORT)" -ForegroundColor DarkCyan
+    Write-Host " 1. 백그라운드 서버 시작 (Start Server)"
+    Write-Host " 2. 백그라운드 서버 종료 (Stop Server)"
+    Write-Host " 3. 백그라운드 서버 상태 확인 (Server Status)"
+    Write-Host ""
+    Write-Host "■  Cloudflare 터널 제어 (외부 보안 연동)" -ForegroundColor DarkCyan
+    Write-Host " 11. 터널 시작 (Start Tunnel, 백그라운드)"
+    Write-Host " 12. 터널 종료 (Stop Tunnel)"
+    Write-Host " 13. 터널 상태 및 주소 확인 (Tunnel Status)"
     Write-Host ""
     Write-Host "■  환경 및 패키지 설정" -ForegroundColor DarkCyan
     Write-Host " 91. 파이썬 가상환경(.venv) 생성"
     Write-Host " 92. 백엔드 패키지 설치 (backend/requirements.txt)"
+    Write-Host " 93. Cloudflare(cloudflared) 설치"
     Write-Host "`n 0. 프로그램 종료"
     Write-Host "================================================" -ForegroundColor Cyan
 }
@@ -87,10 +348,15 @@ function Show-Menu {
 do {
     Show-Menu
     $choice = Read-Host "메뉴를 선택하세요"
-    
+
     switch ($choice) {
         "0" { break }
         "1" { Start-UnifiedServer }
+        "2" { Stop-UnifiedServer }
+        "3" { Check-UnifiedServer }
+        "11" { Start-CloudflareTunnel }
+        "12" { Stop-CloudflareTunnel }
+        "13" { Check-CloudflareTunnel }
         "91" {
             if (Test-Path ".\.venv") {
                 Write-Host "[INFO] 이미 가상환경(.venv)이 존재합니다." -ForegroundColor Yellow
@@ -108,7 +374,6 @@ do {
                     Write-Host "[ERROR] backend/requirements.txt 파일이 없습니다." -ForegroundColor Red
                 } else {
                     Write-Host "[INFO] 백엔드 패키지 설치를 시작합니다..." -ForegroundColor Green
-                    
                     $oldEAP = $ErrorActionPreference
                     $ErrorActionPreference = "SilentlyContinue"
                     & $VENV_PYTHON -m pip install -r backend/requirements.txt 2>&1 | Tee-Object -Variable pipOut
@@ -126,9 +391,10 @@ do {
                 }
             }
         }
+        "93" { Install-CloudflaredTool }
         default { Write-Host "[WARN] 잘못된 선택입니다." -ForegroundColor Red }
     }
-    
+
     if ($choice -ne "0") {
         Write-Host "`n메뉴로 돌아가려면 아무 키나 누르세요."
         $null = [Console]::ReadKey($true)

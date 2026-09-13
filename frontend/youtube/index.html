@@ -438,14 +438,6 @@
       </h1>
     </div>
     <div class="topbar-right">
-      <button id="serverConfigBtn" class="btn icon-btn" type="button" aria-label="서버 연결 설정" title="백엔드 서버 설정">
-        <span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="2" y1="12" x2="22" y2="12" />
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-          </svg></span>
-      </button>
       <a class="btn icon-btn" href="../" aria-label="홈으로">
         <span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -554,28 +546,6 @@
     const API_BASE = getApiBase();
     let currentVideoUrl = '';
 
-    // 백엔드 서버 연결 설정 버튼 이벤트
-    const serverConfigBtn = document.getElementById('serverConfigBtn');
-    if (serverConfigBtn) {
-      serverConfigBtn.addEventListener('click', () => {
-        const current = localStorage.getItem('guma_backend_url') || API_BASE;
-        const input = prompt(
-          `[GUMA™ 백엔드 서버 연결 설정]\n\n현재 연결된 백엔드 API 주소:\n${API_BASE}\n\n새로운 백엔드(Cloudflare 터널) 주소를 입력하세요.\n(기본값으로 복원하려면 비워두고 확인을 누르세요):`,
-          current
-        );
-        if (input !== null) {
-          const trimmed = input.trim();
-          if (trimmed) {
-            localStorage.setItem('guma_backend_url', trimmed);
-            alert(`백엔드 서버 주소가 저장되었습니다.\n${trimmed}\n\n페이지를 새로고침합니다.`);
-          } else {
-            localStorage.removeItem('guma_backend_url');
-            alert('기본 백엔드 주소로 초기화되었습니다.\n페이지를 새로고침합니다.');
-          }
-          window.location.reload();
-        }
-      });
-    }
 
     const urlInput = document.getElementById('yt-url');
     const clearBtn = document.getElementById('yt-clear');

@@ -1220,12 +1220,81 @@ ytReset?.addEventListener('click', async ()=>{
   }
 });
 
+// --- Server Config (Cloudflare Tunnel / Backend) ---
+const BACKEND_STORAGE_KEY = 'guma_backend_url';
+const DEFAULT_TUNNEL_URL = 'https://removal-vehicle-abroad-contributed.trycloudflare.com';
+
+const backendServerUrl = $('#backendServerUrl');
+const serverApply = $('#serverApply');
+const serverTest = $('#serverTest');
+const serverReset = $('#serverReset');
+const serverStatusMsg = $('#serverStatusMsg');
+
+function showServerStatus(msg, isSuccess){
+  if(!serverStatusMsg) return;
+  serverStatusMsg.style.display = 'block';
+  serverStatusMsg.style.background = isSuccess ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)';
+  serverStatusMsg.style.color = isSuccess ? '#2ecc71' : '#e74c3c';
+  serverStatusMsg.style.border = `1px solid ${isSuccess ? 'rgba(46, 204, 113, 0.4)' : 'rgba(231, 76, 60, 0.4)'}`;
+  serverStatusMsg.textContent = msg;
+}
+
+function loadServerConfigIntoEditor(){
+  if(!backendServerUrl) return;
+  const saved = localStorage.getItem(BACKEND_STORAGE_KEY);
+  backendServerUrl.value = saved || DEFAULT_TUNNEL_URL;
+}
+
+serverApply?.addEventListener('click', ()=>{
+  const val = (backendServerUrl?.value || '').trim();
+  if(val){
+    const cleanUrl = val.replace(/\/+$/, '');
+    localStorage.setItem(BACKEND_STORAGE_KEY, cleanUrl);
+    backendServerUrl.value = cleanUrl;
+    showServerStatus(`✔ 저장 완료: 백엔드 서버 주소가 저장되었습니다. (${cleanUrl})`, true);
+  } else {
+    localStorage.removeItem(BACKEND_STORAGE_KEY);
+    backendServerUrl.value = DEFAULT_TUNNEL_URL;
+    showServerStatus('✔ 기본값으로 복원되었습니다. (' + DEFAULT_TUNNEL_URL + ')', true);
+  }
+});
+
+serverReset?.addEventListener('click', ()=>{
+  if(!confirm('백엔드 서버 설정을 기본 터널 주소로 초기화하시겠습니까?')) return;
+  localStorage.removeItem(BACKEND_STORAGE_KEY);
+  if(backendServerUrl) backendServerUrl.value = DEFAULT_TUNNEL_URL;
+  showServerStatus('✔ 초기화 완료: 기본 터널 주소로 복원되었습니다.', true);
+});
+
+serverTest?.addEventListener('click', async ()=>{
+  const targetUrl = (backendServerUrl?.value || '').trim().replace(/\/+$/, '') || DEFAULT_TUNNEL_URL;
+  showServerStatus(`연결 확인 중... (${targetUrl})`, true);
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(`${targetUrl}/api/status`, {
+      method: 'GET',
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    if(res.ok){
+      const data = await res.json().catch(()=>({}));
+      showServerStatus(`✔ 통신 성공! 백엔드 서버가 온라인 상태입니다. (버전: ${data.version || '1.1.0'})`, true);
+    } else {
+      showServerStatus(`✖ 서버 응답 에러 (HTTP ${res.status}): 주소를 다시 확인하세요.`, false);
+    }
+  } catch(e) {
+    showServerStatus(`✖ 연결 실패: 서버가 응답하지 않거나 터널이 닫혀 있습니다. (${String(e?.message || e)})`, false);
+  }
+});
+
 // theme (홈과 동일한 localStorage 키 사용) - 편집기에서는 토글 버튼 없이 적용만
 if(localStorage.getItem('theme') === 'dark'){
   document.body.classList.add('dark');
 }
 
-// URL 쿼리 파라미터로 초기 탭 지정 지원 (?tab=youtube 등)
+// URL 쿼리 파라미터로 초기 탭 지정 지원 (?tab=server 등)
 const urlParams = new URLSearchParams(window.location.search);
 const initialTab = urlParams.get('tab') || 'top';
 
@@ -1239,3 +1308,5 @@ loadTopIntoEditor().catch(()=>{});
 loadShortcutsIntoEditor();
 loadEnginesIntoEditor();
 loadChannelsIntoEditor();
+loadServerConfigIntoEditor();
+

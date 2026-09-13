@@ -1,11 +1,13 @@
 """
 GUMA™ FastAPI Backend Application Entry Point
+프론트엔드 정적 파일과 백엔드 API를 단일 서버에서 동시에 서빙하는 통합 서버
 """
 
+import os
 from fastapi import FastAPI, Response
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-import os
 
 try:
     from app.routers import youtube
@@ -13,12 +15,15 @@ except ImportError:
     from backend.app.routers import youtube
 
 app = FastAPI(
-    title="GUMA™ API",
-    description="GUMA™ 대시보드를 위한 파이썬 백엔드 API 서비스",
-    version="1.0.0"
+    title="GUMA™ Unified Server",
+    description="GUMA™ 프론트엔드 및 파이썬 백엔드 통합 서비스",
+    version="1.1.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
 )
 
-# CORS 설정 (GitHub Pages 프론트엔드 및 로컬 테스트 허용)
+# CORS 설정 (동일 출처 통합 시 기본 허용, 외부 도메인 및 클라우드 호환성 유지)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,20 +33,19 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],
 )
 
-
-# 라우터 등록
+# 1. 백엔드 API 라우터 등록
 app.include_router(youtube.router)
 
-@app.get("/")
+@app.get("/api")
+@app.get("/api/status")
 def read_root():
     import yt_dlp
     return {
         "status": "online",
-        "service": "GUMA™ Backend API",
-        "version": "1.0.1",
-        "commit": "140cb0f-check",
+        "service": "GUMA™ Unified Backend API",
+        "version": "1.1.0",
         "yt_dlp_version": getattr(yt_dlp, '__version__', 'unknown'),
-        "message": "FastAPI 백엔드 서버가 성공적으로 가동되었습니다."
+        "message": "GUMA™ 단일 통합 서버가 성공적으로 가동되었습니다."
     }
 
 @app.get("/api/health")
@@ -53,8 +57,17 @@ def health_check():
 @app.get("/favicon.png", include_in_schema=False)
 @app.get("/apple-touch-icon.png", include_in_schema=False)
 def favicon():
-    favicon_path = os.path.join("frontend", "favicon.svg")
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    favicon_path = os.path.join(base_dir, "frontend", "favicon.svg")
     if os.path.exists(favicon_path):
         return FileResponse(favicon_path, media_type="image/svg+xml")
     return Response(status_code=204)
 
+# 2. 프론트엔드 정적 파일 서빙 마운트 (API 라우터보다 반드시 뒤에 위치)
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+frontend_dir = os.path.join(base_dir, "frontend")
+if not os.path.exists(frontend_dir):
+    frontend_dir = os.path.join(os.getcwd(), "frontend")
+
+if os.path.exists(frontend_dir):
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")

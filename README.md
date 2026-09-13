@@ -24,9 +24,9 @@
    - [5.3. 공통 모듈 (`shared/`) 활용](#53-공통-모듈-shared-활용)
    - [5.4. `localStorage` 데이터 명세](#54-localstorage-데이터-명세)
    - [5.5. UI 커스터마이징](#55-ui-커스터마이징)
-6. [🌐 배포 가이드](#6--배포-가이드)
+6. [🌐 배포 및 운용 가이드](#6--배포-가이드)
    - [6.1. 프론트엔드 배포 (GitHub Pages)](#61-프론트엔드-배포-github-pages)
-   - [6.2. 백엔드 배포 (Render Web Service)](#62-백엔드-배포-render-web-service)
+   - [6.2. 단일 통합 서버 운용 (로컬 / 홈서버)](#62-단일-통합-서버-운용-로컬--홈서버)
 
 ---
 
@@ -47,9 +47,8 @@
 guma/                                   # 단일 Git 저장소
 │
 ├── manage.ps1                          # [루트 단일 통합 관리 스크립트] (가상환경 구축, 패키지 설치, 로컬 가동 대시보드)
-├── Dockerfile                          # [배포 컨테이너 설정] (Render 클라우드 백엔드 빌드 규격)
 │
-├── frontend/                           # [1] 프론트엔드 영역 (GitHub Pages 배포)
+├── frontend/                           # [1] 프론트엔드 영역 (GitHub Pages 배포 및 정적 웹)
 │   ├── index.html                      # 대시보드 메인 페이지
 │   ├── script.js                       # 대시보드 스크립트
 │   ├── style.css                       # 대시보드 전역 스타일
@@ -61,8 +60,8 @@ guma/                                   # 단일 Git 저장소
 │   ├── games/                          # 내장 미니게임 3종
 │   └── youtube/                        # 유튜브 클립 & 음원 다운로더
 │
-├── backend/                            # [2] 파이썬 백엔드 영역 (Render 무료 배포)
-│   ├── main.py                         # FastAPI 웹 앱 메인 진입점
+├── backend/                            # [2] 파이썬 백엔드 영역 (FastAPI 단일 통합 서빙)
+│   ├── main.py                         # FastAPI 웹 앱 메인 진입점 (정적 웹 + API 통합)
 │   ├── requirements.txt                # 파이썬 의존성 패키지 (fastapi, uvicorn, yt-dlp)
 │   └── app/                            # API 라우터 (youtube 다운로더 등)
 │
@@ -253,15 +252,13 @@ body.dark {
 > [!NOTE]
 > 루트에 `.nojekyll` 파일이 존재해야 언더스코어(`_`)로 시작하는 내부 경로가 차단 없이 정상 배포됩니다. (기본 제공됨)
 
-### 6.2. 백엔드 배포 (Render Web Service)
+### 6.2. 단일 통합 서버 운용 (로컬 / 홈서버)
 
-파이썬 FastAPI 기반의 백엔드는 **Render Free Web Service**를 통해 완전 무료로 호스팅됩니다.
+FastAPI 기반의 백엔드는 프론트엔드 정적 파일 서빙과 결합되어 **단일 통합 서버(포트 80)**로 운용됩니다.
 
-- **실서버 API 주소:** `https://guma.onrender.com`
-- **Swagger API 문서:** `https://guma.onrender.com/docs`
-- **배포 방식:** 루트의 `Dockerfile`을 감지하여 Render가 컨테이너를 자동 빌드 및 배포
-- **절전(Spin down) 동작:** 15분간 요청이 없으면 절전 모드로 전환되며, 최초 요청 시 약 50초 후 자동으로 기상합니다.
-
-> [!TIP]
-> **프론트엔드 변경 시 불필요한 재빌드 방지 (Build Filters 설정)**  
-> Render 대시보드 > `guma` > `Settings` > `Build Filters` > `Included Paths`에 `backend/**` 및 `Dockerfile`을 지정하면, 프론트엔드 코드만 수정·푸시할 때 백엔드가 재빌드되지 않아 무료 빌드 시간을 절약할 수 있습니다.
+- **실행 방식:** 루트의 `manage.ps1` 실행 후 `1번(서버 실행)` 선택
+- **서비스 포트:** `80` (브라우저 표준 기본 포트)
+- **메인 웹 접속:** `http://localhost/`
+- **유튜브 서비스:** `http://localhost/youtube/`
+- **Swagger API 문서:** `http://localhost/docs`
+- **서버 종료:** 터미널에서 `Ctrl + C` 입력으로 안전하게 정상 종료

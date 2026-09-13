@@ -276,13 +276,36 @@
       transform: translateY(-2px);
     }
 
-    .yt-ch-thumb {
+    .yt-thumb-wrap {
+      position: relative;
       width: 100%;
       height: 94px;
+      margin-bottom: 8px;
+    }
+
+    .yt-ch-thumb {
+      width: 100%;
+      height: 100%;
       border-radius: 8px;
       object-fit: cover;
-      margin-bottom: 8px;
+      display: block;
       border: 1px solid var(--border);
+    }
+
+    .yt-thumb-duration {
+      position: absolute;
+      right: 6px;
+      bottom: 6px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      pointer-events: none;
+      line-height: 1.3;
+      letter-spacing: 0.3px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
 
     .yt-ch-badge {
@@ -415,6 +438,14 @@
       </h1>
     </div>
     <div class="topbar-right">
+      <button id="serverConfigBtn" class="btn icon-btn" type="button" aria-label="서버 연결 설정" title="백엔드 서버 설정">
+        <span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </svg></span>
+      </button>
       <a class="btn icon-btn" href="../" aria-label="홈으로">
         <span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -503,10 +534,48 @@
   <script>
 
 
-    const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
-      ? 'http://127.0.0.1:8000'
-      : (window.GUMA_API_BASE || 'https://guma.onrender.com');
+    // 백엔드 API 주소 결정 (로컬 환경 vs GitHub Pages 환경)
+    const DEFAULT_TUNNEL_URL = 'https://removal-vehicle-abroad-contributed.trycloudflare.com';
+    
+    function getApiBase() {
+      const saved = localStorage.getItem('guma_backend_url');
+      if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
+
+      const host = window.location.hostname;
+      // 로컬 환경 (localhost, 127.0.0.1, 내부망) 또는 터널 자체 접속 시
+      if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.') || host.endsWith('.trycloudflare.com')) {
+        return window.location.origin;
+      }
+
+      // GitHub Pages 등 외부 정적 웹 접속 시 기본 터널 주소 연결
+      return DEFAULT_TUNNEL_URL;
+    }
+
+    const API_BASE = getApiBase();
     let currentVideoUrl = '';
+
+    // 백엔드 서버 연결 설정 버튼 이벤트
+    const serverConfigBtn = document.getElementById('serverConfigBtn');
+    if (serverConfigBtn) {
+      serverConfigBtn.addEventListener('click', () => {
+        const current = localStorage.getItem('guma_backend_url') || API_BASE;
+        const input = prompt(
+          `[GUMA™ 백엔드 서버 연결 설정]\n\n현재 연결된 백엔드 API 주소:\n${API_BASE}\n\n새로운 백엔드(Cloudflare 터널) 주소를 입력하세요.\n(기본값으로 복원하려면 비워두고 확인을 누르세요):`,
+          current
+        );
+        if (input !== null) {
+          const trimmed = input.trim();
+          if (trimmed) {
+            localStorage.setItem('guma_backend_url', trimmed);
+            alert(`백엔드 서버 주소가 저장되었습니다.\n${trimmed}\n\n페이지를 새로고침합니다.`);
+          } else {
+            localStorage.removeItem('guma_backend_url');
+            alert('기본 백엔드 주소로 초기화되었습니다.\n페이지를 새로고침합니다.');
+          }
+          window.location.reload();
+        }
+      });
+    }
 
     const urlInput = document.getElementById('yt-url');
     const clearBtn = document.getElementById('yt-clear');
@@ -538,14 +607,16 @@
       return `${m}:${pad(s)}`;
     }
 
-    // 영상 분석 요청
-    analyzeBtn.addEventListener('click', async () => {
-      const url = urlInput.value.trim();
+    // 영상 분석 공통 함수
+    async function analyzeVideo(targetUrl) {
+      const url = (targetUrl || urlInput.value).trim();
       if (!url) {
         alert('유튜브 URL을 입력하세요.');
         return;
       }
 
+      urlInput.value = url;
+      clearBtn.style.display = 'block';
       analyzeBtn.disabled = true;
       analyzeBtn.innerHTML = '<span>분석 중...</span>';
       resultCard.style.display = 'none';
@@ -589,7 +660,10 @@
         analyzeBtn.disabled = false;
         analyzeBtn.innerHTML = '<span>영상 분석</span>';
       }
-    });
+    }
+
+    // 영상 분석 버튼 클릭
+    analyzeBtn.addEventListener('click', () => analyzeVideo());
 
     const ALL_FEED_ID = '__ALL_FEED__';
     let channelsList = [];
@@ -775,44 +849,34 @@
           const card = document.createElement('div');
           card.className = 'yt-ch-card';
 
-          let viewsText = (v.views_text || '').replace(/^조회수\s*/, '').trim();
-          if (!viewsText && v.view_count) {
-            viewsText = v.view_count >= 10000 ? `${(v.view_count / 10000).toFixed(1)}만회` : `${v.view_count.toLocaleString()}회`;
-          }
-
           const relTime = formatRelativeTime(v.time_text || v.published);
           const durationStr = v.duration_text || (v.duration ? formatDuration(v.duration) : '');
           const chBadgeHtml = (v.channel_name)
             ? `<div class="yt-ch-badge">📺 ${v.channel_name}</div>`
             : '';
+          const durationBadgeHtml = durationStr
+            ? `<span class="yt-thumb-duration">${durationStr}</span>`
+            : '';
 
           card.innerHTML = `
             <div>
-              <img class="yt-ch-thumb" src="${v.thumbnail}" alt="${v.title}" loading="lazy">
+              <div class="yt-thumb-wrap">
+                <img class="yt-ch-thumb" src="${v.thumbnail}" alt="${v.title}" loading="lazy">
+                ${durationBadgeHtml}
+              </div>
               ${chBadgeHtml}
               <div class="yt-ch-title" title="${v.title}">${v.title}</div>
               <div class="yt-ch-meta">
-                <span>${viewsText ? '👁️ ' + viewsText : ''}</span>
-                <span>${relTime ? '🕒 ' + relTime : (durationStr ? '⏱️ ' + durationStr : '')}</span>
+                <span>${durationStr ? '⏱️ ' + durationStr : ''}</span>
+                <span>${relTime ? '🕒 ' + relTime : ''}</span>
               </div>
             </div>
           `;
 
-          // 카드 클릭 시 불필요한 서버 재호출 없이 0초 만에 상단 결과 카드 표시 (봇 차단 에러 원천 방지)
+          // 썸네일(카드) 클릭 시 화면 상단으로 스크롤하고 자동으로 영상 분석 실행
           card.addEventListener('click', () => {
-            urlInput.value = v.url;
-            clearBtn.style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
-
-            currentVideoUrl = v.url;
-            document.getElementById('yt-thumb').src = v.thumbnail;
-            document.getElementById('yt-card-title').textContent = v.title;
-            document.getElementById('yt-card-uploader').textContent = `👤 ${v.channel_name || '유튜브 채널'}`;
-            document.getElementById('yt-card-duration').textContent = durationStr ? `⏱️ ${durationStr}` : '';
-            document.getElementById('yt-card-views').textContent = viewsText ? `👁️ ${viewsText}` : '';
-            document.getElementById('yt-card-date').textContent = relTime ? `📅 ${relTime}` : (v.published ? `📅 ${v.published.split('T')[0]}` : '');
-            document.getElementById('yt-card-quality').textContent = 'HD';
-            resultCard.style.display = 'block';
+            analyzeVideo(v.url);
           });
 
           container.appendChild(card);

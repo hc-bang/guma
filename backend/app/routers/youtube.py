@@ -27,45 +27,6 @@ router = APIRouter(
     tags=["YouTube"]
 )
 
-def get_youtube_cookie_path() -> Optional[str]:
-    """
-    1. YOUTUBE_COOKIES 환경 변수 (개행문자 및 인코딩 보정)
-    2. Render Secret Files 경로 (/etc/secrets/cookies.txt)
-    3. 로컬 디렉터리의 cookies.txt 파일 (backend/cookies.txt 또는 루트 cookies.txt)
-    위 순서로 쿠키 파일 경로를 반환합니다.
-    """
-    env_cookies = os.environ.get("YOUTUBE_COOKIES", "").strip()
-    if env_cookies:
-        try:
-            # 리터럴 문자열 '\n'으로 들어온 경우 실제 개행으로 복원
-            if "\\n" in env_cookies and "\n" not in env_cookies:
-                env_cookies = env_cookies.replace("\\r\\n", "\n").replace("\\n", "\n")
-            
-            temp_cookie = os.path.join(tempfile.gettempdir(), "guma_yt_cookies.txt")
-            with open(temp_cookie, "w", encoding="utf-8") as f:
-                f.write(env_cookies)
-            
-            size = os.path.getsize(temp_cookie)
-            print(f"[YouTube] YOUTUBE_COOKIES 환경 변수 쿠키 적용 완료 (크기: {size} bytes)")
-            return temp_cookie
-        except Exception as e:
-            print(f"[YouTube] 쿠키 환경변수 임시 파일 생성 실패: {e}")
-
-    # Render Secret Files 및 로컬 파일 탐색
-    cookie_candidates = [
-        "/etc/secrets/cookies.txt",
-        "/etc/secrets/YOUTUBE_COOKIES",
-        os.path.join(os.getcwd(), "backend", "cookies.txt"),
-        os.path.join(os.getcwd(), "cookies.txt"),
-    ]
-    for c in cookie_candidates:
-        if os.path.exists(c):
-            size = os.path.getsize(c)
-            print(f"[YouTube] 쿠키 파일 감지 및 적용: {c} (크기: {size} bytes)")
-            return c
-
-    print("[YouTube] 쿠키 파일이 설정되지 않았습니다.")
-    return None
 
 
 def cleanup_file(path: str):
@@ -339,12 +300,14 @@ def get_channel_videos(req: ChannelRequest):
                 vid = e.get("id") or ""
                 v_title = e.get("title", "제목 없음")
                 
-                # 멤버십/회원 전용 영상 필터링 (다운로드 불가능한 영상 제외)
+                # 멤버십/회원 전용 영상 필터링 (다운로드 불가능한 유료 영상 완전 제외)
+                entry_str = json.dumps(e)
                 availability = e.get("availability")
                 is_subscriber_only = availability in ("subscriber_only", "needs_auth", "unlisted_subscriber_only")
-                title_has_member_kw = any(kw in v_title.lower() for kw in ["멤버십", "회원전용", "멤버 전용", "rs 멤버"])
+                has_member_badge = any(kw in entry_str for kw in ["BADGE_MEMBERS_ONLY", "SPONSORSHIP_STAR", "MEMBERS_ONLY", "members-only", "member_only"])
+                title_has_member_kw = any(kw in v_title.lower() for kw in ["멤버십", "회원전용", "멤버 전용", "rs 멤버", "회원 전용"])
 
-                if is_subscriber_only or title_has_member_kw:
+                if is_subscriber_only or has_member_badge or title_has_member_kw:
                     continue
                 
                 v_url = e.get("url") if e.get("url") and "http" in e.get("url") else f"https://www.youtube.com/watch?v={vid}"
@@ -477,8 +440,11 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                         meta = lockup.get('metadata', {}).get('lockupMetadataViewModel', {})
                         title = meta.get('title', {}).get('content', '')
                         
-                        # 1. 회원전용/멤버십 영상 제외
-                        if any(kw in title.lower() for kw in ['멤버십', '회원전용', '멤버 전용', 'rs 멤버']):
+                        # 1. 회원전용/멤버십/스폰서 유료 영상 완전 제외
+                        lockup_str = json.dumps(lockup)
+                        if any(kw in lockup_str for kw in ['BADGE_MEMBERS_ONLY', 'SPONSORSHIP_STAR', 'MEMBERS_ONLY', 'members-only', 'member_only']):
+                            continue
+                        if any(kw in title.lower() for kw in ['멤버십', '회원전용', '멤버 전용', 'rs 멤버', '회원 전용']):
                             continue
 
                         # 2. 쇼츠(Shorts) 태그 제외
@@ -574,7 +540,10 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                     v_title = entry.get("title") or ""
                     if any(v_title.endswith(s) for s in [" - 동영상", " - 라이브", " - Shorts", " - Videos", " - Live"]):
                         continue
-                    if any(kw in v_title.lower() for kw in ["멤버십", "회원전용", "멤버 전용", "rs 멤버", "#shorts"]):
+                    entry_str = json.dumps(entry)
+                    if any(kw in entry_str for kw in ["BADGE_MEMBERS_ONLY", "SPONSORSHIP_STAR", "MEMBERS_ONLY", "members-only"]):
+                        continue
+                    if any(kw in v_title.lower() for kw in ["멤버십", "회원전용", "멤버 전용", "rs 멤버", "회원 전용", "#shorts"]):
                         continue
 
                     dur = entry.get("duration") or 0
@@ -656,15 +625,12 @@ def get_subscription_feed(req: FeedRequest):
 def download_video(url: str, format_type: str = "mp4", background_tasks: BackgroundTasks = None):
     """
     선택한 유튜브 포맷(mp4 비디오 또는 mp3 오디오)으로 변환/다운로드하여 스트리밍 파일을 반환합니다.
-    Render 등 데이터센터 IP의 봇 차단 우회를 위해 등록된 YOUTUBE_COOKIES 또는 로컬 cookies.txt를 자동 주입합니다.
     """
     if not url:
         raise HTTPException(status_code=400, detail="유효한 유튜브 URL이 필요합니다.")
 
     temp_dir = tempfile.gettempdir()
     out_tmpl = os.path.join(temp_dir, 'guma_yt_%(id)s_%(ext)s')
-
-    cookie_file = get_youtube_cookie_path()
 
     base_ydl_opts = {
         'outtmpl': out_tmpl,
@@ -682,26 +648,15 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
             'Sec-Fetch-Mode': 'navigate',
             'Sec-Fetch-Site': 'none',
             'Sec-Fetch-User': '?1',
-        }
-    }
-
-    if cookie_file and os.path.exists(cookie_file):
-        base_ydl_opts['cookiefile'] = cookie_file
-        # 쿠키 인증 시에는 웹페이지를 건너뛰지 않고 온전한 세션으로 플레이어 응답 획득
-        base_ydl_opts['extractor_args'] = {
-            'youtube': {
-                'lang': ['ko']
-            }
-        }
-    else:
-        # 쿠키가 없을 때는 모바일 클라이언트로 1차 시도
-        base_ydl_opts['extractor_args'] = {
+        },
+        'extractor_args': {
             'youtube': {
                 'player_client': ['android', 'ios'],
                 'player_skip': ['webpage', 'configs'],
                 'lang': ['ko']
             }
         }
+    }
 
     if format_type.lower() == "mp3":
         ydl_opts = {
@@ -790,15 +745,19 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
 
     except Exception as e:
         err_msg = str(e)
-        cookie_status = f"[쿠키 파일 적용됨: {os.path.getsize(cookie_file)}B]" if (cookie_file and os.path.exists(cookie_file)) else "[쿠키 미감지]"
-        print(f"[YouTube Download Error] {cookie_status}: {err_msg}")
+        print(f"[YouTube Download Error]: {err_msg}")
 
-        if any(k in err_msg for k in ["봇이 아님", "Sign in to confirm", "bot"]):
-            if cookie_file and os.path.exists(cookie_file):
-                detail_msg = f"유튜브 다운로드 실패: 쿠키가 적용되었으나 구글이 거부했습니다. {cookie_status}. (유튜브 웹에서 로그인 상태를 확인하고 쿠키를 다시 추출해 주세요.)"
-            else:
-                detail_msg = f"유튜브 다운로드 실패: Render 서버가 아직 쿠키를 읽지 못했습니다. {cookie_status}. (Render 대시보드 Environment의 Save 후 재배포 완료를 잠시 기다려 주세요.)"
-            raise HTTPException(status_code=403, detail=detail_msg)
+        if any(k in err_msg for k in ["회원 전용", "가입하여", "subscriber_only", "members-only", "Join this channel"]):
+            raise HTTPException(
+                status_code=403,
+                detail="유튜브 다운로드 불가: 이 영상은 채널 유료 회원(멤버십) 전용 콘텐츠입니다. 유료 가입자 전용 영상은 일반 다운로드가 지원되지 않습니다."
+            )
+
+        if any(k in err_msg for k in ["봇이 아님", "Sign in to confirm", "bot", "Requested format is not available"]):
+            raise HTTPException(
+                status_code=403,
+                detail="유튜브 다운로드 실패: 클라우드 IP 차단으로 인해 다운로드할 수 없습니다. (로컬 환경에서는 정상 작동합니다.)"
+            )
         raise HTTPException(status_code=500, detail=f"유튜브 다운로드 실패: {err_msg}")
 
 

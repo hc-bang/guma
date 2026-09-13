@@ -689,7 +689,7 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
         base_ydl_opts['cookiefile'] = cookie_file
         base_ydl_opts['extractor_args'] = {
             'youtube': {
-                'player_client': ['web', 'mweb'],
+                'player_client': ['android', 'web'],
                 'lang': ['ko']
             }
         }
@@ -702,7 +702,6 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
                 'lang': ['ko']
             }
         }
-
 
     if format_type.lower() == "mp3":
         ydl_opts = {
@@ -719,19 +718,14 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
         media_type = "audio/mpeg"
         default_ext = "mp3"
     else:
-        # mp4 format
-        if FFMPEG_PATH:
-            format_spec = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
-        else:
-            format_spec = 'best[ext=mp4]/best'
-
+        # mp4 format: 코덱 제한 없이 최고화질 비디오+오디오 결합 후 mp4로 출력
         ydl_opts = {
             **base_ydl_opts,
-            'format': format_spec,
+            'format': 'bestvideo*+bestaudio/best',
+            'merge_output_format': 'mp4',
         }
         if FFMPEG_PATH:
             ydl_opts['ffmpeg_location'] = FFMPEG_PATH
-            ydl_opts['merge_output_format'] = 'mp4'
 
         media_type = "video/mp4"
         default_ext = "mp4"

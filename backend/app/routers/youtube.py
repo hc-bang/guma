@@ -118,7 +118,7 @@ def get_video_info(req: VideoInfoRequest):
 
     clean_url = req.url.strip()
 
-    # 1차 시도: yt-dlp 다중 클라이언트 (android, ios, mweb)로 봇 탐지 우회
+    # 1차 시도: yt-dlp 모바일 앱 클라이언트 (android, ios)로 데이터센터 IP 봇 차단 우회
     ydl_opts = {
         'dump_single_json': True,
         'no_warnings': True,
@@ -126,11 +126,11 @@ def get_video_info(req: VideoInfoRequest):
         'no_check_certificates': True,
         'http_headers': {
             'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
         },
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios', 'mweb', 'web'],
+                'player_client': ['android', 'ios'],
+                'player_skip': ['webpage', 'configs'],
                 'lang': ['ko']
             }
         }
@@ -627,11 +627,11 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
         'no_check_certificates': True,
         'http_headers': {
             'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
         },
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios', 'mweb', 'web'],
+                'player_client': ['android', 'ios'],
+                'player_skip': ['webpage', 'configs'],
                 'lang': ['ko']
             }
         }
@@ -640,7 +640,7 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
     if format_type.lower() == "mp3":
         ydl_opts = {
             **base_ydl_opts,
-            'format': 'bestaudio/best',
+            'format': 'ba/bestaudio/best',
         }
         if FFMPEG_PATH:
             ydl_opts['ffmpeg_location'] = FFMPEG_PATH
@@ -670,38 +670,55 @@ def download_video(url: str, format_type: str = "mp4", background_tasks: Backgro
         default_ext = "mp4"
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            title = info.get("title", "video").replace("/", "_").replace("\\", "_")
-            
-            # 실제 생성된 파일 경로 찾기
-            downloaded_file = ydl.prepare_filename(info)
-            
-            # mp3 변환 후 확장자 보정
-            if format_type.lower() == "mp3" and FFMPEG_PATH:
-                base, _ = os.path.splitext(downloaded_file)
-                downloaded_file = base + ".mp3"
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+        except Exception as first_err:
+            # 봇 차단(Sign in to confirm...) 발생 시 tv_embedded 또는 호환 포맷으로 2차 폴백 시도
+            fallback_opts = {
+                **ydl_opts,
+                'format': 'ba/bestaudio/best' if format_type.lower() == 'mp3' else '18/best[ext=mp4]/best',
+                'extractor_args': {
+                    'youtube': {
+                        'player_client': ['tv_embedded', 'android'],
+                        'player_skip': ['webpage', 'configs'],
+                        'lang': ['ko']
+                    }
+                }
+            }
+            with yt_dlp.YoutubeDL(fallback_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
 
-            if not os.path.exists(downloaded_file):
-                # 백업: temp_dir 내에서 패턴에 맞는 파일 탐색
-                video_id = info.get("id", "")
-                files = [os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.startswith(f"guma_yt_{video_id}")]
-                if files:
-                    downloaded_file = files[0]
-                else:
-                    raise HTTPException(status_code=500, detail="다운로드된 파일을 찾을 수 없습니다.")
+        title = info.get("title", "video").replace("/", "_").replace("\\", "_")
+        
+        # 실제 생성된 파일 경로 찾기
+        downloaded_file = ydl.prepare_filename(info)
+        
+        # mp3 변환 후 확장자 보정
+        if format_type.lower() == "mp3" and FFMPEG_PATH:
+            base, _ = os.path.splitext(downloaded_file)
+            downloaded_file = base + ".mp3"
 
-            clean_filename = f"{title}.{default_ext}"
+        if not os.path.exists(downloaded_file):
+            # 백업: temp_dir 내에서 패턴에 맞는 파일 탐색
+            video_id = info.get("id", "")
+            files = [os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.startswith(f"guma_yt_{video_id}")]
+            if files:
+                downloaded_file = files[0]
+            else:
+                raise HTTPException(status_code=500, detail="다운로드된 파일을 찾을 수 없습니다.")
 
-            # 백그라운드 태스크로 파일 다운로드 후 임시 파일 자동 삭제
-            if background_tasks:
-                background_tasks.add_task(cleanup_file, downloaded_file)
+        clean_filename = f"{title}.{default_ext}"
 
-            return FileResponse(
-                path=downloaded_file,
-                filename=clean_filename,
-                media_type=media_type
-            )
+        # 백그라운드 태스크로 파일 다운로드 후 임시 파일 자동 삭제
+        if background_tasks:
+            background_tasks.add_task(cleanup_file, downloaded_file)
+
+        return FileResponse(
+            path=downloaded_file,
+            filename=clean_filename,
+            media_type=media_type
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"유튜브 다운로드 실패: {str(e)}")

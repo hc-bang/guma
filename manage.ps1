@@ -1,4 +1,4 @@
-# Usage: .\manage.ps1
+﻿# Usage: .\manage.ps1
 
 $VENV_PYTHON = ".\.venv\Scripts\python.exe"
 

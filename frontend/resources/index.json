@@ -2,9 +2,9 @@
   "files": [
     {
       "group": "설치/개발 도구",
-      "file": "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.1/npp.8.9.1.Installer.x64.exe",
+      "file": "https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.9.8/npp.8.9.8.Installer.x64.exe",
       "display": "Notepad++",
-      "desc": "Notepad++ v8.9.1"
+      "desc": "Notepad++ v8.9.8 Windows x64"
     },
     {
       "group": "설치/개발 도구",
@@ -22,13 +22,13 @@
       "group": "설치/개발 도구",
       "file": "https://dbeaver.io/files/dbeaver-ce-latest-windows-x86_64.exe",
       "display": "DBeaver",
-      "desc": "DBeaver Community Windows x86"
+      "desc": "DBeaver Community Windows x86_64"
     },
     {
       "group": "설치/개발 도구",
       "file": "https://download.mobatek.net/2612026022582601/MobaXterm_Installer_v26.1.zip",
       "display": "MobaXterm",
-      "desc": "MobaXterm Home Edition"
+      "desc": "MobaXterm Home Edition v26.1"
     },
     {
       "group": "설치/개발 환경",
@@ -38,27 +38,57 @@
     },
     {
       "group": "설치/개발 환경",
-      "file": "https://github.com/git-for-windows/git/releases/download/v2.53.0.windows.1/Git-2.53.0-64-bit.exe",
+      "file": "https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.5/Git-2.55.0.5-64-bit.exe",
       "display": "Git",
-      "desc": "Git for Windows/x64 Setup (2.53.0)"
-    },
-    {
-      "group": "설치/개발 환경",
-      "file": "https://nodejs.org/dist/v22.22.2/node-v22.22.2-x64.msi",
-      "display": "Node.js",
-      "desc": "Node.js v22.22.2 Windows x64"
+      "desc": "Git for Windows x64 Setup (2.55.0.5)"
     },
     {
       "group": "설치/개발 환경",
       "file": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe",
-      "display": "Python",
+      "display": "Python 3.12",
       "desc": "Python 3.12.10 Windows x64"
     },
     {
+      "group": "설치/개발 환경",
+      "file": "https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe",
+      "display": "Python 3.11",
+      "desc": "Python 3.11.9 Windows x64"
+    },
+    {
+      "group": "설치/개발 환경",
+      "file": "https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe",
+      "display": "Python 3.10",
+      "desc": "Python 3.10.11 Windows x64"
+    },
+    {
+      "group": "설치/개발 환경",
+      "file": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_x64_windows_hotspot_21.0.12.1_1.msi",
+      "display": "Temurin OpenJDK 21 (LTS)",
+      "desc": "Eclipse Temurin OpenJDK 21.0.12.1+1 Windows x64 MSI"
+    },
+    {
+      "group": "설치/개발 환경",
+      "file": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.20.1%2B1/OpenJDK17U-jdk_x64_windows_hotspot_17.0.20.1_1.msi",
+      "display": "Temurin OpenJDK 17 (LTS)",
+      "desc": "Eclipse Temurin OpenJDK 17.0.20.1+1 Windows x64 MSI"
+    },
+    {
+      "group": "설치/개발 환경",
+      "file": "https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u504-b01/OpenJDK8U-jdk_x64_windows_hotspot_8u504b01.msi",
+      "display": "Temurin OpenJDK 8 (LTS)",
+      "desc": "Eclipse Temurin OpenJDK 8u504-b01 Windows x64 MSI"
+    },
+    {
+      "group": "설치/개발 환경",
+      "file": "https://download.oracle.com/java/21/latest/jdk-21_windows-x64_bin.exe",
+      "display": "Oracle JDK 21 (LTS)",
+      "desc": "Oracle JDK 21 Windows x64 EXE"
+    },
+    {
       "group": "설치/일반 도구",
-      "file": "https://drive.google.com/file/d/1ZvkrPBpk0obwNCUDjNBIytCIvhjxztRM/view?usp=sharing",
-      "display": "Microsoft Office 2024",
-      "desc": "Microsoft Office 2024 | OfficeSetup.exe"
+      "file": "https://drive.google.com/file/d/1JdpJbyGL3qv9-DWHpKuxNmnlcXYZN8_w/view?usp=sharing",
+      "display": "Microsoft Office 2016",
+      "desc": "Microsoft Office 2016 | OfficeSetup.exe"
     },
     {
       "group": "설치/일반 도구",
@@ -74,39 +104,9 @@
     },
     {
       "group": "설치/시스템",
-      "file": "https://github.com/pbatard/rufus/releases/download/v4.13/rufus-4.13.exe",
+      "file": "https://github.com/pbatard/rufus/releases/download/v4.15/rufus-4.15.exe",
       "display": "Rufus",
-      "desc": "부팅 USB 제작 Windows x64 (4.13)"
-    },
-    {
-      "group": "설치/미디어",
-      "file": "https://exiftool.org/exiftool-13.52_64.zip",
-      "display": "exiftool-13.52_64.zip",
-      "desc": "이미지·오디오·비디오 등 다양한 파일에서 EXIF, IPTC, XMP 등 메타데이터를 읽고 쓸 수 있는 명령줄 도구"
-    },
-    {
-      "group": "설치/미디어",
-      "file": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip",
-      "display": "ffmpeg-master-latest-win64-gpl-shared.zip",
-      "desc": "비디오·오디오 파일을 읽고, 필터링하고, 트랜스코딩하는 등 다양한 멀티미디어 처리를 수행하는 명령줄 도구"
-    },
-    {
-      "group": "GUMA™/도구",
-      "file": "https://drive.google.com/file/d/1eCzRZ1XjQD_GTcroy51wMp3xiZFo7rW_/view?usp=drive_link",
-      "display": "gClipDown",
-      "desc": "유투브 동영상/음원 다운로드"
-    },
-    {
-      "group": "GUMA™/도구",
-      "file": "https://drive.google.com/file/d/1NumgKj663m54NL5cqk7kZ6qwkCniDG3o/view?usp=drive_link",
-      "display": "gTorrent",
-      "desc": "토렌트 다운로드"
-    },
-    {
-      "group": "GUMA™/도구",
-      "file": "https://drive.google.com/file/d/1-0wpY9py8AJwZgkGgaftNngm9ApROXxb/view?usp=drive_link",
-      "display": "gSplitter",
-      "desc": "오디오 파일 분할 (자동감지 O)"
+      "desc": "부팅 USB 제작 Windows x64 (4.15)"
     }
   ]
 }

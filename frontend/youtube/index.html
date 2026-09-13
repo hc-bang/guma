@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GUMA™ — 유튜브 클립 다운로더</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="../config/config.css">
+  <style>
+    .yt-container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 16px 14px 32px;
+    }
+    .yt-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .yt-input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .yt-input-wrapper {
+      position: relative;
+      flex: 1;
+    }
+    .yt-input {
+      width: 100%;
+      height: 36px;
+      padding: 0 32px 0 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color var(--trans, 0.18s), box-shadow var(--trans, 0.18s);
+    }
+    .yt-input:focus {
+      border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+    }
+    .yt-clear-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: none;
+    }
+    .yt-btn-analyze {
+      padding: 7px 14px;
+      min-height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--btn);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background .18s, border-color .18s;
+    }
+    .yt-btn-analyze:hover {
+      background: var(--btnHover, var(--btn-hover));
+    }
+    .yt-btn-analyze:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Result Card */
+    .yt-card {
+      display: none;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px dashed var(--border);
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .yt-card-content {
+      display: flex;
+      gap: 20px;
+    }
+    @media (max-width: 640px) {
+      .yt-card-content {
+        flex-direction: column;
+      }
+      .yt-input-group {
+        flex-direction: column;
+      }
+    }
+    .yt-thumb {
+      width: 220px;
+      height: 124px;
+      border-radius: 10px;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .yt-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .yt-info-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .yt-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 14px;
+    }
+    .yt-quality-badge {
+      background: color-mix(in srgb, var(--accent) 15%, var(--btn));
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .yt-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .yt-dl-btn {
+      flex: 0 0 130px;
+      width: 130px;
+      padding: 7px 12px;
+      min-height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--btn);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .18s, border-color .18s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+    .yt-dl-btn:hover {
+      background: var(--btnHover, var(--btn-hover));
+    }
+    .yt-dl-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Channel Section */
+    .yt-channel-section {
+      margin-top: 28px;
+    }
+    .yt-channel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .yt-channel-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .yt-channel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .yt-ch-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color .18s, transform .18s;
+      cursor: pointer;
+    }
+    .yt-ch-card:hover {
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+      transform: translateY(-2px);
+    }
+    .yt-ch-thumb {
+      width: 100%;
+      height: 94px;
+      border-radius: 8px;
+      object-fit: cover;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+    }
+    .yt-ch-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .yt-ch-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    .yt-channel-loading {
+      color: var(--muted);
+      font-size: 13px;
+      grid-column: 1 / -1;
+      padding: 16px 0;
+      text-align: center;
+    }
+
+    /* Channel Management Tabs */
+    .yt-channel-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: thin;
+    }
+    .yt-ch-tab {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .18s ease;
+    }
+    .yt-ch-tab:hover {
+      border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+      color: var(--text);
+    }
+    .yt-ch-tab.active {
+      background: color-mix(in srgb, var(--accent) 15%, var(--panel));
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .yt-ch-tab .del-btn {
+      font-size: 11px;
+      line-height: 1;
+      color: var(--muted);
+      margin-left: 4px;
+      padding: 3px 5px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: color-mix(in srgb, var(--border) 60%, transparent);
+      transition: all .15s ease;
+    }
+    .yt-ch-tab .del-btn:hover {
+      background: #ff4b4b;
+      color: #ffffff;
+    }
+    .yt-btn-add-ch {
+      padding: 7px 14px;
+      min-height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--btn);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background .18s, border-color .18s;
+    }
+    .yt-btn-add-ch:hover {
+      background: var(--btnHover, var(--btn-hover));
+    }
+
+    /* Modal / Form overlay */
+    .yt-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+    .yt-modal {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      width: 90%;
+      max-width: 420px;
+      box-shadow: var(--shadow);
+    }
+    .yt-modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .yt-modal-field {
+      margin-bottom: 12px;
+    }
+    .yt-modal-field label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .yt-modal-field input {
+      width: 100%;
+      height: 36px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+    .yt-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 18px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Global Root Window Config -->
+  <script>window.GUMA = { root: '../', page: 'youtube' };</script>
+  <script src="../shared/topbar.js" defer></script>
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="title">
+        <span class="title-icon icon-svg" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff4b4b">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+        </span>
+        유튜브 다운로더
+      </h1>
+    </div>
+    <div class="topbar-right">
+      <a class="btn icon-btn" href="../" aria-label="홈으로">
+        <span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg></span>
+      </a>
+      <button id="themeToggle" class="btn icon-btn" type="button" aria-label="모드 토글">
+        <span class="icon-svg" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+      </button>
+      <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴">
+        <span class="icon-svg" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></span>
+      </button>
+    </div>
+  </header>
+
+  <div id="sidepanelOverlay" class="sidepanel-overlay"></div>
+  <aside id="sidepanel" class="sidepanel" aria-label="메뉴">
+    <div class="sidepanel-title">메뉴</div>
+    <div id="sidepanel-nav" class="sidepanel-actions"></div>
+  </aside>
+
+  <div class="yt-container">
+    <div class="yt-box">
+      <!-- Input Form -->
+      <div class="yt-input-group">
+        <div class="yt-input-wrapper">
+          <input type="text" id="yt-url" class="yt-input" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+          <button id="yt-clear" class="yt-clear-btn">&times;</button>
+        </div>
+        <button id="yt-analyze" class="yt-btn-analyze">
+          <span>영상 분석</span>
+        </button>
+      </div>
+
+      <!-- Result Card -->
+      <div id="yt-result" class="yt-card">
+        <div class="yt-card-content">
+          <img id="yt-thumb" class="yt-thumb" src="" alt="Thumbnail">
+          <div class="yt-info">
+            <div>
+              <div id="yt-card-title" class="yt-info-title"></div>
+              <div class="yt-meta">
+                <span id="yt-card-uploader">👤 -</span>
+                <span id="yt-card-duration">⏱️ 00:00</span>
+                <span id="yt-card-views">👁️ -</span>
+                <span id="yt-card-date">📅 -</span>
+                <span id="yt-card-quality" class="yt-quality-badge">HD</span>
+              </div>
+            </div>
+            <div class="yt-actions">
+              <button id="btn-dl-mp4" class="yt-dl-btn">MP4 다운로드</button>
+              <button id="btn-dl-mp3" class="yt-dl-btn">MP3 다운로드</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- YouTube Channel Recent Videos (With Channel Tabs & Infinite Scroll) -->
+    <div class="yt-channel-section">
+      <div class="yt-channel-header">
+        <h2 class="yt-channel-title">📺 최근 영상</h2>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-open-add-ch" class="yt-btn-add-ch">채널 추가</button>
+          <button id="btn-clear-all-ch" class="yt-btn-add-ch">초기화</button>
+        </div>
+      </div>
+
+      <!-- Channel Tabs Bar -->
+      <div id="yt-channel-bar" class="yt-channel-bar"></div>
+
+      <!-- Video Grid & Loader -->
+      <div id="rs-billiards-list" class="yt-channel-grid"></div>
+      <div id="rs-billiards-loader" class="yt-channel-loading" style="margin-top: 16px;">최근 영상을 불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- Add Channel Modal -->
+  <div id="add-ch-modal" class="yt-modal-backdrop">
+    <div class="yt-modal">
+      <div class="yt-modal-title">관심 채널 추가</div>
+      <div class="yt-modal-field">
+        <label for="ch-name-input">채널 이름</label>
+        <input type="text" id="ch-name-input" placeholder="예: PBA TV" autocomplete="off">
+      </div>
+      <div class="yt-modal-field">
+        <label for="ch-url-input">채널 URL 또는 핸들</label>
+        <input type="text" id="ch-url-input" placeholder="예: @pbatv 또는 https://www.youtube.com/@pbatv" autocomplete="off">
+      </div>
+      <div class="yt-modal-actions">
+        <button id="btn-cancel-add-ch" class="yt-dl-btn" style="flex: initial; width: 80px; min-height: 32px; background: transparent;">취소</button>
+        <button id="btn-save-add-ch" class="yt-btn-analyze" style="min-height: 32px;">추가하기</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+      ? 'http://127.0.0.1:8000'
+      : (window.GUMA_API_BASE || 'https://guma-backend.onrender.com');
+    let currentVideoUrl = '';
+
+    const urlInput = document.getElementById('yt-url');
+    const clearBtn = document.getElementById('yt-clear');
+    const analyzeBtn = document.getElementById('yt-analyze');
+    const resultCard = document.getElementById('yt-result');
+
+    // 입력창 클리어 버튼 제어
+    urlInput.addEventListener('input', () => {
+      clearBtn.style.display = urlInput.value ? 'block' : 'none';
+    });
+    clearBtn.addEventListener('click', () => {
+      urlInput.value = '';
+      clearBtn.style.display = 'none';
+      resultCard.style.display = 'none';
+      urlInput.focus();
+    });
+
+    // 시간 포맷팅 (초 -> MM:SS)
+    function formatDuration(seconds) {
+      if (!seconds) return '00:00';
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    // 영상 분석 요청
+    analyzeBtn.addEventListener('click', async () => {
+      const url = urlInput.value.trim();
+      if (!url) {
+        alert('유튜브 URL을 입력하세요.');
+        return;
+      }
+
+      analyzeBtn.disabled = true;
+      analyzeBtn.innerHTML = '<span>분석 중...</span>';
+      resultCard.style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/youtube/info`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || '분석 실패');
+        }
+
+        currentVideoUrl = url;
+        document.getElementById('yt-thumb').src = data.thumbnail;
+        document.getElementById('yt-card-title').textContent = data.title;
+        document.getElementById('yt-card-uploader').textContent = `👤 ${data.uploader}`;
+        document.getElementById('yt-card-duration').textContent = `⏱️ ${formatDuration(data.duration)}`;
+
+        // 조회수 포맷팅
+        let viewsStr = '-';
+        if (data.view_count) {
+          if (data.view_count >= 10000) {
+            viewsStr = (data.view_count / 10000).toFixed(1) + '만회';
+          } else {
+            viewsStr = data.view_count.toLocaleString() + '회';
+          }
+        }
+        document.getElementById('yt-card-views').textContent = `👁️ ${viewsStr}`;
+        document.getElementById('yt-card-date').textContent = data.upload_date ? `📅 ${data.upload_date}` : '';
+        document.getElementById('yt-card-quality').textContent = data.quality || 'HD';
+
+        resultCard.style.display = 'block';
+      } catch (err) {
+        alert(`오류: ${err.message}`);
+      } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.innerHTML = '<span>영상 분석</span>';
+      }
+    });
+
+    // 관심 채널 목록 관리 (localStorage 연동)
+    const DEFAULT_CHANNELS = [
+      { id: 'rs-billiards', name: 'RS Billiards', url: 'https://www.youtube.com/@RSBilliards/videos', isDefault: true },
+      { id: 'pba-tv', name: 'PBA TV', url: 'https://www.youtube.com/@pbatv/videos', isDefault: true },
+      { id: 'billiards-tv', name: '빌리어즈TV', url: 'https://www.youtube.com/@BilliardsTV_Official/videos', isDefault: true }
+    ];
+
+    function getSavedChannels() {
+      try {
+        const saved = localStorage.getItem('guma_yt_channels');
+        if (saved) {
+          let list = JSON.parse(saved);
+          list = list.map(c => {
+            if (c.id === 'billiards-tv' && (c.url.endsWith('@BilliardsTV/videos') || c.url.endsWith('@BilliardsTV'))) {
+              c.url = 'https://www.youtube.com/@BilliardsTV_Official/videos';
+            }
+            return c;
+          });
+          return list;
+        }
+      } catch (e) {}
+      return DEFAULT_CHANNELS;
+    }
+
+    function saveChannels(channels) {
+      localStorage.setItem('guma_yt_channels', JSON.stringify(channels));
+    }
+
+    let channelsList = getSavedChannels();
+    let activeChannelUrl = channelsList[0] ? channelsList[0].url : 'https://www.youtube.com/@RSBilliards/videos';
+
+    function renderChannelTabs() {
+      const bar = document.getElementById('yt-channel-bar');
+      if (!bar) return;
+      bar.innerHTML = '';
+
+      if (channelsList.length === 0) {
+        bar.innerHTML = '';
+        const container = document.getElementById('rs-billiards-list');
+        if (container) container.innerHTML = '';
+        const loader = document.getElementById('rs-billiards-loader');
+        if (loader) loader.style.display = 'none';
+        return;
+      }
+
+      channelsList.forEach(ch => {
+        const tab = document.createElement('div');
+        tab.className = `yt-ch-tab ${ch.url === activeChannelUrl ? 'active' : ''}`;
+        
+        // 모든 채널 탭에 ✕ 삭제 버튼 표시
+        const delBtnHtml = `<span class="del-btn" title="'${ch.name}' 채널 삭제">✕</span>`;
+
+        tab.innerHTML = `<span>${ch.name}</span>${delBtnHtml}`;
+
+        tab.addEventListener('click', (evt) => {
+          if (evt.target.classList.contains('del-btn')) {
+            evt.stopPropagation();
+            if (confirm(`'${ch.name}' 채널을 목록에서 삭제하시겠습니까?`)) {
+              channelsList = channelsList.filter(c => c.id !== ch.id);
+              saveChannels(channelsList);
+              if (activeChannelUrl === ch.url) {
+                activeChannelUrl = channelsList[0] ? channelsList[0].url : '';
+              }
+              renderChannelTabs();
+              resetAndLoadChannel();
+            }
+            return;
+          }
+
+          if (activeChannelUrl !== ch.url) {
+            activeChannelUrl = ch.url;
+            renderChannelTabs();
+            resetAndLoadChannel();
+          }
+        });
+
+        bar.appendChild(tab);
+      });
+    }
+
+    function resetAndLoadChannel() {
+      const container = document.getElementById('rs-billiards-list');
+      const loader = document.getElementById('rs-billiards-loader');
+      if (container) container.innerHTML = '';
+      chOffset = 0;
+      chHasMore = true;
+      chLoading = false;
+      if (activeChannelUrl && channelsList.length > 0) {
+        loadMoreChannelVideos();
+      } else {
+        if (loader) loader.style.display = 'none';
+      }
+    }
+
+    // 모달 및 채널 제어 (추가/초기화)
+    const addChModal = document.getElementById('add-ch-modal');
+    const btnOpenAddCh = document.getElementById('btn-open-add-ch');
+    const btnClearAllCh = document.getElementById('btn-clear-all-ch');
+    const btnCancelAddCh = document.getElementById('btn-cancel-add-ch');
+    const btnSaveAddCh = document.getElementById('btn-save-add-ch');
+    const chNameInput = document.getElementById('ch-name-input');
+    const chUrlInput = document.getElementById('ch-url-input');
+
+    if (btnClearAllCh) {
+      btnClearAllCh.addEventListener('click', () => {
+        if (confirm('등록된 모든 관심 채널을 삭제(목록 비우기)하시겠습니까?')) {
+          channelsList = [];
+          saveChannels(channelsList);
+          activeChannelUrl = '';
+          renderChannelTabs();
+          resetAndLoadChannel();
+        }
+      });
+    }
+
+    if (btnOpenAddCh) {
+      btnOpenAddCh.addEventListener('click', () => {
+        chNameInput.value = '';
+        chUrlInput.value = '';
+        addChModal.style.display = 'flex';
+        chNameInput.focus();
+      });
+    }
+
+    if (btnCancelAddCh) {
+      btnCancelAddCh.addEventListener('click', () => {
+        addChModal.style.display = 'none';
+      });
+    }
+
+    if (btnSaveAddCh) {
+      btnSaveAddCh.addEventListener('click', () => {
+        const name = chNameInput.value.trim();
+        let url = chUrlInput.value.trim();
+
+        if (!name || !url) {
+          alert('채널 이름과 URL(또는 핸들)을 모두 입력해주세요.');
+          return;
+        }
+
+        if (url.startsWith('@')) {
+          url = `https://www.youtube.com/${url}/videos`;
+        } else if (!url.startsWith('http')) {
+          url = `https://www.youtube.com/${url}`;
+        }
+
+        const newCh = {
+          id: 'custom-' + Date.now(),
+          name: name,
+          url: url,
+          isDefault: false
+        };
+
+        channelsList.push(newCh);
+        saveChannels(channelsList);
+        activeChannelUrl = url;
+        addChModal.style.display = 'none';
+        renderChannelTabs();
+        resetAndLoadChannel();
+      });
+    }
+
+    // 최근 영상 무한 스크롤 로딩
+    let chOffset = 0;
+    const chLimit = 10;
+    let chLoading = false;
+    let chHasMore = true;
+
+    async function loadMoreChannelVideos() {
+      if (chLoading || !chHasMore) return;
+
+      const loader = document.getElementById('rs-billiards-loader');
+      const container = document.getElementById('rs-billiards-list');
+
+      if (!activeChannelUrl || !channelsList || channelsList.length === 0) {
+        if (container) container.innerHTML = '';
+        if (loader) loader.style.display = 'none';
+        chHasMore = false;
+        return;
+      }
+
+      chLoading = true;
+      loader.style.display = 'block';
+      loader.innerHTML = '<span>영상을 더 불러오는 중...</span>';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/youtube/channel`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channel_url: activeChannelUrl,
+            offset: chOffset,
+            limit: chLimit
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.videos) throw new Error(data.detail || '로딩 실패');
+
+        const container = document.getElementById('rs-billiards-list');
+        
+        if (data.videos.length === 0 && chOffset === 0) {
+          loader.innerHTML = '<span>불러올 영상이 없습니다.</span>';
+          chHasMore = false;
+          return;
+        }
+
+        data.videos.forEach(v => {
+          const card = document.createElement('div');
+          card.className = 'yt-ch-card';
+
+          let viewsText = '';
+          if (v.view_count) {
+            viewsText = v.view_count >= 10000 ? `${(v.view_count / 10000).toFixed(1)}만회` : `${v.view_count.toLocaleString()}회`;
+          }
+
+          card.innerHTML = `
+            <div>
+              <img class="yt-ch-thumb" src="${v.thumbnail}" alt="${v.title}">
+              <div class="yt-ch-title" title="${v.title}">${v.title}</div>
+              <div class="yt-ch-meta">
+                <span>⏱️ ${formatDuration(v.duration)}</span>
+                <span>${viewsText ? '👁️ ' + viewsText : ''}</span>
+              </div>
+            </div>
+          `;
+
+          card.addEventListener('click', () => {
+            urlInput.value = v.url;
+            clearBtn.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            analyzeBtn.click();
+          });
+
+          container.appendChild(card);
+        });
+
+        chOffset += data.videos.length;
+        chHasMore = data.has_more;
+
+        if (!chHasMore) {
+          loader.innerHTML = '<span>모든 최근 영상을 불러왔습니다.</span>';
+        } else {
+          loader.innerHTML = '<span style="font-size:12px; cursor:pointer; color:var(--muted);" onclick="loadMoreChannelVideos()">⬇️ 스크롤 또는 클릭하여 영상 더보기</span>';
+        }
+      } catch (e) {
+        loader.innerHTML = '<span>최근 영상을 불러오려면 백엔드 서버(FastAPI)가 가동 중이어야 합니다.</span>';
+      } finally {
+        chLoading = false;
+        // 화면 스크롤이 생기지 않았고 추가 데이터가 있다면 화면을 채울 때까지 자동 추가 로딩
+        const loaderRect = loaderSentinel.getBoundingClientRect();
+        if (chHasMore && loaderRect.top <= window.innerHeight + 100) {
+          setTimeout(loadMoreChannelVideos, 400);
+        }
+      }
+    }
+
+    renderChannelTabs();
+
+    // IntersectionObserver로 스크롤 하단 감지
+    const loaderSentinel = document.getElementById('rs-billiards-loader');
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        loadMoreChannelVideos();
+      }
+    }, { rootMargin: '200px' });
+
+    observer.observe(loaderSentinel);
+
+    // 다운로드 실행 함수
+    async function triggerDownload(formatType) {
+      if (!currentVideoUrl) return;
+
+      const mp4Btn = document.getElementById('btn-dl-mp4');
+      const mp3Btn = document.getElementById('btn-dl-mp3');
+      const targetBtn = formatType === 'mp4' ? mp4Btn : mp3Btn;
+      const originalText = targetBtn.innerHTML;
+
+      targetBtn.disabled = true;
+      mp4Btn.disabled = true;
+      mp3Btn.disabled = true;
+      targetBtn.innerHTML = `<span>⏳ 다운로드 중...</span>`;
+
+      try {
+        const downloadUrl = `${API_BASE}/api/youtube/download?url=${encodeURIComponent(currentVideoUrl)}&format_type=${formatType}`;
+        
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (err) {
+        alert(`다운로드 오류: ${err.message}`);
+      } finally {
+        setTimeout(() => {
+          targetBtn.innerHTML = originalText;
+          mp4Btn.disabled = false;
+          mp3Btn.disabled = false;
+        }, 3000);
+      }
+    }
+
+    document.getElementById('btn-dl-mp4').addEventListener('click', () => triggerDownload('mp4'));
+    document.getElementById('btn-dl-mp3').addEventListener('click', () => triggerDownload('mp3'));
+  </script>
+</body>
+</html>

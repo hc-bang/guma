@@ -25,35 +25,39 @@ function setCachedFavicon(url, src) {
   if (!k) return;
   try { localStorage.setItem(k, src); } catch {}
 }
+const ROUTER_FAVICON =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%233b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>';
+
 function applyFavicon(imgEl, url, size = 32) {
-  let hostname = '', originUrl = '';
+  let hostname = '';
   try {
     const u = new URL(url);
     hostname = u.hostname;
-    originUrl = u.origin;
   } catch {
     imgEl.src = FALLBACK_FAVICON;
     return;
   }
 
+  imgEl.loading = 'lazy';
+
+  // 1. 사설 IP (공유기, 확장기 등)는 네트워크 연결 시도 시 타임아웃(수초 지연)을 유발하므로 즉시 라우터 아이콘 적용
   const isPrivate = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/i.test(url);
+  if (isPrivate) {
+    imgEl.src = ROUTER_FAVICON;
+    return;
+  }
+
+  // 2. 이미 캐시된 파비콘이 있다면 네트워크 요청 없이 0ms 즉시 렌더링
   const cached = getCachedFavicon(url);
-  
-  // 파비콘 다중 획득 소스 (Google / DuckDuckGo API 우선으로 99.9% 즉각 획득)
+  if (cached) {
+    imgEl.src = cached;
+    return;
+  }
+
+  // 3. 캐시가 없는 일반 도메인은 구글 파비콘 API를 1차로 로드
   const google     = `https://www.google.com/s2/favicons?domain=${hostname}&sz=${size}`;
   const duckduckgo = `https://icons.duckduckgo.com/ip3/${hostname}.ico`;
-  const clearbit   = `https://logo.clearbit.com/${hostname}`;
-
-  const originIco   = `${originUrl}/favicon.ico`;
-  const originPng   = `${originUrl}/favicon.png`;
-  const originSvg   = `${originUrl}/favicon.svg`;
-  const originApple = `${originUrl}/apple-touch-icon.png`;
-
-  const externalSources = [google, duckduckgo, clearbit, originIco, originPng, originSvg, originApple];
-  const privateSources  = [originSvg, originPng, originIco, originApple, google];
-
-  const base = isPrivate ? privateSources : externalSources;
-  const candidates = [...new Set([...base, cached, FALLBACK_FAVICON].filter(Boolean))];
+  const candidates = [google, duckduckgo, FALLBACK_FAVICON];
 
   imgEl.onload = () => {
     if (imgEl.naturalWidth > 0 && imgEl.src && !imgEl.src.startsWith('data:')) {
@@ -143,7 +147,7 @@ async function loadEnginesJson() {
     }
     
     // 2. config/engines.json 확인
-    const res = await fetch('./config/engines.json', { cache: 'no-store' });
+    const res = await fetch('./config/engines.json', { cache: 'default' });
     if (!res.ok) throw new Error();
     const data = await res.json();
     engines = data.engines || {};
@@ -215,7 +219,7 @@ function render() {
 async function loadShortcutsJson() {
   if (bookmarks !== null) { render(); return; }
   try {
-    const res = await fetch('./config/shortcuts.json', { cache: 'no-store' });
+    const res = await fetch('./config/shortcuts.json', { cache: 'default' });
     if (!res.ok) throw new Error();
     const data = await res.json();
     bookmarks = (Array.isArray(data.shortcuts) ? data.shortcuts : []).slice(0, 15);
@@ -360,7 +364,7 @@ async function loadBookmarksJson() {
   try {
     const stored = getTopFromLocalStorage();
     if (stored) { renderTopFolders(stored); return; }
-    const res = await fetch('./config/bookmarks.json', { cache: 'no-store' });
+    const res = await fetch('./config/bookmarks.json', { cache: 'default' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     renderTopFolders(await res.json());
   } catch { if (topBookmarksDiv) topBookmarksDiv.innerHTML = ''; }
@@ -369,7 +373,5 @@ async function loadBookmarksJson() {
 
 document.addEventListener('click', () => document.querySelectorAll('.engine-menu, .top-folder-menu').forEach(el => el.classList.add('hidden')));
 
-loadEnginesJson();
-loadShortcutsJson();
-loadBookmarksJson();
+Promise.all([loadEnginesJson(), loadShortcutsJson(), loadBookmarksJson()]);
 input.focus();

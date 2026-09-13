@@ -195,6 +195,10 @@
           "url": "https://hub.docker.com/"
         },
         {
+          "name": "HuggingFace",
+          "url": "https://huggingface.co/"
+        },
+        {
           "name": "Maven Repository",
           "url": "https://mvnrepository.com/"
         },

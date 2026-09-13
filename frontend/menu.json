@@ -11,6 +11,11 @@
       "icon": "archive"
     },
     {
+      "label": "유튜브 다운로더",
+      "href": "youtube/",
+      "icon": "youtube"
+    },
+    {
       "label": "게임",
       "href": "games/",
       "icon": "gamepad"

@@ -1222,7 +1222,7 @@ ytReset?.addEventListener('click', async ()=>{
 
 // --- Server Config (Cloudflare Tunnel / Backend) ---
 const BACKEND_STORAGE_KEY = 'guma_backend_url';
-const DEFAULT_TUNNEL_URL = 'https://removal-vehicle-abroad-contributed.trycloudflare.com';
+const DEFAULT_TUNNEL_URL = 'https://generated-thanksgiving-sullivan-labels.trycloudflare.com';
 
 const backendServerUrl = $('#backendServerUrl');
 const serverApply = $('#serverApply');

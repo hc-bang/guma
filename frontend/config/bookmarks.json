@@ -30,6 +30,10 @@
         {
           "name": "K-패스",
           "url": "https://korea-pass.kr/"
+        },
+        {
+          "name": "프리티",
+          "url": "https://www.freet.co.kr/"
         }
       ]
     },
@@ -212,6 +216,10 @@
           "url": "https://drive.google.com/drive/"
         },
         {
+          "name": "Google 포토",
+          "url": "https://photos.google.com/"
+        },
+        {
           "name": "네이버 MYBOX",
           "url": "https://mybox.naver.com/"
         },
@@ -316,6 +324,32 @@
         {
           "name": "Rufus | 부팅 USB",
           "url": "https://rufus.ie/ko/"
+        }
+      ]
+    },
+    {
+      "name": "개발",
+      "items": [
+        {
+          "name": "localhost",
+          "items": [
+            {
+              "name": "80",
+              "url": "http://localhost/"
+            },
+            {
+              "name": "8000",
+              "url": "http://localhost:8000/"
+            },
+            {
+              "name": "8080",
+              "url": "http://localhost:8080/"
+            }
+          ]
+        },
+        {
+          "name": "Neon",
+          "url": "https://neon.tech/"
         }
       ]
     }

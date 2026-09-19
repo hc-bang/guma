@@ -132,6 +132,9 @@
 
       a.appendChild(iconSvg);
       a.appendChild(label);
+      a.addEventListener('click', () => {
+        closeSidepanel();
+      });
       container.appendChild(a);
     });
   }
@@ -166,6 +169,11 @@
       e.preventDefault(); openSidepanel();
     });
     document.getElementById('sidepanelOverlay')?.addEventListener('click', closeSidepanel);
+
+    // 뒤로가기(BFCache) 등으로 페이지 복원 시 항상 사이드패널 닫기
+    window.addEventListener('pageshow', () => {
+      closeSidepanel();
+    });
 
     // ESC 키
     document.addEventListener('keydown', e => {

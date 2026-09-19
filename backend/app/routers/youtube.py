@@ -111,18 +111,107 @@ def resolve_channel_id(ch_url: str = "", ch_id: Optional[str] = None) -> Optiona
 
     return None
 
+def parse_duration_to_seconds(duration_str: str) -> int:
+    """'1:17:50' 또는 '46:30' 또는 'PT9M55S' 형태의 재생시간 텍스트를 초 단위로 변환합니다."""
+    if not duration_str:
+        return 0
+    try:
+        if duration_str.startswith('PT'):
+            # ISO 8601 duration 파싱 (예: PT9M55S, PT1H23M45S)
+            m = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration_str)
+            if m:
+                h = int(m.group(1) or 0)
+                minutes = int(m.group(2) or 0)
+                s = int(m.group(3) or 0)
+                return h * 3600 + minutes * 60 + s
+        parts = duration_str.split(':')
+        if len(parts) == 3:
+            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+        elif len(parts) == 2:
+            return int(parts[0]) * 60 + int(parts[1])
+    except Exception:
+        pass
+    return 0
+
+def extract_meta_from_watch_html(clean_url: str, vid_id: str) -> Dict[str, Any]:
+    """유튜브 웹페이지 HTML에서 크롤러/SEO용으로 포함된 duration, viewCount, datePublished 등을 직접 추출합니다."""
+    canonical_url = f"https://www.youtube.com/watch?v={vid_id}" if vid_id else clean_url
+    data = {}
+    try:
+        req = urllib.request.Request(canonical_url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+        })
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+            
+            # 1. 재생시간 (초 단위)
+            m_dur_ms = re.search(r'["\']approxDurationMs["\']\s*:\s*["\']?(\d+)["\']?', html)
+            if m_dur_ms:
+                try:
+                    data['duration'] = int(int(m_dur_ms.group(1)) / 1000)
+                except Exception:
+                    pass
+
+            if not data.get('duration'):
+                m_len_sec = re.search(r'["\']lengthSeconds["\']\s*:\s*["\']?(\d+)["\']?', html)
+                if m_len_sec:
+                    try:
+                        data['duration'] = int(m_len_sec.group(1))
+                    except Exception:
+                        pass
+
+            if not data.get('duration'):
+                m_iso = re.search(r'<meta\s+itemprop=["\']duration["\']\s+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+                if m_iso:
+                    data['duration'] = parse_duration_to_seconds(m_iso.group(1))
+
+            # 2. 조회수
+            m_views = re.search(r'<meta\s+itemprop=["\']interactionCount["\']\s+content=["\'](\d+)["\']', html, re.IGNORECASE)
+            if m_views:
+                try:
+                    data['view_count'] = int(m_views.group(1))
+                except Exception:
+                    pass
+            if not data.get('view_count'):
+                m_vc = re.search(r'["\']viewCount["\']\s*:\s*["\']?(\d+)["\']?', html)
+                if m_vc:
+                    try:
+                        data['view_count'] = int(m_vc.group(1))
+                    except Exception:
+                        pass
+
+            # 3. 업로드 날짜
+            m_date = re.search(r'<meta\s+itemprop=["\']datePublished["\']\s+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+            if m_date:
+                data['upload_date'] = m_date.group(1)[:10]
+
+            # 4. 제목
+            m_title = re.search(r'<meta\s+name=["\']title["\']\s+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+            if m_title:
+                data['title'] = m_title.group(1)
+    except Exception:
+        pass
+
+    return data
+
 @router.post("/info")
 def get_video_info(req: VideoInfoRequest):
     """
     유튜브 URL의 영상 메타데이터(제목, 썸네일, 재생시간, 채널명, 조회수, 등록일, 화질)를 추출합니다.
-    클라우드/데이터센터 IP의 봇 차단(Sign in to confirm you're not a bot) 우회를 위해 모바일 클라이언트 및 oEmbed 폴백을 적용합니다.
+    클라우드/데이터센터 IP의 봇 차단(Sign in to confirm you're not a bot) 우회를 위해 모바일 클라이언트 및 oEmbed+HTML 파싱 폴백을 적용합니다.
     """
     if not req.url:
         raise HTTPException(status_code=400, detail="유효한 유튜브 URL을 입력하세요.")
 
     clean_url = req.url.strip()
+    vid_id = ""
+    if "v=" in clean_url:
+        vid_id = clean_url.split("v=")[1].split("&")[0]
+    elif "youtu.be/" in clean_url:
+        vid_id = clean_url.split("youtu.be/")[1].split("?")[0]
 
-    # 1차 시도: yt-dlp 모바일 앱 클라이언트 (android, ios)로 데이터센터 IP 봇 차단 우회
+    # 1차 시도: yt-dlp (다양한 클라이언트 적용)
     ydl_opts = {
         'dump_single_json': True,
         'no_warnings': True,
@@ -133,8 +222,7 @@ def get_video_info(req: VideoInfoRequest):
         },
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios'],
-                'player_skip': ['webpage', 'configs'],
+                'player_client': ['mweb', 'web', 'android', 'ios'],
                 'lang': ['ko']
             }
         }
@@ -163,13 +251,26 @@ def get_video_info(req: VideoInfoRequest):
             else:
                 quality = "HD"
 
+            duration = info.get("duration") or 0
+            view_count = info.get("view_count") or 0
+
+            # duration이나 view_count가 누락된 경우 HTML 메타데이터로 보완
+            if not duration or not view_count:
+                extra = extract_meta_from_watch_html(clean_url, vid_id)
+                if not duration:
+                    duration = extra.get("duration", 0)
+                if not view_count:
+                    view_count = extra.get("view_count", 0)
+                if not upload_date and extra.get("upload_date"):
+                    upload_date = extra.get("upload_date")
+
             return {
                 "success": True,
                 "title": info.get("title", "제목 없음"),
-                "thumbnail": info.get("thumbnail", ""),
-                "duration": info.get("duration", 0),
+                "thumbnail": info.get("thumbnail", f"https://i.ytimg.com/vi/{vid_id}/hqdefault.jpg" if vid_id else ""),
+                "duration": duration,
                 "uploader": info.get("uploader", "알 수 없는 채널"),
-                "view_count": info.get("view_count", 0),
+                "view_count": view_count,
                 "upload_date": upload_date,
                 "quality": quality,
                 "url": clean_url
@@ -179,14 +280,9 @@ def get_video_info(req: VideoInfoRequest):
         if any(k in err_msg for k in ["회원 전용", "가입하여", "subscriber_only", "members-only", "Join this channel"]):
             raise HTTPException(status_code=403, detail="이 영상은 채널 유료 회원(멤버십) 전용 콘텐츠로, 일반 다운로드가 지원되지 않습니다.")
 
-        # 2차 시도: 봇 차단(Sign in to confirm you're not a bot) 발생 시 유튜브 공식 oEmbed API로 무차단 폴백
+        # 2차 시도: 봇 차단 발생 시 공식 oEmbed API + watch 페이지 HTML 파싱으로 무차단 폴백
         try:
-            vid_id = ""
-            if "v=" in clean_url:
-                vid_id = clean_url.split("v=")[1].split("&")[0]
-            elif "youtu.be/" in clean_url:
-                vid_id = clean_url.split("youtu.be/")[1].split("?")[0]
-            
+            extra = extract_meta_from_watch_html(clean_url, vid_id)
             canonical_url = f"https://www.youtube.com/watch?v={vid_id}" if vid_id else clean_url
             encoded_url = urllib.parse.quote(canonical_url, safe='')
             oe_url = f"https://www.youtube.com/oembed?url={encoded_url}&format=json"
@@ -198,12 +294,12 @@ def get_video_info(req: VideoInfoRequest):
                 
                 return {
                     "success": True,
-                    "title": oe_data.get("title", "유튜브 동영상"),
+                    "title": oe_data.get("title") or extra.get("title", "유튜브 동영상"),
                     "thumbnail": thumb,
-                    "duration": 0,
+                    "duration": extra.get("duration", 0),
                     "uploader": oe_data.get("author_name", "알 수 없는 채널"),
-                    "view_count": 0,
-                    "upload_date": "",
+                    "view_count": extra.get("view_count", 0),
+                    "upload_date": extra.get("upload_date", ""),
                     "quality": "HD",
                     "url": clean_url
                 }
@@ -371,40 +467,56 @@ def safe_youtube_url(raw_url: str) -> str:
                 base += '/videos'
             return base
 
-def parse_duration_to_seconds(duration_str: str) -> int:
-    """'1:17:50' 또는 '46:30' 형태의 재생시간 텍스트를 초 단위로 변환합니다."""
-    if not duration_str:
-        return 0
-    parts = duration_str.split(':')
-    try:
-        if len(parts) == 3:
-            return int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
-        elif len(parts) == 2:
-            return int(parts[0]) * 60 + int(parts[1])
-    except Exception:
-        pass
-    return 0
+
 
 def parse_relative_time_to_seconds(time_str: str) -> int:
-    """'방금 전', '5분 전', '2시간 전', '1일 전', '3주 전', '2개월 전' 등을 경과 초로 변환하여 정렬에 사용"""
+    """'방금 전', '5분 전', '2시간 전', '어제', '1일 전', '3주 전', '2개월 전', '2026. 9. 19.' 등을 정확한 경과 초(seconds)로 변환"""
     if not time_str:
         return 999999999
-    digits = re.findall(r'\d+', time_str)
+    
+    clean = str(time_str).strip()
+
+    # 0. 방금, 오늘, 어제
+    if any(kw in clean for kw in ['방금', 'just now', '실시간', 'live']):
+        return 0
+    if '오늘' in clean:
+        return 3600 * 2
+    if '어제' in clean:
+        return 86400
+
+    # 1. 절대 날짜 형식 (예: 2026. 9. 19. 또는 2026-09-19 또는 26. 9. 19.)
+    date_match = re.search(r'(\d{2,4})[\.\-\/]\s*(\d{1,2})[\.\-\/]\s*(\d{1,2})', clean)
+    if date_match:
+        try:
+            raw_y = int(date_match.group(1))
+            y = (2000 + raw_y) if raw_y < 100 else raw_y
+            m = int(date_match.group(2))
+            d = int(date_match.group(3))
+            pub_dt = datetime.datetime(y, m, d)
+            diff = (datetime.datetime.now() - pub_dt).total_seconds()
+            return max(0, int(diff))
+        except Exception:
+            pass
+
+    # 2. 상대 시간 (숫자 + 단위)
+    digits = re.findall(r'\d+', clean)
     n = int(digits[0]) if digits else 1
-    if any(u in time_str for u in ['초', 'second']):
+
+    if any(u in clean for u in ['초', 'sec', 'second']):
         return n
-    if any(u in time_str for u in ['분', 'minute']):
+    if any(u in clean for u in ['분', 'min', 'minute']):
         return n * 60
-    if any(u in time_str for u in ['시간', 'hour']):
+    if any(u in clean for u in ['시간', 'hour', 'hr']):
         return n * 3600
-    if any(u in time_str for u in ['일', 'day']):
+    if any(u in clean for u in ['일', 'day']):
         return n * 86400
-    if any(u in time_str for u in ['주', 'week']):
+    if any(u in clean for u in ['주', 'week']):
         return n * 604800
-    if any(u in time_str for u in ['개월', '달', 'month']):
+    if any(u in clean for u in ['개월', '달', 'month']):
         return n * 2592000
-    if any(u in time_str for u in ['년', 'year']):
+    if any(u in clean for u in ['년', 'year', 'yr']):
         return n * 31536000
+
     return 999999999
 
 def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
@@ -431,7 +543,7 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                     if not tab_renderer.get('selected'):
                         continue
                     contents = tab_renderer.get('content', {}).get('richGridRenderer', {}).get('contents', [])
-                    for item in contents:
+                    for item_idx, item in enumerate(contents):
                         rich_item = item.get('richItemRenderer', {}).get('content', {})
                         lockup = rich_item.get('lockupViewModel')
                         if not lockup:
@@ -473,7 +585,7 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                                 txt = p.get('text', {}).get('content', '')
                                 if '조회수' in txt or 'views' in txt:
                                     views_text = txt.replace('조회수', '').replace('views', '').strip()
-                                elif any(kw in txt for kw in ['전', 'ago', '스트리밍', '라이브']):
+                                elif any(kw in txt for kw in ['전', 'ago', '스트리밍', '라이브', '오늘', '어제', '최초']):
                                     time_text = txt
                                 elif not time_text:
                                     time_text = txt
@@ -503,6 +615,7 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                                 'view_count': numeric_views,
                                 'time_text': time_text,
                                 'published': time_text,
+                                'channel_rank': item_idx,
                                 'elapsed_seconds': parse_relative_time_to_seconds(time_text)
                             })
                 if parsed_videos:
@@ -554,6 +667,20 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                     if entry.get("thumbnails") and len(entry["thumbnails"]) > 0:
                         thumb = entry["thumbnails"][-1].get("url", thumb)
 
+                    # 실제 타임스탬프 또는 날짜 기준 경과 시간 계산 (단순 idx*3600 배제)
+                    entry_ts = entry.get("timestamp")
+                    entry_date = str(entry.get("upload_date") or "")
+                    if entry_ts:
+                        elapsed = max(0, int(time.time() - entry_ts))
+                    elif len(entry_date) == 8:
+                        try:
+                            dt = datetime.datetime.strptime(entry_date, "%Y%m%d")
+                            elapsed = max(0, int((datetime.datetime.now() - dt).total_seconds()))
+                        except Exception:
+                            elapsed = 86400 * (idx + 1)
+                    else:
+                        elapsed = 86400 * (idx + 1)
+
                     fallback_videos.append({
                         "id": vid,
                         "title": v_title,
@@ -566,7 +693,8 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
                         "duration": dur,
                         "duration_text": "",
                         "time_text": "",
-                        "elapsed_seconds": idx * 3600
+                        "channel_rank": idx,
+                        "elapsed_seconds": elapsed
                     })
                 return fallback_videos
         except Exception:
@@ -577,7 +705,8 @@ def fetch_single_channel_feed(ch: ChannelItem) -> List[Dict[str, Any]]:
 @router.post("/feed")
 def get_subscription_feed(req: FeedRequest):
     """
-    등록된 여러 유튜브 채널의 최신 영상을 채널 구분 없이 최신 발행일시 순으로 통합하여 페이징 반환합니다.
+    등록된 여러 유튜브 채널의 최신 영상을 날짜/발행시간 순서를 최우선으로 통합 정렬합니다.
+    동일한 날짜/시간대(예: 같은 1일 전, 2일 전)인 경우 특정 채널이 몰리지 않고 채널별로 고르게 교차(Interleaving) 배치합니다.
     """
     if not req.channels:
         return {
@@ -592,23 +721,39 @@ def get_subscription_feed(req: FeedRequest):
     cache_key = tuple(sorted((c.channel_id or c.url or "") for c in req.channels))
     cached = FEED_CACHE.get(cache_key)
 
-    # 5분(300초) 이내 캐시 유효
-    if cached and (time.time() - cached.get("timestamp", 0) < 300):
+    # 60초 이내 캐시 유효 (빠른 최신 상태 갱신 반영)
+    if cached and (time.time() - cached.get("timestamp", 0) < 60):
         all_videos = cached.get("videos", [])
     else:
-        with ThreadPoolExecutor(max_workers=min(10, len(req.channels))) as executor:
-            channel_results = list(executor.map(fetch_single_channel_feed, req.channels))
+        # 채널 결과 통합 및 고유 영상 ID 기준 중복 제거
+        seen_ids = set()
+        unique_videos = []
+        for sub in channel_results:
+            for v in sub:
+                vid = v.get("id") or v.get("url")
+                if vid and vid not in seen_ids:
+                    seen_ids.add(vid)
+                    unique_videos.append(v)
+                elif not vid:
+                    unique_videos.append(v)
+
+        all_videos = unique_videos
         
-        all_videos = [v for sub in channel_results for v in sub]
-        # 상대 경과 시간(elapsed_seconds) 기준 오름차순(가장 적은 시간 경과 = 최신순) 정렬
-        all_videos.sort(key=lambda x: x.get("elapsed_seconds", 999999999))
+        # [정렬 핵심 로직]: 사용자 지시 "날짜 순서 > 채널 목록 순서"
+        # 1. 1차 기준: elapsed_seconds (경과 초가 적을수록 최신)
+        # 2. 2차 기준: channel_rank (동일한 시간대/날짜일 때 채널 내 최신 순번 0, 1, 2... 순으로 각 채널 영상이 공평하게 교차되도록 정렬)
+        all_videos.sort(key=lambda x: (
+            x.get("elapsed_seconds", 999999999),
+            x.get("channel_rank", 0)
+        ))
+        
         FEED_CACHE[cache_key] = {
             "timestamp": time.time(),
             "videos": all_videos
         }
 
     offset = req.offset or 0
-    limit = req.limit or 12
+    limit = req.limit or 10
     sliced = all_videos[offset : offset + limit]
     has_more = len(all_videos) > (offset + limit)
 

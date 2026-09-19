@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GUMA™ — 유튜브 클립 다운로더</title>
+  <title>GUMA™ YouTube</title>
   <link rel="icon" type="image/svg+xml" href="../favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -233,7 +233,7 @@
 
     /* Channel Section */
     .yt-channel-section {
-      margin-top: 28px;
+      margin-top: 6px;
     }
 
     .yt-channel-header {
@@ -241,6 +241,8 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .yt-channel-title {
@@ -251,6 +253,106 @@
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    /* Modal (Internal Popup) Overlay */
+    .yt-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 1200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.22s ease, visibility 0.22s ease;
+    }
+
+    .yt-modal-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .yt-modal-dialog {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 22px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      transform: scale(0.95);
+      transition: transform 0.22s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .yt-modal-overlay.open .yt-modal-dialog {
+      transform: scale(1);
+    }
+
+    .yt-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .yt-modal-heading {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .yt-modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 8px;
+      border-radius: 8px;
+      transition: color .18s, background .18s;
+    }
+
+    .yt-modal-close:hover {
+      color: var(--text);
+      background: var(--btnHover, var(--btn-hover));
+    }
+
+    .yt-header-action-btn {
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--btn);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .18s ease;
+      white-space: nowrap;
+    }
+
+    .yt-header-action-btn:hover {
+      background: var(--btnHover, var(--btn-hover));
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+      color: var(--accent);
     }
 
     .yt-channel-grid {
@@ -434,7 +536,7 @@
               d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
           </svg>
         </span>
-        유튜브 다운로더
+        YouTube
       </h1>
     </div>
     <div class="topbar-right">
@@ -468,13 +570,25 @@
     <div id="sidepanel-nav" class="sidepanel-actions"></div>
   </aside>
 
-  <div class="yt-container">
-    <div class="yt-box">
+  <!-- Video Detail & Download Modal (내부 팝업) -->
+  <div id="yt-modal" class="yt-modal-overlay" aria-hidden="true">
+    <div class="yt-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="yt-modal-title">
+      <div class="yt-modal-header">
+        <h3 id="yt-modal-title" class="yt-modal-heading">
+          <span class="icon-svg" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff4b4b">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+            </svg>
+          </span>
+          <span>영상 상세 및 다운로드</span>
+        </h3>
+        <button id="yt-modal-close" class="yt-modal-close" type="button" aria-label="닫기">&times;</button>
+      </div>
+
       <!-- Input Form -->
       <div class="yt-input-group">
         <div class="yt-input-wrapper">
-          <input type="text" id="yt-url" class="yt-input" placeholder="https://www.youtube.com/watch?v=..."
-            autocomplete="off">
+          <input type="text" id="yt-url" class="yt-input" placeholder="유튜브 영상 URL을 입력하거나 붙여넣으세요..." autocomplete="off">
           <button id="yt-clear" class="yt-clear-btn">&times;</button>
         </div>
         <button id="yt-analyze" class="yt-btn-analyze">
@@ -498,20 +612,33 @@
               </div>
             </div>
             <div class="yt-actions" style="flex-wrap: wrap; gap: 8px;">
-              <button id="btn-dl-mp4" class="yt-dl-btn" style="flex: 0 0 150px; width: 150px; font-weight: 700;">🎬 MP4 다운로드</button>
-              <button id="btn-dl-mp3" class="yt-dl-btn" style="flex: 0 0 150px; width: 150px; font-weight: 700;">🎵 MP3 다운로드</button>
+              <button id="btn-dl-mp4" class="yt-dl-btn" style="flex: 1 1 140px; font-weight: 700;">🎬 MP4 다운로드</button>
+              <button id="btn-dl-mp3" class="yt-dl-btn" style="flex: 1 1 140px; font-weight: 700;">🎵 MP3 다운로드</button>
             </div>
-
-
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- YouTube Channel Recent Videos -->
+  <div class="yt-container">
+    <!-- YouTube Channel Recent Videos (전면 배치) -->
     <div class="yt-channel-section">
       <div class="yt-channel-header">
         <h2 class="yt-channel-title">📺 최근 영상</h2>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="btnSubOpenUrlModal" class="yt-header-action-btn" type="button" aria-label="URL 직접 입력">
+            <span>🔗 직접 URL 입력</span>
+          </button>
+          <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" class="yt-header-action-btn" aria-label="YouTube 공식 사이트 새 탭 열기" style="text-decoration: none;">
+            <span class="icon-svg" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff4b4b">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+            </span>
+            <span>YouTube</span>
+          </a>
+        </div>
       </div>
 
       <!-- Channel Tabs Bar -->
@@ -530,27 +657,67 @@
     const DEFAULT_TUNNEL_URL = 'https://generated-thanksgiving-sullivan-labels.trycloudflare.com';
     
     function getApiBase() {
-      const saved = localStorage.getItem('guma_backend_url');
-      if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
-
       const host = window.location.hostname;
-      // 로컬 환경 (localhost, 127.0.0.1, 내부망) 또는 터널 자체 접속 시
+      // 1. 로컬 환경(localhost, 127.0.0.1, 내부망 192.168.x.x) 또는 터널 자체 접속 시 무조건 자기 자신(origin) 연결!
       if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.') || host.endsWith('.trycloudflare.com')) {
         return window.location.origin;
       }
 
-      // GitHub Pages 등 외부 정적 웹 접속 시 기본 터널 주소 연결
+      // 2. GitHub Pages 등 외부 정적 웹 접속 시 사용자가 지정한 저장값 우선 적용, 없으면 기본 터널 연결
+      const saved = localStorage.getItem('guma_backend_url');
+      if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
+
       return DEFAULT_TUNNEL_URL;
     }
 
     const API_BASE = getApiBase();
     let currentVideoUrl = '';
 
+    const ytModal = document.getElementById('yt-modal');
+    const modalCloseBtn = document.getElementById('yt-modal-close');
+    const btnSubOpenUrlModal = document.getElementById('btnSubOpenUrlModal');
 
     const urlInput = document.getElementById('yt-url');
     const clearBtn = document.getElementById('yt-clear');
     const analyzeBtn = document.getElementById('yt-analyze');
     const resultCard = document.getElementById('yt-result');
+
+    // 내부 팝업(모달) 열기/닫기 제어
+    function openModal(previewData = null) {
+      if (!ytModal) return;
+      ytModal.classList.add('open');
+      ytModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+
+      if (previewData) {
+        analyzeVideo(previewData.url, previewData);
+      } else {
+        setTimeout(() => {
+          if (urlInput) urlInput.focus();
+        }, 120);
+      }
+    }
+
+    function closeModal() {
+      if (!ytModal) return;
+      ytModal.classList.remove('open');
+      ytModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
+    if (ytModal) {
+      ytModal.addEventListener('click', (e) => {
+        if (e.target === ytModal) closeModal();
+      });
+    }
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && ytModal && ytModal.classList.contains('open')) {
+        closeModal();
+      }
+    });
+
+    if (btnSubOpenUrlModal) btnSubOpenUrlModal.addEventListener('click', () => openModal());
 
     // 입력창 클리어 버튼 제어
     urlInput.addEventListener('input', () => {
@@ -577,8 +744,11 @@
       return `${m}:${pad(s)}`;
     }
 
-    // 영상 분석 공통 함수
-    async function analyzeVideo(targetUrl) {
+    // 로드된 최근 영상 메타데이터 캐시 (빠른 미리보기 및 누락 데이터 보완)
+    const loadedVideosMap = new Map();
+
+    // 영상 분석 공통 함수 (선택된 카드의 사전 메타데이터가 있으면 즉시 렌더링 후 백엔드 분석)
+    async function analyzeVideo(targetUrl, previewData = null) {
       const url = (targetUrl || urlInput.value).trim();
       if (!url) {
         alert('유튜브 URL을 입력하세요.');
@@ -587,9 +757,58 @@
 
       urlInput.value = url;
       clearBtn.style.display = 'block';
+
+      // previewData가 없는 경우 로드된 영상 맵에서 검색
+      if (!previewData) {
+        if (loadedVideosMap.has(url)) {
+          previewData = loadedVideosMap.get(url);
+        } else {
+          for (const [key, val] of loadedVideosMap.entries()) {
+            if (val.id && url.includes(val.id)) {
+              previewData = val;
+              break;
+            }
+          }
+        }
+      }
+
+      currentVideoUrl = url;
+
+      // 카드를 클릭했거나 캐시된 영상 정보가 있다면 즉시 상단 결과 카드에 올바른 정보 선반영
+      if (previewData) {
+        if (previewData.thumbnail) document.getElementById('yt-thumb').src = previewData.thumbnail;
+        if (previewData.title) document.getElementById('yt-card-title').textContent = previewData.title;
+        const chName = previewData.channel_name || previewData.uploader || '유튜브 채널';
+        document.getElementById('yt-card-uploader').textContent = `👤 ${chName}`;
+        
+        const durText = previewData.duration_text || (previewData.duration ? formatDuration(previewData.duration) : '');
+        if (durText) {
+          document.getElementById('yt-card-duration').textContent = `⏱️ ${durText}`;
+        }
+
+        let pViews = '-';
+        if (previewData.view_count) {
+          pViews = previewData.view_count >= 10000 
+            ? (previewData.view_count / 10000).toFixed(1) + '만회' 
+            : previewData.view_count.toLocaleString() + '회';
+        } else if (previewData.views_text) {
+          pViews = previewData.views_text.includes('회') ? previewData.views_text : `${previewData.views_text}회`;
+        }
+        document.getElementById('yt-card-views').textContent = `👁️ ${pViews}`;
+        document.getElementById('yt-card-date').textContent = previewData.time_text || previewData.published || (previewData.upload_date ? `📅 ${previewData.upload_date}` : '');
+        document.getElementById('yt-card-quality').textContent = 'HD';
+        resultCard.style.display = 'block';
+
+        // 카드에서 선택한 영상은 이미 모든 정보(제목, 시간, 채널, 조회수 등)가 확보되어 있으므로 불필요한 2중 백엔드 조회를 생략합니다.
+        analyzeBtn.disabled = false;
+        analyzeBtn.innerHTML = '<span>영상 분석</span>';
+        return;
+      } else {
+        resultCard.style.display = 'none';
+      }
+
       analyzeBtn.disabled = true;
       analyzeBtn.innerHTML = '<span>분석 중...</span>';
-      resultCard.style.display = 'none';
 
       try {
         const res = await fetch(`${API_BASE}/api/youtube/info`, {
@@ -605,27 +824,41 @@
         }
 
         currentVideoUrl = url;
-        document.getElementById('yt-thumb').src = data.thumbnail;
-        document.getElementById('yt-card-title').textContent = data.title;
-        document.getElementById('yt-card-uploader').textContent = `👤 ${data.uploader}`;
-        document.getElementById('yt-card-duration').textContent = `⏱️ ${formatDuration(data.duration)}`;
+        if (data.thumbnail) document.getElementById('yt-thumb').src = data.thumbnail;
+        if (data.title) document.getElementById('yt-card-title').textContent = data.title;
+        if (data.uploader && data.uploader !== '알 수 없는 채널') {
+          document.getElementById('yt-card-uploader').textContent = `👤 ${data.uploader}`;
+        }
+
+        // 재생시간 반영
+        if (data.duration && data.duration > 0) {
+          document.getElementById('yt-card-duration').textContent = `⏱️ ${formatDuration(data.duration)}`;
+        } else {
+          document.getElementById('yt-card-duration').textContent = `⏱️ ${formatDuration(data.duration)}`;
+        }
 
         // 조회수 포맷팅
-        let viewsStr = '-';
-        if (data.view_count) {
+        if (data.view_count && data.view_count > 0) {
+          let viewsStr = '-';
           if (data.view_count >= 10000) {
             viewsStr = (data.view_count / 10000).toFixed(1) + '만회';
           } else {
             viewsStr = data.view_count.toLocaleString() + '회';
           }
+          document.getElementById('yt-card-views').textContent = `👁️ ${viewsStr}`;
         }
-        document.getElementById('yt-card-views').textContent = `👁️ ${viewsStr}`;
-        document.getElementById('yt-card-date').textContent = data.upload_date ? `📅 ${data.upload_date}` : '';
+
+        if (data.upload_date) {
+          document.getElementById('yt-card-date').textContent = `📅 ${data.upload_date}`;
+        }
         document.getElementById('yt-card-quality').textContent = data.quality || 'HD';
 
         resultCard.style.display = 'block';
       } catch (err) {
-        alert(`오류: ${err.message}`);
+        // 이미 previewData로 카드가 렌더링된 상태라면 완전 실패 alert 대신 유지하거나 안내
+        if (!previewData) {
+          alert(`오류: ${err.message}`);
+        }
       } finally {
         analyzeBtn.disabled = false;
         analyzeBtn.innerHTML = '<span>영상 분석</span>';
@@ -739,10 +972,13 @@
       });
     }
 
+    let renderedVideoIds = new Set();
+
     function resetAndLoadChannel() {
       const container = document.getElementById('rs-billiards-list');
       const loader = document.getElementById('rs-billiards-loader');
       if (container) container.innerHTML = '';
+      renderedVideoIds.clear();
       chOffset = 0;
       chHasMore = true;
       chLoading = false;
@@ -790,7 +1026,7 @@
             body: JSON.stringify({
               channels: channelsList,
               offset: chOffset,
-              limit: 12
+              limit: 10
             })
           });
         } else {
@@ -816,6 +1052,15 @@
         }
 
         data.videos.forEach(v => {
+          const vKey = v.id || v.url;
+          if (vKey && renderedVideoIds.has(vKey)) {
+            return; // 이미 화면에 렌더링된 영상은 100% 중복 노출 차단
+          }
+          if (vKey) renderedVideoIds.add(vKey);
+
+          if (v.url) loadedVideosMap.set(v.url, v);
+          if (v.id) loadedVideosMap.set(v.id, v);
+
           const card = document.createElement('div');
           card.className = 'yt-ch-card';
 
@@ -843,10 +1088,9 @@
             </div>
           `;
 
-          // 썸네일(카드) 클릭 시 화면 상단으로 스크롤하고 자동으로 영상 분석 실행
+          // 썸네일(카드) 클릭 시 내부 팝업(모달)으로 상세 정보 및 다운로드 제공
           card.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            analyzeVideo(v.url);
+            openModal(v);
           });
 
           container.appendChild(card);

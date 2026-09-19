@@ -164,6 +164,39 @@ function Check-UnifiedServer {
     Write-Host "================================================" -ForegroundColor Cyan
 }
 
+function Update-Project {
+    Write-Host "================================================" -ForegroundColor Cyan
+    Write-Host "■  프로젝트 최신 버전 업데이트 (Git Pull)" -ForegroundColor Yellow
+    Write-Host "================================================" -ForegroundColor Cyan
+
+    # 1. Git 설치 여부 확인
+    $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+    if (-not $gitCmd) {
+        Write-Host "[ERROR] Git이 설치되어 있지 않습니다." -ForegroundColor Red
+        return
+    }
+
+    $gitVer = (& git --version)
+    Write-Host "[INFO] $gitVer 확인 완료" -ForegroundColor Green
+
+    # 2. 원격 저장소 최신 버전 가져오기
+    Write-Host "[INFO] 원격 저장소에서 최신 버전을 가져옵니다 (git pull)..." -ForegroundColor Cyan
+    git pull
+    Print-TaskResult
+
+    # 3. 서버 실행 중인 경우 재시작 제안
+    $conn = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
+    if ($conn) {
+        Write-Host ""
+        $restart = Read-Host "최신 코드를 적용하기 위해 통합 서버(포트 $PORT)를 재시작할까요? (y/N)"
+        if ($restart -eq "y" -or $restart -eq "Y") {
+            Stop-UnifiedServer
+            Start-Sleep -Seconds 1
+            Start-UnifiedServer
+        }
+    }
+}
+
 # ==========================================
 # 11, 12, 13: Cloudflare 터널 제어
 # ==========================================
@@ -318,6 +351,26 @@ function Install-CloudflaredTool {
     }
 }
 
+function Install-GitTool {
+    $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+    if ($gitCmd) {
+        $ver = (& git --version)
+        Write-Host "[INFO] 이미 Git이 설치되어 있습니다. ($ver)" -ForegroundColor Yellow
+        return
+    }
+
+    Write-Host "[INFO] winget 도구를 통해 Git 설치를 시작합니다..." -ForegroundColor Cyan
+    winget install --id Git.Git -e --source winget
+    Print-TaskResult
+
+    $checkGit = Get-Command git -ErrorAction SilentlyContinue
+    if ($checkGit) {
+        Write-Host "[INFO] Git 설치가 정상 확인되었습니다." -ForegroundColor Green
+    } else {
+        Write-Host "[WARN] 설치 완료 후 현재 터미널을 재시작해야 git 명령어가 인식될 수 있습니다." -ForegroundColor Yellow
+    }
+}
+
 # ==========================================
 # 메뉴 루프
 # ==========================================
@@ -331,6 +384,7 @@ function Show-Menu {
     Write-Host " 1. 백그라운드 서버 시작 (Start Server)"
     Write-Host " 2. 백그라운드 서버 종료 (Stop Server)"
     Write-Host " 3. 백그라운드 서버 상태 확인 (Server Status)"
+    Write-Host " 4. 프로젝트 최신 버전 업데이트 (Git Pull)"
     Write-Host ""
     Write-Host "■  Cloudflare 터널 제어 (외부 보안 연동)" -ForegroundColor DarkCyan
     Write-Host " 11. 터널 시작 (Start Tunnel, 백그라운드)"
@@ -341,19 +395,24 @@ function Show-Menu {
     Write-Host " 91. 파이썬 가상환경(.venv) 생성"
     Write-Host " 92. 백엔드 패키지 설치 (backend/requirements.txt)"
     Write-Host " 93. Cloudflare(cloudflared) 설치"
+    Write-Host " 94. Git 도구 설치 (Install Git)"
     Write-Host "`n 0. 프로그램 종료"
     Write-Host "================================================" -ForegroundColor Cyan
 }
 
-do {
+while ($true) {
     Show-Menu
     $choice = Read-Host "메뉴를 선택하세요"
 
+    if ($choice -eq "0") {
+        break
+    }
+
     switch ($choice) {
-        "0" { break }
         "1" { Start-UnifiedServer }
         "2" { Stop-UnifiedServer }
         "3" { Check-UnifiedServer }
+        "4" { Update-Project }
         "11" { Start-CloudflareTunnel }
         "12" { Stop-CloudflareTunnel }
         "13" { Check-CloudflareTunnel }
@@ -392,14 +451,13 @@ do {
             }
         }
         "93" { Install-CloudflaredTool }
+        "94" { Install-GitTool }
         default { Write-Host "[WARN] 잘못된 선택입니다." -ForegroundColor Red }
     }
 
-    if ($choice -ne "0") {
-        Write-Host "`n메뉴로 돌아가려면 아무 키나 누르세요."
-        $null = [Console]::ReadKey($true)
-    }
-} while ($choice -ne "0")
+    Write-Host "`n메뉴로 돌아가려면 아무 키나 누르세요."
+    $null = [Console]::ReadKey($true)
+}
 
 Write-Host "[INFO] 프로그램을 종료합니다." -ForegroundColor Green
 Start-Sleep -Seconds 1

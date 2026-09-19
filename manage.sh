@@ -124,6 +124,37 @@ check_unified_server() {
     echo -e "\033[1;36m================================================\033[0m"
 }
 
+update_project() {
+    echo -e "\033[1;36m================================================\033[0m"
+    echo -e "\033[1;33m■  프로젝트 최신 버전 업데이트 (Git Pull)\033[0m"
+    echo -e "\033[1;36m================================================\033[0m"
+
+    # 1. Git 설치 여부 확인
+    if ! command -v git >/dev/null 2>&1; then
+        echo -e "\033[1;31m[ERROR] Git이 설치되어 있지 않습니다.\033[0m"
+        return 1
+    fi
+
+    local git_ver
+    git_ver=$(git --version)
+    echo -e "\033[1;32m[INFO] $git_ver 확인 완료\033[0m"
+
+    # 2. 원격 저장소 최신 버전 가져오기
+    echo -e "\033[1;36m[INFO] 원격 저장소에서 최신 버전을 가져옵니다 (git pull)...\033[0m"
+    git pull
+
+    # 3. 서버 실행 중인 경우 재시작 제안
+    if ss -tulpn 2>/dev/null | grep -q ":$PORT "; then
+        echo ""
+        read -rp "최신 코드를 적용하기 위해 통합 서버(포트 $PORT)를 재시작할까요? (y/N): " restart_choice
+        if [[ "$restart_choice" =~ ^[yY]$ ]]; then
+            stop_unified_server
+            sleep 1
+            start_unified_server
+        fi
+    fi
+}
+
 # ==========================================
 # 11, 12, 13: Cloudflare 터널 제어
 # ==========================================
@@ -304,6 +335,28 @@ install_cloudflared_linux() {
     fi
 }
 
+install_git_linux() {
+    echo -e "\033[1;36m================================================\033[0m"
+    echo -e "\033[1;33m■  Git 도구 설치 (Install Git)\033[0m"
+    echo -e "\033[1;36m================================================\033[0m"
+
+    if command -v git >/dev/null 2>&1; then
+        local git_ver
+        git_ver=$(git --version)
+        echo -e "\033[1;32m[INFO] 이미 Git이 설치되어 있습니다: $git_ver\033[0m"
+        return 0
+    fi
+
+    echo -e "\033[1;36m[INFO] apt 패키지 관리자를 통해 Git을 설치합니다...\033[0m"
+    sudo apt update && sudo apt install -y git
+
+    if command -v git >/dev/null 2>&1; then
+        echo -e "\033[1;32m[INFO] Git 설치가 정상 완료되었습니다! ($(git --version))\033[0m"
+    else
+        echo -e "\033[1;31m[ERROR] Git 설치에 실패했습니다. 수동으로 설치해주세요.\033[0m"
+    fi
+}
+
 # ==========================================
 # 메뉴 루프
 # ==========================================
@@ -317,6 +370,7 @@ show_menu() {
     echo " 1. 백그라운드 서버 시작 (Start Server)"
     echo " 2. 백그라운드 서버 종료 (Stop Server)"
     echo " 3. 백그라운드 서버 상태 확인 (Server Status)"
+    echo " 4. 프로젝트 최신 버전 업데이트 (Git Pull)"
     echo ""
     echo -e "\033[1;34m■  Cloudflare 터널 제어 (외부 보안 연동)\033[0m"
     echo " 11. 터널 시작 (Start Tunnel, 백그라운드)"
@@ -327,6 +381,7 @@ show_menu() {
     echo " 91. 파이썬 가상환경(.venv) 생성"
     echo " 92. 백엔드 패키지 설치 (backend/requirements.txt)"
     echo " 93. Cloudflare(cloudflared) 자동 설치"
+    echo " 94. Git 도구 설치 (Install Git)"
     echo ""
     echo " 0. 프로그램 종료"
     echo -e "\033[1;36m================================================\033[0m"
@@ -350,6 +405,9 @@ while true; do
         3)
             check_unified_server
             ;;
+        4)
+            update_project
+            ;;
         11)
             start_cloudflare_tunnel
             ;;
@@ -367,6 +425,9 @@ while true; do
             ;;
         93)
             install_cloudflared_linux
+            ;;
+        94)
+            install_git_linux
             ;;
         *)
             echo -e "\033[1;31m[WARN] 잘못된 선택입니다.\033[0m"

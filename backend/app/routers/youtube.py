@@ -725,6 +725,9 @@ def get_subscription_feed(req: FeedRequest):
     if cached and (time.time() - cached.get("timestamp", 0) < 60):
         all_videos = cached.get("videos", [])
     else:
+        with ThreadPoolExecutor(max_workers=min(10, len(req.channels))) as executor:
+            channel_results = list(executor.map(fetch_single_channel_feed, req.channels))
+
         # 채널 결과 통합 및 고유 영상 ID 기준 중복 제거
         seen_ids = set()
         unique_videos = []

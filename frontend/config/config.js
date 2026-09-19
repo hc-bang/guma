@@ -928,19 +928,7 @@ const ytApply = $('#ytApply');
 const ytExport = $('#ytExport');
 const ytImport = $('#ytImport');
 const ytReset = $('#ytReset');
-
-const DEFAULT_YT_CHANNELS = [
-  { name: '보다', url: '@보다BODA' },
-  { name: '매불쇼', url: '@maebulshow' },
-  { name: '장르만 여의도', url: '@JTBCSHOW' },
-  { name: '정영진의 나쁜질문', url: '@정영진의나쁜질문' },
-  { name: '웃다가!', url: '@StudioPickle' },
-  { name: '제목없음TV', url: '@dony_untitled' },
-  { name: '14F', url: '@14FMBC' },
-  { name: '지식인사이드', url: '@지식인사이드' }
-];
-
-let ytData = DEFAULT_YT_CHANNELS.slice();
+let ytData = [];
 
 function channelsToFileFormat(arr){
   return {
@@ -992,12 +980,12 @@ function getChannelsFromLocalStorage(){
 async function getChannelsDefaultFromFile(){
   try{
     const res = await fetch('./youtube-channels.json', { cache: 'no-store' });
-    if(!res.ok) return DEFAULT_YT_CHANNELS.slice();
+    if(!res.ok) return [];
     const data = await res.json();
     validateChannelsData(data);
-    return data.channels || DEFAULT_YT_CHANNELS.slice();
+    return data.channels || [];
   }catch(e){
-    return DEFAULT_YT_CHANNELS.slice();
+    return [];
   }
 }
 
@@ -1143,9 +1131,9 @@ async function loadChannelsIntoEditor(){
     if(!data || data.length === 0){
       data = await getChannelsDefaultFromFile();
     }
-    ytData = (data && data.length > 0) ? data : DEFAULT_YT_CHANNELS.map(c => ({ ...c }));
+    ytData = (data && data.length > 0) ? data : [];
   }catch(e){
-    ytData = DEFAULT_YT_CHANNELS.map(c => ({ ...c }));
+    ytData = [];
   }
   syncChannelsJsonFromData();
   renderChannelsList();
@@ -1209,12 +1197,12 @@ ytImport?.addEventListener('change', async ()=>{
 
 ytReset?.addEventListener('click', async ()=>{
   try{
-    if(!confirm('유튜브 채널 설정을 기본값(8개 채널)으로 초기화하시겠습니까?')) return;
+    if(!confirm('유튜브 채널 설정을 모두 비우시겠습니까?')) return;
     localStorage.removeItem(YT_CHANNELS_STORAGE_KEY);
-    ytData = DEFAULT_YT_CHANNELS.map(c => ({ ...c }));
+    ytData = [];
     syncChannelsJsonFromData();
     renderChannelsList();
-    alert('초기화 완료: 기본 8개 채널 목록으로 복원되었습니다.');
+    alert('초기화 완료: 채널 목록이 모두 비워졌습니다. 원하는 채널을 추가해 보세요.');
   }catch(e){
     alert(`초기화 실패: ${String(e?.message || e)}`);
   }

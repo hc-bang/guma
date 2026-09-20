@@ -9,6 +9,40 @@ VENV_PYTHON="./.venv/bin/python"
 VENV_PIP="./.venv/bin/pip"
 LOG_DIR="./logs"
 
+load_env() {
+    if [ -f "./.env" ]; then
+        while IFS= read -r line || [ -n "$line" ]; do
+            [[ "$line" =~ ^[[:space:]]*# ]] && continue
+            [[ -z "${line// }" ]] && continue
+            if [[ "$line" =~ ^([a-zA-Z_][a-zA-Z0-9_]*)=(.*)$ ]]; then
+                local key="${BASH_REMATCH[1]}"
+                local val="${BASH_REMATCH[2]}"
+                val="${val%\"}"
+                val="${val#\"}"
+                val="${val%\'}"
+                val="${val#\'}"
+                val="${val%$'\r'}"
+                export "$key"="$val"
+            fi
+        done < "./.env"
+    fi
+}
+
+sync_git_credentials() {
+    if [ -n "$GITHUB_TOKEN" ] && command -v git >/dev/null 2>&1; then
+        local current_url
+        current_url=$(git remote get-url origin 2>/dev/null || true)
+        local target_url="https://${GITHUB_TOKEN}@github.com/hc-bang/guma.git"
+        if [ "$current_url" != "$target_url" ]; then
+            git remote set-url origin "$target_url" 2>/dev/null || true
+        fi
+    fi
+}
+
+# 환경 변수 로드 및 Git 자격증명 자동 동기화
+load_env
+sync_git_credentials
+
 ensure_log_dir() {
     if [ ! -d "$LOG_DIR" ]; then
         mkdir -p "$LOG_DIR"

@@ -86,6 +86,7 @@
   <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
 
   <script src="../shared/tree.js"></script>
+  <script src="../shared/guma-core.js"></script>
   <script>
     const container = document.getElementById('postContainer');
     const mdEl = document.getElementById('md');
@@ -151,9 +152,29 @@
       try {
         let rawUrl = `./${file}`;
         let res = await fetch(rawUrl, { cache: 'no-store' });
-        if (!res.ok && (file === '../README.md' || file === 'README.md')) {
-          res = await fetch('/README.md', { cache: 'no-store' });
+
+        // 정적 경로 실패 시 (GitHub Pages, 외부 접속 등) Guma 백엔드 서버 주소로 2차 시도
+        if (!res.ok) {
+          const apiBase = (window.GumaCore && typeof GumaCore.getApiBaseSync === 'function') 
+            ? GumaCore.getApiBaseSync() 
+            : '';
+          const targets = [
+            '/README.md',
+            apiBase ? `${apiBase}/README.md` : null,
+            apiBase ? `${apiBase}/posts/${file}` : null
+          ].filter(Boolean);
+
+          for (const target of targets) {
+            try {
+              const fbRes = await fetch(target, { cache: 'no-store' });
+              if (fbRes.ok) {
+                res = fbRes;
+                break;
+              }
+            } catch (_) {}
+          }
         }
+
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
 

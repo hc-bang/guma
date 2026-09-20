@@ -11,6 +11,3 @@ __pycache__/
 
 # Log Directory
 logs/
-
-# Static Doc Mirrors (자동 복사되는 정적 문서)
-frontend/README.md

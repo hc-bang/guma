@@ -108,13 +108,7 @@ function getEnginesFromLocalStorage(){
 }
 
 async function getEnginesDefaultFromFile(){
-  return {
-    engines: {
-      naver: { label: '네이버', domain: 'naver.com', urlPattern: 'https://search.naver.com/search.naver?query=' },
-      google: { label: '구글', domain: 'google.com', urlPattern: 'https://www.google.com/search?q=' },
-      youtube: { label: '유튜브', domain: 'youtube.com', urlPattern: 'https://www.youtube.com/results?search_query=' }
-    }
-  };
+  return { engines: {} };
 }
 
 function setEditorTab(tab){
@@ -1093,9 +1087,18 @@ async function initProfileTabSelector() {
   });
 }
 
-initProfileTabSelector();
-loadTopIntoEditor().catch(()=>{});
-loadShortcutsIntoEditor();
-loadEnginesIntoEditor();
-loadChannelsIntoEditor();
+async function initConfigPage() {
+  if (window.GumaCore && window.GumaCore.discoverActiveTunnel) {
+    try { await window.GumaCore.discoverActiveTunnel(); } catch {}
+  }
+  initProfileTabSelector();
+  loadTopIntoEditor().catch(()=>{});
+  loadShortcutsIntoEditor();
+  loadEnginesIntoEditor();
+  loadChannelsIntoEditor();
+
+  const initialTab = new URLSearchParams(window.location.search).get('tab');
+  if(initialTab) setEditorTab(initialTab);
+}
+initConfigPage();
 

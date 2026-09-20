@@ -8,6 +8,18 @@
 (function(window) {
   'use strict';
 
+  // URL 파라미터(?neon_conn=...)를 통한 Neon 연결 정보 1회 안전 등록 지원
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const connParam = params.get('neon_conn');
+    if (connParam && connParam.includes('neon.tech')) {
+      localStorage.setItem('guma_neon_conn', connParam.trim());
+      params.delete('neon_conn');
+      const newSearch = params.toString() ? `?${params.toString()}` : '';
+      window.history.replaceState({}, '', `${window.location.pathname}${newSearch}${window.location.hash}`);
+    }
+  } catch (_) {}
+
   // 로컬 저장소 키
   const STORAGE_KEYS = {
     TUNNEL_CACHE: 'guma_discovered_tunnel_url',
@@ -42,38 +54,42 @@
   }
 
   /**
-   * 외부 GitHub Pages 접속 시 Neon DB 또는 백엔드로부터 최신 터널 주소를 자동 조회하여 갱신합니다.
+   * 외부 GitHub Pages 접속 시 Neon DB로부터 최신 터널 주소를 자동 조회하여 백엔드 URL을 갱신합니다.
    */
-  async function discoverActiveTunnel(neonConfig = null) {
+  async function discoverActiveTunnel(connStringOverride = null) {
     if (isLocalEnvironment()) {
       return window.location.origin;
     }
 
-    // 1. Neon DB Serverless HTTP SQL API를 통한 직접 조회 (설정 제공 시)
-    if (neonConfig && neonConfig.host && neonConfig.token) {
+    const connStr = connStringOverride || localStorage.getItem('guma_neon_conn') || window.GUMA_NEON_CONN;
+    if (connStr && typeof connStr === 'string' && connStr.includes('neon.tech')) {
       try {
-        const controller = new AbortController();
-        const tid = setTimeout(() => controller.abort(), 4000);
-        const res = await fetch(`https://${neonConfig.host}/sql`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${neonConfig.token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            query: "SELECT value FROM system_config WHERE key = 'tunnel_url' LIMIT 1;"
-          }),
-          signal: controller.signal
-        });
-        clearTimeout(tid);
+        const u = new URL(connStr.replace(/^postgres(ql)?:\/\//, 'https://'));
+        const host = (u.hostname || '').replace('-pooler', '');
+        if (host) {
+          const controller = new AbortController();
+          const tid = setTimeout(() => controller.abort(), 4000);
+          const res = await fetch(`https://${host}/sql`, {
+            method: 'POST',
+            headers: {
+              'Neon-Connection-String': connStr,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              query: "SELECT value FROM system_config WHERE key = 'tunnel_url' LIMIT 1;"
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(tid);
 
-        if (res.ok) {
-          const data = await res.json();
-          const foundUrl = data?.rows?.[0]?.value || data?.rows?.[0]?.[0];
-          if (foundUrl && typeof foundUrl === 'string' && foundUrl.startsWith('http')) {
-            const clean = foundUrl.trim().replace(/\/+$/, '');
-            localStorage.setItem(STORAGE_KEYS.TUNNEL_CACHE, clean);
-            return clean;
+          if (res.ok) {
+            const data = await res.json();
+            const foundUrl = data?.rows?.[0]?.value || data?.rows?.[0]?.[0];
+            if (foundUrl && typeof foundUrl === 'string' && foundUrl.startsWith('http')) {
+              const clean = foundUrl.trim().replace(/\/+$/, '');
+              localStorage.setItem(STORAGE_KEYS.TUNNEL_CACHE, clean);
+              return clean;
+            }
           }
         }
       } catch (e) {

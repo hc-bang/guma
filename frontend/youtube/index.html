@@ -892,6 +892,9 @@
     }
 
     async function initChannels() {
+      if (window.GumaCore && window.GumaCore.discoverActiveTunnel) {
+        try { await window.GumaCore.discoverActiveTunnel(); } catch {}
+      }
       try {
         let loadedFromDb = false;
         if (window.GumaCore && window.GumaCore.fetchProfileConfig) {

@@ -154,12 +154,8 @@ async function loadEnginesJson() {
     }
   } catch (e) {}
 
-  // Fallback 기본값
-  engines = {
-    naver: { label: '네이버', domain: 'naver.com', urlPattern: 'https://search.naver.com/search.naver?query=' },
-    google: { label: '구글', domain: 'google.com', urlPattern: 'https://www.google.com/search?q=' },
-    youtube: { label: '유튜브', domain: 'youtube.com', urlPattern: 'https://www.youtube.com/results?search_query=' }
-  };
+  // 데이터가 없을 때 기본값을 내장하지 않고 빈 상태로 둠 (북마크/유튜브와 동일)
+  engines = {};
   renderEngineMenu();
 }
 
@@ -416,5 +412,11 @@ async function loadBookmarksJson() {
 
 document.addEventListener('click', () => document.querySelectorAll('.engine-menu, .top-folder-menu').forEach(el => el.classList.add('hidden')));
 
-Promise.all([loadEnginesJson(), loadShortcutsJson(), loadBookmarksJson()]);
-input.focus();
+async function initApp() {
+  if (window.GumaCore && window.GumaCore.discoverActiveTunnel) {
+    try { await window.GumaCore.discoverActiveTunnel(); } catch {}
+  }
+  await Promise.all([loadEnginesJson(), loadShortcutsJson(), loadBookmarksJson()]);
+  input.focus();
+}
+initApp();

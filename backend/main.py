@@ -73,6 +73,15 @@ def favicon():
         return FileResponse(favicon_path, media_type="image/svg+xml")
     return Response(status_code=204)
 
+@app.get("/README.md", include_in_schema=False)
+@app.get("/readme.md", include_in_schema=False)
+def get_readme():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    root_readme = os.path.join(base_dir, "README.md")
+    if os.path.exists(root_readme):
+        return FileResponse(root_readme, media_type="text/markdown; charset=utf-8")
+    return Response(status_code=404)
+
 # 2. 프론트엔드 정적 파일 서빙 마운트 (API 라우터보다 반드시 뒤에 위치)
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 frontend_dir = os.path.join(base_dir, "frontend")

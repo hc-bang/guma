@@ -1,4 +1,4 @@
-﻿# Usage: .\manage.ps1
+# Usage: .\manage.ps1
 
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -6,6 +6,35 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 $PORT = "80"
 $VENV_PYTHON = ".\.venv\Scripts\python.exe"
 $LOG_DIR = ".\logs"
+
+function Load-Env {
+    if (Test-Path ".\.env") {
+        Get-Content ".\.env" | ForEach-Object {
+            $line = $_.Trim()
+            if (-not $line.StartsWith("#") -and $line -match '^([a-zA-Z_][a-zA-Z0-9_]*)=(.*)$') {
+                $key = $matches[1]
+                $val = $matches[2].Trim('"', "'")
+                [System.Environment]::SetEnvironmentVariable($key, $val, "Process")
+            }
+        }
+    }
+}
+
+function Sync-GitCredentials {
+    $token = [System.Environment]::GetEnvironmentVariable("GITHUB_TOKEN", "Process")
+    $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+    if ($token -and $gitCmd) {
+        $currentUrl = (git remote get-url origin 2>$null)
+        $targetUrl = "https://${token}@github.com/hc-bang/guma.git"
+        if ($currentUrl -ne $targetUrl) {
+            git remote set-url origin $targetUrl 2>$null
+        }
+    }
+}
+
+# 환경 변수 로드 및 Git 자격증명 자동 동기화
+Load-Env
+Sync-GitCredentials
 
 function Ensure-LogDir {
     if (-not (Test-Path $LOG_DIR)) {
@@ -169,19 +198,23 @@ function Update-Project {
     Write-Host "■  프로젝트 최신 버전 업데이트 (Git Pull)" -ForegroundColor Yellow
     Write-Host "================================================" -ForegroundColor Cyan
 
-    # 1. Git 설치 여부 확인
+    # 1. Git 설치 여부 및 자격증명 확인
     $gitCmd = Get-Command git -ErrorAction SilentlyContinue
     if (-not $gitCmd) {
         Write-Host "[ERROR] Git이 설치되어 있지 않습니다." -ForegroundColor Red
         return
     }
 
+    Load-Env
+    Sync-GitCredentials
+
     $gitVer = (& git --version)
     Write-Host "[INFO] $gitVer 확인 완료" -ForegroundColor Green
 
     # 2. 원격 저장소 최신 버전 가져오기
-    Write-Host "[INFO] 원격 저장소에서 최신 버전을 가져옵니다 (git pull)..." -ForegroundColor Cyan
-    git pull
+    Write-Host "[INFO] 원격 저장소에서 최신 버전을 가져옵니다 (git pull origin main)..." -ForegroundColor Cyan
+    git pull origin main
+    if ($LASTEXITCODE -ne 0) { git pull }
     Print-TaskResult
 
     # 3. 서버 실행 중인 경우 재시작 제안
@@ -208,6 +241,15 @@ function Start-CloudflareTunnel {
     if (-not $cfPath) {
         Write-Host "[ERROR] cloudflared 실행 파일을 찾을 수 없습니다." -ForegroundColor Red
         Write-Host "[HINT] 93번 메뉴를 실행하여 cloudflared를 먼저 설치하세요." -ForegroundColor Yellow
+        return
+    }
+
+    # 안전 확인 질문 (개발 중 실수 방지)
+    Write-Host ""
+    Write-Host "[주의] 터널을 시작하면 GitHub Pages(운영 환경)의 접속 주소가 이 PC로 갱신됩니다." -ForegroundColor Yellow
+    $startChoice = Read-Host "정말 터널을 시작하고 깃허브에 배포할까요? (y/N)"
+    if ($startChoice -ne "y" -and $startChoice -ne "Y") {
+        Write-Host "[INFO] 터널 시작을 안전하게 취소했습니다." -ForegroundColor Gray
         return
     }
 
@@ -267,12 +309,32 @@ function Start-CloudflareTunnel {
         Write-Host "  - 외부 전용 주소: $tunnelUrl" -ForegroundColor Cyan
         Write-Host "  - 안내: 스마트폰이나 외부 어디서든 위 주소로 접속 가능합니다." -ForegroundColor White
 
-        # 백엔드 API를 통해 Neon DB에 터널 주소 자동 동기화
-        try {
-            $syncBody = @{ url = $tunnelUrl; status = "online" } | ConvertTo-Json
-            Invoke-RestMethod -Uri "http://localhost:$PORT/api/system/tunnel" -Method Post -Body $syncBody -ContentType "application/json" -TimeoutSec 3 -ErrorAction SilentlyContinue | Out-Null
-            Write-Host "  - 클라우드 연동: Neon DB에 터널 주소가 자동 등록되었습니다. (무설정 동기화)" -ForegroundColor Green
-        } catch {}
+        # frontend/tunnel.json 파일 갱신 및 Git 자동 푸시 (모든 기기 완전 무설정 동기화)
+        $nowUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        $tunnelJsonPath = ".\frontend\tunnel.json"
+        $tunnelContent = @"
+{
+  "url": "$tunnelUrl",
+  "status": "online",
+  "updated_at": "$nowUtc"
+}
+"@
+        [System.IO.File]::WriteAllText((Resolve-Path $tunnelJsonPath), $tunnelContent, [System.Text.Encoding]::UTF8)
+
+        $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+        if ($gitCmd) {
+            Load-Env
+            Sync-GitCredentials
+            Write-Host "  - [Git] tunnel.json 동기화 커밋 및 푸시 진행 중..." -ForegroundColor Cyan
+            git add .\frontend\tunnel.json 2>$null | Out-Null
+            git commit -m "Chore: Cloudflare 터널 주소 갱신 ($tunnelUrl)" 2>$null | Out-Null
+            git push origin main 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "  - ✔ GitHub Pages 동기화 완료: 모든 기기(스마트폰/PC)에서 즉시 자동 연결됩니다." -ForegroundColor Green
+            } else {
+                Write-Host "  - [WARN] Git push 실패 (네트워크 또는 인증 확인 필요)" -ForegroundColor Yellow
+            }
+        }
     } else {
         Write-Host "  - 터널 프로세스가 시작되었습니다. 주소 확인은 13번 메뉴를 이용하세요." -ForegroundColor Yellow
     }
@@ -283,11 +345,28 @@ function Stop-CloudflareTunnel {
     Write-Host "[INFO] Cloudflare 터널을 점검하고 종료합니다..." -ForegroundColor Cyan
     $stopped = 0
 
-    # 백엔드 API를 통해 Neon DB에 오프라인 상태 통지
-    try {
-        $offBody = @{ url = ""; status = "offline" } | ConvertTo-Json
-        Invoke-RestMethod -Uri "http://localhost:$PORT/api/system/tunnel" -Method Post -Body $offBody -ContentType "application/json" -TimeoutSec 3 -ErrorAction SilentlyContinue | Out-Null
-    } catch {}
+    # frontend/tunnel.json 오프라인 갱신 및 Git 자동 푸시
+    $nowUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $tunnelJsonPath = ".\frontend\tunnel.json"
+    if (Test-Path $tunnelJsonPath) {
+        $tunnelContent = @"
+{
+  "url": "",
+  "status": "offline",
+  "updated_at": "$nowUtc"
+}
+"@
+        [System.IO.File]::WriteAllText((Resolve-Path $tunnelJsonPath), $tunnelContent, [System.Text.Encoding]::UTF8)
+
+        $gitCmd = Get-Command git -ErrorAction SilentlyContinue
+        if ($gitCmd) {
+            Load-Env
+            Sync-GitCredentials
+            git add .\frontend\tunnel.json 2>$null | Out-Null
+            git commit -m "Chore: Cloudflare 터널 종료 (오프라인 전환)" 2>$null | Out-Null
+            git push origin main 2>$null | Out-Null
+        }
+    }
 
     $pidFile = Join-Path $LOG_DIR "tunnel.pid"
     if (Test-Path $pidFile) {
@@ -339,6 +418,7 @@ function Check-CloudflareTunnel {
         Write-Host "✔ Cloudflare 터널:" -ForegroundColor Green
         Write-Host "  - 상태         : 정상 가동 중 (RUNNING, Background)" -ForegroundColor Green
         Write-Host "  - 외부 접속 URL: $curUrl" -ForegroundColor Cyan
+        Write-Host "  - GitHub Pages : https://hc-bang.github.io/guma/ (무설정 자동 연결)" -ForegroundColor Green
         Write-Host "  - 프로세스 PID : $pids" -ForegroundColor Gray
     } else {
         Write-Host "✖ Cloudflare 터널:" -ForegroundColor Red

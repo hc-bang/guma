@@ -190,6 +190,9 @@ update_project() {
         return 1
     fi
 
+    load_env
+    sync_git_credentials
+
     local git_ver
     git_ver=$(git --version)
     echo -e "\033[1;32m[INFO] $git_ver 확인 완료\033[0m"

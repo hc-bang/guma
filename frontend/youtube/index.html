@@ -1171,12 +1171,20 @@
         a.remove();
         window.URL.revokeObjectURL(blobUrl);
 
+        // 다운로드 완료 시점: 완료 알림 후 팝업(모달) 자동 닫기
+        targetBtn.innerHTML = `<span>✅ 다운로드 완료!</span>`;
+        setTimeout(() => {
+          closeModal();
+        }, 600);
+
       } catch (err) {
         alert(`다운로드 오류:\n${err.message}`);
       } finally {
-        targetBtn.innerHTML = originalText;
-        mp4Btn.disabled = false;
-        mp3Btn.disabled = false;
+        setTimeout(() => {
+          targetBtn.innerHTML = originalText;
+          mp4Btn.disabled = false;
+          mp3Btn.disabled = false;
+        }, 650);
       }
     }
 

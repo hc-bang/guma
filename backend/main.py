@@ -31,6 +31,15 @@ def on_startup():
         init_db()
     except Exception as e:
         print(f"[DB] 시작 시 초기화 예외: {e}")
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        root_readme = os.path.join(base_dir, "README.md")
+        fe_readme = os.path.join(base_dir, "frontend", "README.md")
+        if os.path.isfile(root_readme):
+            import shutil
+            shutil.copy2(root_readme, fe_readme)
+    except Exception as e:
+        print(f"[README] 동기화 실패: {e}")
 
 # CORS 설정 (동일 출처 통합 시 기본 허용, 외부 도메인 및 클라우드 호환성 유지)
 app.add_middleware(

@@ -62,6 +62,11 @@ start_unified_server() {
 
     echo -e "\033[1;36m[INFO] GUMA™ 단일 통합 서버(포트 $PORT)를 백그라운드로 시작합니다...\033[0m"
 
+    # 웹 문서 뷰어용 README.md 정적 미러 복사 (Git 추적 제외 대상)
+    if [ -f "./README.md" ]; then
+        cp -f "./README.md" "./frontend/README.md" 2>/dev/null || true
+    fi
+
     nohup "$VENV_PYTHON" -m uvicorn backend.main:app --host 0.0.0.0 --port "$PORT" > "$LOG_DIR/server.log" 2>&1 &
     local server_pid=$!
     echo "$server_pid" > "$LOG_DIR/server.pid"
@@ -156,14 +161,18 @@ update_project() {
     echo -e "\033[1;32m[INFO] $git_ver 확인 완료\033[0m"
 
     # 2. 원격 저장소 최신 버전 가져오기
-    echo -e "\033[1;36m[INFO] 원격 저장소에서 최신 버전을 가져옵니다 (git pull)...\033[0m"
-    git pull
+    echo -e "\033[1;36m[INFO] 원격 저장소에서 최신 버전을 가져옵니다 (git pull origin main)...\033[0m"
+    git pull origin main || git pull
 
     # 3. 서버 실행 중인 경우 재시작 제안
     if ss -tulpn 2>/dev/null | grep -q ":$PORT "; then
         echo ""
         read -rp "최신 코드를 적용하기 위해 통합 서버(포트 $PORT)를 재시작할까요? (y/N): " restart_choice
         if [[ "$restart_choice" =~ ^[yY]$ ]]; then
+            if [ "$PORT" -lt 1024 ] && [ "$EUID" -ne 0 ]; then
+                echo -e "\033[1;33m[WARN] 포트 $PORT 은 시스템 권한이 필요합니다.\033[0m"
+                echo -e "\033[1;33m       기존 서버 종료 및 재시작을 위해 'sudo ./manage.sh' 로 재실행을 권장합니다.\033[0m"
+            fi
             stop_unified_server
             sleep 1
             start_unified_server

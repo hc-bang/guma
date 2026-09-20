@@ -149,8 +149,11 @@
       mdEl.innerHTML = '<p class="hint">불러오는 중...</p>';
 
       try {
-        const rawUrl = `./${file}`;
-        const res = await fetch(rawUrl, { cache: 'no-store' });
+        let rawUrl = `./${file}`;
+        let res = await fetch(rawUrl, { cache: 'no-store' });
+        if (!res.ok && (file === '../README.md' || file === 'README.md')) {
+          res = await fetch('/README.md', { cache: 'no-store' });
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const text = await res.text();
 

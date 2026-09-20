@@ -10,18 +10,27 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 try:
-    from app.routers import youtube
+    from app.routers import youtube, config_hub
+    from app.database import init_db
 except ImportError:
-    from backend.app.routers import youtube
+    from backend.app.routers import youtube, config_hub
+    from backend.app.database import init_db
 
 app = FastAPI(
     title="GUMA™ Unified Server",
     description="GUMA™ 프론트엔드 및 파이썬 백엔드 통합 서비스",
-    version="1.1.0",
+    version="1.2.0",
     docs_url=None,
     redoc_url=None,
     openapi_url=None
 )
+
+@app.on_event("startup")
+def on_startup():
+    try:
+        init_db()
+    except Exception as e:
+        print(f"[DB] 시작 시 초기화 예외: {e}")
 
 # CORS 설정 (동일 출처 통합 시 기본 허용, 외부 도메인 및 클라우드 호환성 유지)
 app.add_middleware(
@@ -35,6 +44,7 @@ app.add_middleware(
 
 # 1. 백엔드 API 라우터 등록
 app.include_router(youtube.router)
+app.include_router(config_hub.router)
 
 @app.get("/api")
 @app.get("/api/status")

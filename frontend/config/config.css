@@ -99,6 +99,43 @@ body{
   overflow-x: auto;
   padding-bottom: 4px;
   scrollbar-width: thin;
+  align-items: center;
+}
+
+.profile-tab-box{
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  border-radius: 10px;
+  flex-shrink: 0;
+  padding: 0 4px 0 8px;
+  height: 39px;
+  transition: border-color 0.18s, background 0.18s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.profile-tab-box:hover{
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+}
+
+.profile-tab-select{
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 4px;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+}
+
+.profile-tab-select option{
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 600;
 }
 
 .tab{

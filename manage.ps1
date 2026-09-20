@@ -266,6 +266,13 @@ function Start-CloudflareTunnel {
         $tunnelUrl | Out-File -FilePath (Join-Path $LOG_DIR "tunnel_url.txt") -Encoding UTF8
         Write-Host "  - 외부 전용 주소: $tunnelUrl" -ForegroundColor Cyan
         Write-Host "  - 안내: 스마트폰이나 외부 어디서든 위 주소로 접속 가능합니다." -ForegroundColor White
+
+        # 백엔드 API를 통해 Neon DB에 터널 주소 자동 동기화
+        try {
+            $syncBody = @{ url = $tunnelUrl; status = "online" } | ConvertTo-Json
+            Invoke-RestMethod -Uri "http://localhost:$PORT/api/system/tunnel" -Method Post -Body $syncBody -ContentType "application/json" -TimeoutSec 3 -ErrorAction SilentlyContinue | Out-Null
+            Write-Host "  - 클라우드 연동: Neon DB에 터널 주소가 자동 등록되었습니다. (무설정 동기화)" -ForegroundColor Green
+        } catch {}
     } else {
         Write-Host "  - 터널 프로세스가 시작되었습니다. 주소 확인은 13번 메뉴를 이용하세요." -ForegroundColor Yellow
     }
@@ -275,6 +282,12 @@ function Start-CloudflareTunnel {
 function Stop-CloudflareTunnel {
     Write-Host "[INFO] Cloudflare 터널을 점검하고 종료합니다..." -ForegroundColor Cyan
     $stopped = 0
+
+    # 백엔드 API를 통해 Neon DB에 오프라인 상태 통지
+    try {
+        $offBody = @{ url = ""; status = "offline" } | ConvertTo-Json
+        Invoke-RestMethod -Uri "http://localhost:$PORT/api/system/tunnel" -Method Post -Body $offBody -ContentType "application/json" -TimeoutSec 3 -ErrorAction SilentlyContinue | Out-Null
+    } catch {}
 
     $pidFile = Join-Path $LOG_DIR "tunnel.pid"
     if (Test-Path $pidFile) {

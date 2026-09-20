@@ -524,6 +524,7 @@
 
 <body>
   <!-- Global Root Window Config -->
+  <script src="../shared/guma-core.js"></script>
   <script>window.GUMA = { root: '../', page: 'youtube' };</script>
   <script src="../shared/topbar.js" defer></script>
 
@@ -651,23 +652,12 @@
   </div>
 
   <script>
-
-
     // 백엔드 API 주소 결정 (로컬 환경 vs GitHub Pages 환경)
-    const DEFAULT_TUNNEL_URL = 'https://generated-thanksgiving-sullivan-labels.trycloudflare.com';
-    
     function getApiBase() {
-      const host = window.location.hostname;
-      // 1. 로컬 환경(localhost, 127.0.0.1, 내부망 192.168.x.x) 또는 터널 자체 접속 시 무조건 자기 자신(origin) 연결!
-      if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.') || host.endsWith('.trycloudflare.com')) {
-        return window.location.origin;
+      if (window.GumaCore && window.GumaCore.getApiBase) {
+        return window.GumaCore.getApiBase();
       }
-
-      // 2. GitHub Pages 등 외부 정적 웹 접속 시 사용자가 지정한 저장값 우선 적용, 없으면 기본 터널 연결
-      const saved = localStorage.getItem('guma_backend_url');
-      if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
-
-      return DEFAULT_TUNNEL_URL;
+      return window.location.origin;
     }
 
     const API_BASE = getApiBase();
@@ -903,21 +893,16 @@
 
     async function initChannels() {
       try {
-        const saved = localStorage.getItem('guma_yt_channels');
-        if (saved) {
-          channelsList = JSON.parse(saved);
-        } else {
-          try {
-            const res = await fetch('../config/youtube-channels.json', { cache: 'no-store' });
-            if (res.ok) {
-              const data = await res.json();
-              channelsList = data.channels || [];
-            } else {
-              channelsList = [];
-            }
-          } catch (e) {
-            channelsList = [];
+        let loadedFromDb = false;
+        if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
+          const dbData = await window.GumaCore.fetchProfileConfig('youtube_channels');
+          if (dbData) {
+            channelsList = dbData.channels || (Array.isArray(dbData) ? dbData : []);
+            loadedFromDb = true;
           }
+        }
+        if (!loadedFromDb) {
+          channelsList = [];
         }
       } catch (e) {
         channelsList = [];

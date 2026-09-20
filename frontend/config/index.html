@@ -39,11 +39,13 @@
 
   <main class="container">
     <section class="tabs" aria-label="편집 섹션">
+      <div class="profile-tab-box">
+        <select id="configProfileSelect" class="profile-tab-select" aria-label="프로필 선택"></select>
+      </div>
       <button class="tab active" type="button" data-tab="top">북마크</button>
       <button class="tab" type="button" data-tab="shortcuts">바로가기</button>
       <button class="tab" type="button" data-tab="engines">검색 엔진</button>
       <button class="tab" type="button" data-tab="youtube">유튜브 채널</button>
-      <button class="tab" type="button" data-tab="server">서버 설정</button>
     </section>
 
     <section class="panel" data-panel="top">
@@ -58,9 +60,6 @@
       <div class="actions">
         <button class="btn" type="button" id="topLoad">리로드</button>
         <button class="btn" type="button" id="topApply">적용</button>
-        <button class="btn" type="button" id="topExport">내보내기</button>
-        <label class="btn file">불러오기 <input id="topImport" type="file" accept="application/json" /></label>
-        <button class="btn danger" type="button" id="topReset">초기화</button>
       </div>
       <div id="topTree" class="tree"></div>
       <label class="label" id="topJsonLabel">top-bookmarks.json / config/bookmarks.json 형식(JSON)</label>
@@ -80,10 +79,7 @@
       <div class="actions">
         <button class="btn" type="button" id="scLoad">리로드</button>
         <button class="btn" type="button" id="scApply">적용</button>
-        <button class="btn" type="button" id="scExport">내보내기</button>
-        <label class="btn file">불러오기 <input id="scImport" type="file" accept="application/json" /></label>
         <button class="btn" type="button" id="scNormalize">URL 정리</button>
-        <button class="btn danger" type="button" id="scReset">초기화</button>
       </div>
       <div id="scList" class="list"></div>
       <label class="label" id="scJsonLabel">shortcuts.json 형식(JSON)</label>
@@ -102,9 +98,6 @@
       <div class="actions">
         <button class="btn" type="button" id="egLoad">리로드</button>
         <button class="btn" type="button" id="egApply">적용</button>
-        <button class="btn" type="button" id="egExport">내보내기</button>
-        <label class="btn file">불러오기 <input id="egImport" type="file" accept="application/json" /></label>
-        <button class="btn danger" type="button" id="egReset">초기화</button>
       </div>
       <div id="egList" class="list"></div>
       <label class="label" id="egJsonLabel">engines.json 형식(JSON)</label>
@@ -124,39 +117,15 @@
       <div class="actions">
         <button class="btn" type="button" id="ytLoad">리로드</button>
         <button class="btn" type="button" id="ytApply">적용</button>
-        <button class="btn" type="button" id="ytExport">내보내기</button>
-        <label class="btn file">불러오기 <input id="ytImport" type="file" accept="application/json" /></label>
-        <button class="btn danger" type="button" id="ytReset">초기화</button>
       </div>
       <div id="ytList" class="list"></div>
       <label class="label" id="ytJsonLabel">youtube-channels.json 형식(JSON)</label>
       <textarea id="ytJson" class="editor hidden" spellcheck="false"></textarea>
     </section>
-
-    <section class="panel hidden" data-panel="server">
-      <p class="hint">
-        외부(GitHub Pages 등)에서 접속할 때 유튜브 영상 분석 및 다운로드를 수행할 <strong>백엔드 서버(Cloudflare 터널)</strong>를 설정합니다.<br />
-        로컬 환경(<code>localhost</code>, <code>127.0.0.1</code>)으로 접속한 경우에는 자동으로 자기 자신을 연결하므로 별도 설정이 필요 없습니다.
-      </p>
-      <div style="margin-top: 16px; max-width: 600px; display: flex; flex-direction: column; gap: 14px;">
-        <div>
-          <label class="label" style="display: block; margin-bottom: 6px; font-weight: 600;">백엔드 서버 URL (Cloudflare 터널)</label>
-          <input type="url" id="backendServerUrl" spellcheck="false" placeholder="예: https://xxxx.trycloudflare.com" style="width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 13px; outline: none; transition: border-color .18s;">
-          <span style="font-size: 11px; color: var(--muted); display: block; margin-top: 6px;">
-            ※ <code>manage.ps1</code>의 11번(터널 시작) 또는 13번(터널 상태) 메뉴에 표시된 터널 주소를 입력하세요.
-          </span>
-        </div>
-        <div class="actions" style="margin-top: 4px;">
-          <button class="btn" type="button" id="serverApply">적용</button>
-          <button class="btn" type="button" id="serverTest">연결 테스트</button>
-          <button class="btn danger" type="button" id="serverReset">기본값 초기화</button>
-        </div>
-        <div id="serverStatusMsg" style="font-size: 12px; font-weight: 600; padding: 10px 14px; border-radius: 6px; display: none; line-height: 1.5;"></div>
-      </div>
-    </section>
   </main>
 
   <script>window.GUMA = { root: '../', page: 'config' };</script>
+  <script src="../shared/guma-core.js"></script>
   <script src="../shared/topbar.js" defer></script>
   <script src="./config.js"></script>
 </body>

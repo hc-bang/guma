@@ -214,6 +214,12 @@ start_cloudflare_tunnel() {
         echo "$tunnel_url" > "$LOG_DIR/tunnel_url.txt"
         echo -e "  - 외부 전용 주소: \033[1;36m$tunnel_url\033[0m"
         echo -e "  - 안내: 스마트폰이나 외부 어디서든 위 주소로 접속 가능합니다."
+
+        # 백엔드 API를 통해 Neon DB에 터널 주소 자동 동기화
+        if command -v curl >/dev/null 2>&1; then
+            curl -s -X POST "http://localhost:$PORT/api/system/tunnel" -H "Content-Type: application/json" -d "{\"url\":\"$tunnel_url\",\"status\":\"online\"}" --max-time 3 >/dev/null 2>&1 || true
+            echo -e "  - \033[1;32m클라우드 연동: Neon DB에 터널 주소가 자동 등록되었습니다. (무설정 동기화)\033[0m"
+        fi
     else
         echo -e "\033[1;33m  - 터널 프로세스가 시작되었습니다. 주소 확인은 13번 메뉴를 이용하세요.\033[0m"
     fi
@@ -223,6 +229,11 @@ start_cloudflare_tunnel() {
 stop_cloudflare_tunnel() {
     echo -e "\033[1;36m[INFO] Cloudflare 터널을 점검하고 종료합니다...\033[0m"
     local stopped=0
+
+    # 백엔드 API를 통해 Neon DB에 오프라인 상태 통지
+    if command -v curl >/dev/null 2>&1; then
+        curl -s -X POST "http://localhost:$PORT/api/system/tunnel" -H "Content-Type: application/json" -d "{\"url\":\"\",\"status\":\"offline\"}" --max-time 3 >/dev/null 2>&1 || true
+    fi
 
     if [ -f "$LOG_DIR/tunnel.pid" ]; then
         local saved_pid

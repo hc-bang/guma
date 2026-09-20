@@ -135,7 +135,14 @@ function renderEngineMenu() {
 
 async function loadEnginesJson() {
   try {
-    // 1. localStorage 확인
+    if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
+      const dbData = await window.GumaCore.fetchProfileConfig('engines');
+      if (dbData && dbData.engines) {
+        engines = dbData.engines;
+        renderEngineMenu();
+        return;
+      }
+    }
     const stored = localStorage.getItem(SEARCH_ENGINES_KEY);
     if (stored) {
       const data = JSON.parse(stored);
@@ -145,19 +152,14 @@ async function loadEnginesJson() {
         return;
       }
     }
-    
-    // 2. config/engines.json 확인
-    const res = await fetch('./config/engines.json', { cache: 'default' });
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    engines = data.engines || {};
-  } catch (e) {
-    // Fallback: 기존 하드코딩된 값 일부 유지
-    engines = {
-      naver: { label: '네이버', domain: 'naver.com', urlPattern: 'https://search.naver.com/search.naver?query=' },
-      google: { label: '구글', domain: 'google.com', urlPattern: 'https://www.google.com/search?q=' }
-    };
-  }
+  } catch (e) {}
+
+  // Fallback 기본값
+  engines = {
+    naver: { label: '네이버', domain: 'naver.com', urlPattern: 'https://search.naver.com/search.naver?query=' },
+    google: { label: '구글', domain: 'google.com', urlPattern: 'https://www.google.com/search?q=' },
+    youtube: { label: '유튜브', domain: 'youtube.com', urlPattern: 'https://www.youtube.com/results?search_query=' }
+  };
   renderEngineMenu();
 }
 
@@ -174,13 +176,18 @@ form.addEventListener('submit', e => {
 });
 
 /* ── Bookmarks ──────────────────────────────────────────── */
-let bookmarks = (() => { try { return JSON.parse(localStorage.getItem('bookmarks') || 'null'); } catch { return null; } })();
+let bookmarks = null;
 
-function saveBookmarks() { localStorage.setItem('bookmarks', JSON.stringify(bookmarks || [])); render(); }
+async function saveBookmarks() {
+  if (window.GumaCore && window.GumaCore.saveProfileConfig) {
+    await window.GumaCore.saveProfileConfig('bookmarks', { shortcuts: bookmarks || [] });
+  }
+  render();
+}
 
 function render() {
   bookmarksDiv.innerHTML = '';
-  bookmarks.forEach((b, i) => {
+  (bookmarks || []).forEach((b, i) => {
     const div = document.createElement('div');
     div.className = 'bookmark';
     div.title = `${b.name || ''}\n${b.url || ''}`;
@@ -217,16 +224,34 @@ function render() {
 }
 
 async function loadShortcutsJson() {
-  if (bookmarks !== null) { render(); return; }
-  try {
-    const res = await fetch('./config/shortcuts.json', { cache: 'default' });
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    bookmarks = (Array.isArray(data.shortcuts) ? data.shortcuts : []).slice(0, 15);
-  } catch {
-    bookmarks = []; // fallback empty
+  // 1. Neon DB 프로필 설정에서 항상 최신 데이터 조회 (단일 진실 공급원)
+  let loaded = false;
+  if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
+    try {
+      const dbData = await window.GumaCore.fetchProfileConfig('bookmarks');
+      if (dbData) {
+        bookmarks = (Array.isArray(dbData.shortcuts) ? dbData.shortcuts : (Array.isArray(dbData) ? dbData : [])).slice(0, 15);
+        loaded = true;
+        render();
+      }
+    } catch {}
   }
-  render();
+
+  // 2. Neon DB에 데이터가 없거나 통신 실패 시 기본 파일 조회 (Fallback)
+  if (!loaded) {
+    try {
+      const res = await fetch('./config/shortcuts.json', { cache: 'default' });
+      if (res.ok) {
+        const data = await res.json();
+        bookmarks = (Array.isArray(data.shortcuts) ? data.shortcuts : []).slice(0, 15);
+      } else {
+        bookmarks = [];
+      }
+    } catch {
+      bookmarks = [];
+    }
+    render();
+  }
 }
 
 /* ── Modal ──────────────────────────────────────────────── */
@@ -358,17 +383,34 @@ document.addEventListener('click', e => {
 });
 
 function getTopFromLocalStorage() {
-  try { const d = JSON.parse(localStorage.getItem(TOP_BOOKMARKS_KEY) || 'null'); return (d && Array.isArray(d.top)) ? d : null; } catch { return null; }
+  try {
+    const curProfile = (window.GumaCore && window.GumaCore.getActiveProfile()) || localStorage.getItem('guma_active_profile') || 'default';
+    const profileKey = (curProfile === 'default') ? TOP_BOOKMARKS_KEY : `${TOP_BOOKMARKS_KEY}_${curProfile}`;
+    const d = JSON.parse(localStorage.getItem(profileKey) || 'null');
+    return (d && Array.isArray(d.top)) ? d : null;
+  } catch {
+    return null;
+  }
 }
 
 async function loadBookmarksJson() {
-  try {
-    const stored = getTopFromLocalStorage();
-    if (stored) { renderTopFolders(stored); return; }
-    const res = await fetch('./config/bookmarks.json', { cache: 'default' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    renderTopFolders(await res.json());
-  } catch { if (topBookmarksDiv) topBookmarksDiv.innerHTML = ''; }
+  let loaded = false;
+  // 1. Neon DB 프로필 설정에서 항상 최신 상단 북마크 조회
+  if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
+    try {
+      const dbData = await window.GumaCore.fetchProfileConfig('topBookmarks');
+      if (dbData && (Array.isArray(dbData.top) || Array.isArray(dbData))) {
+        const topObj = Array.isArray(dbData.top) ? dbData : { top: dbData };
+        renderTopFolders(topObj);
+        loaded = true;
+      }
+    } catch {}
+  }
+
+  // 2. DB 연결 실패 시 기본값 처리
+  if (!loaded && topBookmarksDiv) {
+    topBookmarksDiv.innerHTML = '';
+  }
 }
 
 

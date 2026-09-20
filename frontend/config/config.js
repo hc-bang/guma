@@ -3,6 +3,11 @@ const SHORTCUTS_STORAGE_KEY = 'bookmarks';
 const SEARCH_ENGINES_STORAGE_KEY = 'searchEngines';
 const YT_CHANNELS_STORAGE_KEY = 'guma_yt_channels';
 
+function getProfileStorageKey(baseKey) {
+  const curProfile = (window.GumaCore && window.GumaCore.getActiveProfile()) || localStorage.getItem('guma_active_profile') || 'default';
+  return (curProfile === 'default') ? baseKey : `${baseKey}_${curProfile}`;
+}
+
 function $(sel){
   return document.querySelector(sel);
 }
@@ -11,25 +16,6 @@ function $all(sel){
   return Array.from(document.querySelectorAll(sel));
 }
 
-function downloadJson(filename, obj){
-  const data = JSON.stringify(obj, null, 2);
-  const blob = new Blob([data], { type: 'application/json;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-
-  setTimeout(()=>URL.revokeObjectURL(url), 500);
-}
-
-async function readJsonFile(file){
-  const text = await file.text();
-  return JSON.parse(text);
-}
 
 function normalizeUrl(url){
   const u = String(url || '').trim();
@@ -79,7 +65,7 @@ function validateChannelsData(data){
 
 function getTopFromLocalStorage(){
   try{
-    const raw = localStorage.getItem(TOP_BOOKMARKS_STORAGE_KEY);
+    const raw = localStorage.getItem(getProfileStorageKey(TOP_BOOKMARKS_STORAGE_KEY));
     if(!raw) return null;
     const data = JSON.parse(raw);
     validateTopData(data);
@@ -90,16 +76,12 @@ function getTopFromLocalStorage(){
 }
 
 async function getTopDefaultFromFile(){
-  const res = await fetch('./bookmarks.json', { cache: 'no-store' });
-  if(!res.ok) throw new Error(`config/bookmarks.json 로드 실패 (HTTP ${res.status})`);
-  const data = await res.json();
-  validateTopData(data);
-  return data;
+  return { top: [] };
 }
 
 function getShortcutsFromLocalStorage(){
   try{
-    const raw = localStorage.getItem(SHORTCUTS_STORAGE_KEY);
+    const raw = localStorage.getItem(getProfileStorageKey(SHORTCUTS_STORAGE_KEY));
     if (!raw) return null;
     const arr = JSON.parse(raw);
     if(!Array.isArray(arr)) return null; 
@@ -110,11 +92,7 @@ function getShortcutsFromLocalStorage(){
 }
 
 async function getShortcutsDefaultFromFile(){
-  const res = await fetch('./shortcuts.json', { cache: 'no-store' });
-  if(!res.ok) throw new Error(`config/shortcuts.json 로드 실패 (HTTP ${res.status})`);
-  const data = await res.json();
-  const arr = fileFormatToShortcuts(data);
-  return arr;
+  return [];
 }
 
 function getEnginesFromLocalStorage(){
@@ -130,11 +108,13 @@ function getEnginesFromLocalStorage(){
 }
 
 async function getEnginesDefaultFromFile(){
-  const res = await fetch('./engines.json', { cache: 'no-store' });
-  if(!res.ok) throw new Error(`config/engines.json 로드 실패 (HTTP ${res.status})`);
-  const data = await res.json();
-  validateEnginesData(data);
-  return data;
+  return {
+    engines: {
+      naver: { label: '네이버', domain: 'naver.com', urlPattern: 'https://search.naver.com/search.naver?query=' },
+      google: { label: '구글', domain: 'google.com', urlPattern: 'https://www.google.com/search?q=' },
+      youtube: { label: '유튜브', domain: 'youtube.com', urlPattern: 'https://www.youtube.com/results?search_query=' }
+    }
+  };
 }
 
 function setEditorTab(tab){
@@ -158,9 +138,6 @@ const topJsonLabel = $('#topJsonLabel');
 const topTree = $('#topTree');
 const topLoad = $('#topLoad');
 const topApply = $('#topApply');
-const topExport = $('#topExport');
-const topImport = $('#topImport');
-const topReset = $('#topReset');
 
 let topData = { top: [] };
 
@@ -352,8 +329,18 @@ $all('input[name="topMode"]').forEach((r)=>{
 });
 
 async function loadTopIntoEditor(){
-  const stored = getTopFromLocalStorage();
-  const data = stored || (await getTopDefaultFromFile());
+  let data = null;
+  if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
+    try {
+      const dbData = await window.GumaCore.fetchProfileConfig('topBookmarks');
+      if (dbData && (Array.isArray(dbData.top) || Array.isArray(dbData))) {
+        data = Array.isArray(dbData.top) ? dbData : { top: dbData };
+      }
+    } catch {}
+  }
+  if (!data) {
+    data = await getTopDefaultFromFile();
+  }
   validateTopData(data);
   topData = data;
   syncTopJsonFromData();
@@ -368,53 +355,17 @@ topLoad.addEventListener('click', async ()=>{
   }
 });
 
-topApply.addEventListener('click', ()=>{
+topApply.addEventListener('click', async ()=>{
   try{
     const data = JSON.parse(topJson.value || 'null');
     validateTopData(data);
     topData = data;
-    localStorage.setItem(TOP_BOOKMARKS_STORAGE_KEY, JSON.stringify(data));
-    alert('상단 고정(Top) 저장 완료: 홈으로 돌아가면 반영됩니다.');
+    if (window.GumaCore && window.GumaCore.saveProfileConfig) {
+      await window.GumaCore.saveProfileConfig('topBookmarks', data);
+    }
+    alert('상단 고정(Top) 저장 완료: 클라우드 DB에 즉시 반영되었습니다.');
   }catch(e){
     alert(`적용 실패: ${String(e?.message || e)}`);
-  }
-});
-
-topExport.addEventListener('click', ()=>{
-  try{
-    const data = JSON.parse(topJson.value || 'null');
-    validateTopData(data);
-    downloadJson('top-bookmarks.json', data);
-  }catch(e){
-    alert(`Export 실패: ${String(e?.message || e)}`);
-  }
-});
-
-topImport.addEventListener('change', async ()=>{
-  const file = topImport.files?.[0];
-  if(!file) return;
-  try{
-    const data = await readJsonFile(file);
-    validateTopData(data);
-    topData = data;
-    syncTopJsonFromData();
-    renderTopTree();
-    alert('Import 완료(에디터에 반영). 필요하면 “적용”을 눌러 저장하세요.');
-  }catch(e){
-    alert(`Import 실패: ${String(e?.message || e)}`);
-  }finally{
-    topImport.value = '';
-  }
-});
-
-topReset.addEventListener('click', async ()=>{
-  try{
-    if(!confirm('localStorage(topBookmarks)를 삭제하고 기본값(bookmarks.json)으로 되돌릴까요?')) return;
-    localStorage.removeItem(TOP_BOOKMARKS_STORAGE_KEY);
-    await loadTopIntoEditor();
-    alert('초기화 완료: 홈 상단은 기본값(bookmarks.json)으로 표시됩니다.');
-  }catch(e){
-    alert(`초기화 실패: ${String(e?.message || e)}`);
   }
 });
 
@@ -424,8 +375,6 @@ const scJsonLabel = $('#scJsonLabel');
 const scList = $('#scList');
 const scLoad = $('#scLoad');
 const scApply = $('#scApply');
-const scExport = $('#scExport');
-const scImport = $('#scImport');
 const scNormalize = $('#scNormalize');
 
 let scData = [];
@@ -583,8 +532,18 @@ $all('input[name="scMode"]').forEach((r)=>{
 });
 
 async function loadShortcutsIntoEditor(){
-  const stored = getShortcutsFromLocalStorage();
-  const arr = stored || (await getShortcutsDefaultFromFile().catch(() => []));
+  let arr = null;
+  if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
+    try {
+      const dbData = await window.GumaCore.fetchProfileConfig('bookmarks');
+      if (dbData) {
+        arr = Array.isArray(dbData.shortcuts) ? dbData.shortcuts : (Array.isArray(dbData) ? dbData : []);
+      }
+    } catch {}
+  }
+  if (!arr) {
+    arr = await getShortcutsDefaultFromFile().catch(() => []);
+  }
   scData = arr;
   syncShortcutsJsonFromData();
   renderShortcutsList();
@@ -616,7 +575,7 @@ scNormalize.addEventListener('click', ()=>{
   }
 });
 
-scApply.addEventListener('click', ()=>{
+scApply.addEventListener('click', async ()=>{
   try{
     const obj = JSON.parse(scJson.value || 'null');
     const arr = fileFormatToShortcuts(obj);
@@ -628,54 +587,12 @@ scApply.addEventListener('click', ()=>{
     syncShortcutsJsonFromData();
     renderShortcutsList();
 
-    localStorage.setItem(SHORTCUTS_STORAGE_KEY, JSON.stringify(normalized));
-    alert('하단 바로가기 저장 완료: 홈으로 돌아가면 반영됩니다.');
+    if (window.GumaCore && window.GumaCore.saveProfileConfig) {
+      await window.GumaCore.saveProfileConfig('bookmarks', { shortcuts: normalized });
+    }
+    alert('하단 바로가기 저장 완료: 클라우드 DB에 즉시 반영되었습니다.');
   }catch(e){
     alert(`적용 실패: ${String(e?.message || e)}`);
-  }
-});
-
-scExport.addEventListener('click', ()=>{
-  try{
-    const obj = JSON.parse(scJson.value || 'null');
-    const arr = fileFormatToShortcuts(obj);
-    const normalized = normalizeShortcutsInPlace(arr);
-    validateShortcutsArray(normalized);
-    downloadJson('shortcuts.json', shortcutsToFileFormat(normalized));
-  }catch(e){
-    alert(`Export 실패: ${String(e?.message || e)}`);
-  }
-});
-
-scImport.addEventListener('change', async ()=>{
-  const file = scImport.files?.[0];
-  if(!file) return;
-  try{
-    const obj = await readJsonFile(file);
-    const arr = fileFormatToShortcuts(obj);
-    const normalized = normalizeShortcutsInPlace(arr);
-    validateShortcutsArray(normalized);
-
-    scData = normalized;
-    syncShortcutsJsonFromData();
-    renderShortcutsList();
-
-    alert('Import 완료(에디터에 반영). 필요하면 “적용”을 눌러 저장하세요.');
-  }catch(e){
-    alert(`Import 실패: ${String(e?.message || e)}`);
-  }finally{
-    scImport.value = '';
-  }
-});
-
-$('#scReset').addEventListener('click', async ()=>{
-  try{
-    if(!confirm('localStorage(bookmarks)를 삭제하고 기본값(config/shortcuts.json)으로 되돌릴까요?')) return;
-    localStorage.removeItem(SHORTCUTS_STORAGE_KEY);
-    await loadShortcutsIntoEditor();
-    alert('초기화 완료: 하단 바로가기는 기본값(config/shortcuts.json)으로 표시됩니다.');
-  }catch(e){
-    alert(`초기화 실패: ${String(e?.message || e)}`);
   }
 });
 
@@ -685,9 +602,6 @@ const egJsonLabel = $('#egJsonLabel');
 const egList = $('#egList');
 const egLoad = $('#egLoad');
 const egApply = $('#egApply');
-const egExport = $('#egExport');
-const egImport = $('#egImport');
-const egReset = $('#egReset');
 
 let egData = { engines: {} };
 
@@ -701,7 +615,16 @@ function syncEnginesDataFromJson(){
   egData = data;
 }
 
-function renderEngineRow(key, index){
+function extractDomainFromUrl(urlStr) {
+  try {
+    const u = new URL(urlStr);
+    return u.hostname.replace(/^www\./, '');
+  } catch (e) {
+    return '';
+  }
+}
+
+function renderEngineRow(key){
   const item = egData.engines[key];
   const node = document.createElement('div');
   node.className = 'node';
@@ -713,51 +636,29 @@ function renderEngineRow(key, index){
   badge.className = 'node-badge';
   badge.textContent = 'ENGINE';
 
-  const keyField = document.createElement('div');
-  keyField.className = 'field';
-  const keyInput = document.createElement('input');
-  keyInput.placeholder = 'ID(unique)';
-  keyInput.value = key;
-  keyInput.oninput = ()=>{
-    const newKey = keyInput.value.trim();
-    if (newKey && newKey !== key) {
-      egData.engines[newKey] = egData.engines[key];
-      delete egData.engines[key];
-      key = newKey; // 업데이트된 키로 유지
-      syncEnginesJsonFromData();
-    }
-  };
-  keyField.appendChild(keyInput);
-
   const labelField = document.createElement('div');
   labelField.className = 'field';
   const labelInput = document.createElement('input');
-  labelInput.placeholder = '표시 이름';
-  labelInput.value = item.label;
+  labelInput.placeholder = '표시 명칭 (예: 네이버)';
+  labelInput.value = item.label || '';
   labelInput.oninput = ()=>{
     item.label = labelInput.value;
     syncEnginesJsonFromData();
   };
   labelField.appendChild(labelInput);
 
-  const domainField = document.createElement('div');
-  domainField.className = 'field';
-  const domainInput = document.createElement('input');
-  domainInput.placeholder = '도메인 (아이콘용)';
-  domainInput.value = item.domain;
-  domainInput.oninput = ()=>{
-    item.domain = domainInput.value;
-    syncEnginesJsonFromData();
-  };
-  domainField.appendChild(domainInput);
-
   const urlField = document.createElement('div');
   urlField.className = 'field';
   const urlInput = document.createElement('input');
-  urlInput.placeholder = '검색 URL 패턴';
-  urlInput.value = item.urlPattern;
+  urlInput.placeholder = '검색 주소 (예: https://search.naver.com/search.naver?query=)';
+  urlInput.style.minWidth = '340px';
+  urlInput.value = item.urlPattern || '';
   urlInput.oninput = ()=>{
     item.urlPattern = urlInput.value;
+    const extracted = extractDomainFromUrl(urlInput.value);
+    if (extracted) {
+      item.domain = extracted;
+    }
     syncEnginesJsonFromData();
   };
   urlField.appendChild(urlInput);
@@ -773,9 +674,7 @@ function renderEngineRow(key, index){
   };
 
   header.appendChild(badge);
-  header.appendChild(keyField);
   header.appendChild(labelField);
-  header.appendChild(domainField);
   header.appendChild(urlField);
   header.appendChild(delBtn);
 
@@ -854,8 +753,18 @@ $all('input[name="egMode"]').forEach((r)=>{
 });
 
 async function loadEnginesIntoEditor(){
-  const stored = getEnginesFromLocalStorage();
-  const data = stored || (await getEnginesDefaultFromFile());
+  let data = null;
+  if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
+    try {
+      const dbData = await window.GumaCore.fetchProfileConfig('engines');
+      if (dbData && dbData.engines) {
+        data = dbData;
+      }
+    } catch {}
+  }
+  if (!data) {
+    data = getEnginesFromLocalStorage() || (await getEnginesDefaultFromFile());
+  }
   egData = data;
   syncEnginesJsonFromData();
   renderEnginesList();
@@ -869,53 +778,18 @@ egLoad.addEventListener('click', async ()=>{
   }
 });
 
-egApply.addEventListener('click', ()=>{
+egApply.addEventListener('click', async ()=>{
   try{
     const data = JSON.parse(egJson.value || 'null');
     validateEnginesData(data);
     egData = data;
+    if (window.GumaCore && window.GumaCore.saveProfileConfig) {
+      await window.GumaCore.saveProfileConfig('engines', data);
+    }
     localStorage.setItem(SEARCH_ENGINES_STORAGE_KEY, JSON.stringify(data));
-    alert('검색 엔진 저장 완료: 홈으로 돌아가면 반영됩니다.');
+    alert('검색 엔진 저장 완료: 클라우드 DB에 즉시 반영되었습니다.');
   }catch(e){
     alert(`적용 실패: ${String(e?.message || e)}`);
-  }
-});
-
-egExport.addEventListener('click', ()=>{
-  try{
-    const data = JSON.parse(egJson.value || 'null');
-    validateEnginesData(data);
-    downloadJson('engines.json', data);
-  }catch(e){
-    alert(`Export 실패: ${String(e?.message || e)}`);
-  }
-});
-
-egImport.addEventListener('change', async ()=>{
-  const file = egImport.files?.[0];
-  if(!file) return;
-  try{
-    const data = await readJsonFile(file);
-    validateEnginesData(data);
-    egData = data;
-    syncEnginesJsonFromData();
-    renderEnginesList();
-    alert('Import 완료(에디터에 반영). 필요하면 “적용”을 눌러 저장하세요.');
-  }catch(e){
-    alert(`Import 실패: ${String(e?.message || e)}`);
-  }finally{
-    egImport.value = '';
-  }
-});
-
-egReset.addEventListener('click', async ()=>{
-  try{
-    if(!confirm('localStorage(searchEngines)를 삭제하고 기본값(config/engines.json)으로 되돌릴까요?')) return;
-    localStorage.removeItem(SEARCH_ENGINES_STORAGE_KEY);
-    await loadEnginesIntoEditor();
-    alert('초기화 완료: 검색 엔진은 기본값(config/engines.json)으로 표시됩니다.');
-  }catch(e){
-    alert(`초기화 실패: ${String(e?.message || e)}`);
   }
 });
 
@@ -925,9 +799,6 @@ const ytJsonLabel = $('#ytJsonLabel');
 const ytList = $('#ytList');
 const ytLoad = $('#ytLoad');
 const ytApply = $('#ytApply');
-const ytExport = $('#ytExport');
-const ytImport = $('#ytImport');
-const ytReset = $('#ytReset');
 let ytData = [];
 
 function channelsToFileFormat(arr){
@@ -963,7 +834,7 @@ function normalizeChannelUrl(url){
 
 function getChannelsFromLocalStorage(){
   try{
-    const raw = localStorage.getItem(YT_CHANNELS_STORAGE_KEY);
+    const raw = localStorage.getItem(getProfileStorageKey(YT_CHANNELS_STORAGE_KEY));
     if(!raw) return null;
     const list = JSON.parse(raw);
     if(!Array.isArray(list) || list.length === 0) return null;
@@ -1012,7 +883,6 @@ function renderChannelRow(item, index){
 
   const nameField = document.createElement('div');
   nameField.className = 'field';
-  nameField.style.flex = '1';
   const nameInput = document.createElement('input');
   nameInput.placeholder = '채널 이름 (예: PBA TV)';
   nameInput.value = item?.name || '';
@@ -1024,7 +894,6 @@ function renderChannelRow(item, index){
 
   const urlField = document.createElement('div');
   urlField.className = 'field';
-  urlField.style.flex = '2';
   const urlInput = document.createElement('input');
   urlInput.placeholder = '@핸들 (예: @보다BODA)';
   urlInput.value = item?.url || '';
@@ -1127,7 +996,13 @@ $all('input[name="ytMode"]').forEach((r)=>{
 
 async function loadChannelsIntoEditor(){
   try{
-    let data = getChannelsFromLocalStorage();
+    let data = null;
+    if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
+      const dbData = await window.GumaCore.fetchProfileConfig('youtube_channels');
+      if (dbData) {
+        data = dbData.channels || (Array.isArray(dbData) ? dbData : []);
+      }
+    }
     if(!data || data.length === 0){
       data = await getChannelsDefaultFromFile();
     }
@@ -1147,7 +1022,7 @@ ytLoad?.addEventListener('click', async ()=>{
   }
 });
 
-ytApply?.addEventListener('click', ()=>{
+ytApply?.addEventListener('click', async ()=>{
   try{
     const obj = JSON.parse(ytJson?.value || 'null');
     const arr = fileFormatToChannels(obj);
@@ -1157,123 +1032,14 @@ ytApply?.addEventListener('click', ()=>{
     })).filter(c => c.name && c.url);
     validateChannelsData({ channels: cleaned });
     ytData = cleaned;
-    localStorage.setItem(YT_CHANNELS_STORAGE_KEY, JSON.stringify(cleaned));
+    if (window.GumaCore && window.GumaCore.saveProfileConfig) {
+      await window.GumaCore.saveProfileConfig('youtube_channels', { channels: cleaned });
+    }
     syncChannelsJsonFromData();
     renderChannelsList();
-    alert('유튜브 채널 저장 완료: 유튜브 다운로더 페이지에 즉시 반영됩니다.');
+    alert('유튜브 채널 저장 완료: 클라우드 DB에 즉시 반영되었습니다.');
   }catch(e){
     alert(`적용 실패: ${String(e?.message || e)}`);
-  }
-});
-
-ytExport?.addEventListener('click', ()=>{
-  try{
-    const obj = JSON.parse(ytJson?.value || 'null');
-    const arr = fileFormatToChannels(obj);
-    validateChannelsData({ channels: arr });
-    downloadJson('youtube-channels.json', { channels: arr });
-  }catch(e){
-    alert(`Export 실패: ${String(e?.message || e)}`);
-  }
-});
-
-ytImport?.addEventListener('change', async ()=>{
-  const file = ytImport?.files?.[0];
-  if(!file) return;
-  try{
-    const data = await readJsonFile(file);
-    const arr = fileFormatToChannels(data);
-    validateChannelsData({ channels: arr });
-    ytData = arr;
-    syncChannelsJsonFromData();
-    renderChannelsList();
-    alert('Import 완료(에디터에 반영). 필요하면 “적용”을 눌러 저장하세요.');
-  }catch(e){
-    alert(`Import 실패: ${String(e?.message || e)}`);
-  }finally{
-    if(ytImport) ytImport.value = '';
-  }
-});
-
-ytReset?.addEventListener('click', async ()=>{
-  try{
-    if(!confirm('유튜브 채널 설정을 모두 비우시겠습니까?')) return;
-    localStorage.removeItem(YT_CHANNELS_STORAGE_KEY);
-    ytData = [];
-    syncChannelsJsonFromData();
-    renderChannelsList();
-    alert('초기화 완료: 채널 목록이 모두 비워졌습니다. 원하는 채널을 추가해 보세요.');
-  }catch(e){
-    alert(`초기화 실패: ${String(e?.message || e)}`);
-  }
-});
-
-// --- Server Config (Cloudflare Tunnel / Backend) ---
-const BACKEND_STORAGE_KEY = 'guma_backend_url';
-const DEFAULT_TUNNEL_URL = 'https://generated-thanksgiving-sullivan-labels.trycloudflare.com';
-
-const backendServerUrl = $('#backendServerUrl');
-const serverApply = $('#serverApply');
-const serverTest = $('#serverTest');
-const serverReset = $('#serverReset');
-const serverStatusMsg = $('#serverStatusMsg');
-
-function showServerStatus(msg, isSuccess){
-  if(!serverStatusMsg) return;
-  serverStatusMsg.style.display = 'block';
-  serverStatusMsg.style.background = isSuccess ? 'rgba(46, 204, 113, 0.15)' : 'rgba(231, 76, 60, 0.15)';
-  serverStatusMsg.style.color = isSuccess ? '#2ecc71' : '#e74c3c';
-  serverStatusMsg.style.border = `1px solid ${isSuccess ? 'rgba(46, 204, 113, 0.4)' : 'rgba(231, 76, 60, 0.4)'}`;
-  serverStatusMsg.textContent = msg;
-}
-
-function loadServerConfigIntoEditor(){
-  if(!backendServerUrl) return;
-  const saved = localStorage.getItem(BACKEND_STORAGE_KEY);
-  backendServerUrl.value = saved || DEFAULT_TUNNEL_URL;
-}
-
-serverApply?.addEventListener('click', ()=>{
-  const val = (backendServerUrl?.value || '').trim();
-  if(val){
-    const cleanUrl = val.replace(/\/+$/, '');
-    localStorage.setItem(BACKEND_STORAGE_KEY, cleanUrl);
-    backendServerUrl.value = cleanUrl;
-    showServerStatus(`✔ 저장 완료: 백엔드 서버 주소가 저장되었습니다. (${cleanUrl})`, true);
-  } else {
-    localStorage.removeItem(BACKEND_STORAGE_KEY);
-    backendServerUrl.value = DEFAULT_TUNNEL_URL;
-    showServerStatus('✔ 기본값으로 복원되었습니다. (' + DEFAULT_TUNNEL_URL + ')', true);
-  }
-});
-
-serverReset?.addEventListener('click', ()=>{
-  if(!confirm('백엔드 서버 설정을 기본 터널 주소로 초기화하시겠습니까?')) return;
-  localStorage.removeItem(BACKEND_STORAGE_KEY);
-  if(backendServerUrl) backendServerUrl.value = DEFAULT_TUNNEL_URL;
-  showServerStatus('✔ 초기화 완료: 기본 터널 주소로 복원되었습니다.', true);
-});
-
-serverTest?.addEventListener('click', async ()=>{
-  const targetUrl = (backendServerUrl?.value || '').trim().replace(/\/+$/, '') || DEFAULT_TUNNEL_URL;
-  showServerStatus(`연결 확인 중... (${targetUrl})`, true);
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
-    const res = await fetch(`${targetUrl}/api/status`, {
-      method: 'GET',
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-
-    if(res.ok){
-      const data = await res.json().catch(()=>({}));
-      showServerStatus(`✔ 통신 성공! 백엔드 서버가 온라인 상태입니다. (버전: ${data.version || '1.1.0'})`, true);
-    } else {
-      showServerStatus(`✖ 서버 응답 에러 (HTTP ${res.status}): 주소를 다시 확인하세요.`, false);
-    }
-  } catch(e) {
-    showServerStatus(`✖ 연결 실패: 서버가 응답하지 않거나 터널이 닫혀 있습니다. (${String(e?.message || e)})`, false);
   }
 });
 
@@ -1282,7 +1048,7 @@ if(localStorage.getItem('theme') === 'dark'){
   document.body.classList.add('dark');
 }
 
-// URL 쿼리 파라미터로 초기 탭 지정 지원 (?tab=server 등)
+// URL 쿼리 파라미터로 초기 탭 지정 지원 (?tab=youtube 등)
 const urlParams = new URLSearchParams(window.location.search);
 const initialTab = urlParams.get('tab') || 'top';
 
@@ -1292,9 +1058,44 @@ setTopMode('tree');
 setScMode('list');
 setEgMode('list');
 setYtMode('list');
+
+// 탭 바 좌측 기기(프로필) 선택 드롭다운 초기화
+async function initProfileTabSelector() {
+  const sel = $('#configProfileSelect');
+  if (!sel) return;
+
+  let profiles = [];
+  if (window.GumaCore && window.GumaCore.loadProfiles) {
+    profiles = await window.GumaCore.loadProfiles();
+  } else {
+    profiles = [
+      { id: 'default', name: '기본 (PC)', icon: '🖥️' },
+      { id: 'mobile',  name: '모바일',    icon: '📱' }
+    ];
+  }
+
+  const curProfileId = (window.GumaCore && window.GumaCore.getActiveProfile()) || localStorage.getItem('guma_active_profile') || 'default';
+  sel.innerHTML = '';
+  profiles.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.icon || '🏷️'} ${p.name}`;
+    if (p.id === curProfileId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  sel.addEventListener('change', () => {
+    const nextId = sel.value;
+    if (window.GumaCore) window.GumaCore.setActiveProfile(nextId);
+    else localStorage.setItem('guma_active_profile', nextId);
+    const activeTab = document.querySelector('.tab.active')?.getAttribute('data-tab') || 'top';
+    window.location.href = `?tab=${activeTab}`;
+  });
+}
+
+initProfileTabSelector();
 loadTopIntoEditor().catch(()=>{});
 loadShortcutsIntoEditor();
 loadEnginesIntoEditor();
 loadChannelsIntoEditor();
-loadServerConfigIntoEditor();
 

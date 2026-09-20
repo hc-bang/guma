@@ -8,12 +8,6 @@ __pycache__/
 
 # Environment Variables
 .env
-.env.local
 
-# OS Generated Files
-.DS_Store
-Thumbs.db
-
-# Log Files
+# Log Directory
 logs/
-*.log

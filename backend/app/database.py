@@ -1,7 +1,7 @@
 """
 GUMA™ Neon PostgreSQL Database Module
 - Serverless Postgres 연동 및 연결 풀링
-- system_config, profiles, profile_configs 테이블 자동 초기화 및 헬퍼 함수 제공
+- profiles, profile_configs 테이블 자동 초기화 및 헬퍼 함수 제공
 """
 
 import os
@@ -64,16 +64,7 @@ def init_db():
     try:
         conn = pool_obj.getconn()
         with conn.cursor() as cur:
-            # 1. system_config 테이블 (터널 주소, 시스템 설정 보관)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS system_config (
-                    key VARCHAR(50) PRIMARY KEY,
-                    value TEXT NOT NULL,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-
-            # 2. profiles 테이블 (기기별/개인별 프로필)
+            # 1. profiles 테이블 (기기별/개인별 프로필)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS profiles (
                     id VARCHAR(50) PRIMARY KEY,
@@ -84,7 +75,7 @@ def init_db():
                 );
             """)
 
-            # 3. profile_configs 테이블 (프로필별 북마크/채널 JSON 데이터)
+            # 2. profile_configs 테이블 (프로필별 북마크/채널 JSON 데이터)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS profile_configs (
                     profile_id VARCHAR(50) REFERENCES profiles(id) ON DELETE CASCADE,
@@ -125,53 +116,6 @@ def init_db():
         if conn:
             conn.rollback()
         logger.error(f"[DB] 데이터베이스 초기화 중 오류: {e}")
-    finally:
-        if conn and pool_obj:
-            pool_obj.putconn(conn)
-
-# ==========================================
-# 헬퍼 함수: system_config (터널 주소 등)
-# ==========================================
-
-def get_system_config(key: str) -> Optional[str]:
-    pool_obj = get_connection_pool()
-    if not pool_obj:
-        return None
-    conn = None
-    try:
-        conn = pool_obj.getconn()
-        with conn.cursor() as cur:
-            cur.execute("SELECT value FROM system_config WHERE key = %s;", (key,))
-            row = cur.fetchone()
-            return row[0] if row else None
-    except Exception as e:
-        logger.error(f"[DB] get_system_config 실패 ({key}): {e}")
-        return None
-    finally:
-        if conn and pool_obj:
-            pool_obj.putconn(conn)
-
-def set_system_config(key: str, value: str) -> bool:
-    pool_obj = get_connection_pool()
-    if not pool_obj:
-        return False
-    conn = None
-    try:
-        conn = pool_obj.getconn()
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO system_config (key, value, updated_at)
-                VALUES (%s, %s, CURRENT_TIMESTAMP)
-                ON CONFLICT (key) DO UPDATE
-                SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP;
-            """, (key, value))
-            conn.commit()
-            return True
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        logger.error(f"[DB] set_system_config 실패 ({key}): {e}")
-        return False
     finally:
         if conn and pool_obj:
             pool_obj.putconn(conn)

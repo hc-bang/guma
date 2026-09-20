@@ -240,10 +240,19 @@ start_cloudflare_tunnel() {
         echo -e "  - 외부 전용 주소: \033[1;36m$tunnel_url\033[0m"
         echo -e "  - 안내: 스마트폰이나 외부 어디서든 위 주소로 접속 가능합니다."
 
-        # 백엔드 API를 통해 Neon DB에 터널 주소 자동 동기화
-        if command -v curl >/dev/null 2>&1; then
-            curl -s -X POST "http://localhost:$PORT/api/system/tunnel" -H "Content-Type: application/json" -d "{\"url\":\"$tunnel_url\",\"status\":\"online\"}" --max-time 3 >/dev/null 2>&1 || true
-            echo -e "  - \033[1;32m클라우드 연동: Neon DB에 터널 주소가 자동 등록되었습니다. (무설정 동기화)\033[0m"
+        # frontend/tunnel.json 파일 갱신 및 Git 자동 푸시 (모든 기기 완전 무설정 동기화)
+        cat <<EOF > ./frontend/tunnel.json
+{
+  "url": "$tunnel_url",
+  "status": "online",
+  "updated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
+        if command -v git >/dev/null 2>&1; then
+            echo -e "  - \033[1;36m[Git] tunnel.json 동기화 커밋 및 푸시 진행 중...\033[0m"
+            git add ./frontend/tunnel.json >/dev/null 2>&1
+            git commit -m "Chore: Cloudflare 터널 주소 갱신 ($tunnel_url)" >/dev/null 2>&1
+            git push origin main >/dev/null 2>&1 && echo -e "  - \033[1;32m✔ GitHub Pages 동기화 완료: 모든 기기(스마트폰/PC)에서 즉시 자동 연결됩니다.\033[0m" || echo -e "  - \033[1;33m[WARN] Git push 실패 (네트워크 또는 인증 확인 필요)\033[0m"
         fi
     else
         echo -e "\033[1;33m  - 터널 프로세스가 시작되었습니다. 주소 확인은 13번 메뉴를 이용하세요.\033[0m"
@@ -255,9 +264,18 @@ stop_cloudflare_tunnel() {
     echo -e "\033[1;36m[INFO] Cloudflare 터널을 점검하고 종료합니다...\033[0m"
     local stopped=0
 
-    # 백엔드 API를 통해 Neon DB에 오프라인 상태 통지
-    if command -v curl >/dev/null 2>&1; then
-        curl -s -X POST "http://localhost:$PORT/api/system/tunnel" -H "Content-Type: application/json" -d "{\"url\":\"\",\"status\":\"offline\"}" --max-time 3 >/dev/null 2>&1 || true
+    # frontend/tunnel.json 오프라인 갱신 및 Git 자동 푸시
+    cat <<EOF > ./frontend/tunnel.json
+{
+  "url": "",
+  "status": "offline",
+  "updated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
+    if command -v git >/dev/null 2>&1; then
+        git add ./frontend/tunnel.json >/dev/null 2>&1
+        git commit -m "Chore: Cloudflare 터널 종료 (오프라인 전환)" >/dev/null 2>&1
+        git push origin main >/dev/null 2>&1 || true
     fi
 
     if [ -f "$LOG_DIR/tunnel.pid" ]; then
@@ -299,6 +317,9 @@ check_cloudflare_tunnel() {
         echo -e "\033[1;32m✔ Cloudflare 터널:\033[0m"
         echo -e "  - 상태         : \033[1;32m정상 가동 중 (RUNNING, Background)\033[0m"
         echo -e "  - 외부 접속 URL: \033[1;36m$cur_url\033[0m"
+        if [[ "$cur_url" =~ ^https:// ]]; then
+            echo -e "  - GitHub Pages : \033[1;32mhttps://hc-bang.github.io/guma/ (무설정 자동 연결)\033[0m"
+        fi
     else
         echo -e "\033[1;31m✖ Cloudflare 터널:\033[0m"
         echo -e "  - 상태         : \033[1;31m중지됨 (STOPPED)\033[0m"

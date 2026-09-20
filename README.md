@@ -148,14 +148,7 @@ guma/                                   # 단일 Git 통합 저장소
 모든 데이터는 [`database/schema.sql`](file:///c:/workspace/git-hub(hc-bang)/guma/database/schema.sql)에 정의된 최신 스키마를 통해 중앙 집중 관리됩니다.
 
 ```sql
--- 1. system_config (시스템 전역 설정 및 Cloudflare 터널 주소)
-CREATE TABLE system_config (
-    key VARCHAR(50) PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- 2. profiles (기기별/사용자별 프로필)
+-- 1. profiles (기기별/사용자별 프로필)
 CREATE TABLE profiles (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -164,15 +157,18 @@ CREATE TABLE profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. profile_configs (프로필별 설정 JSONB 데이터)
+-- 2. profile_configs (프로필별 설정 JSONB 데이터)
 CREATE TABLE profile_configs (
     profile_id VARCHAR(50) REFERENCES profiles(id) ON DELETE CASCADE,
     config_type VARCHAR(50) NOT NULL,            -- 'topBookmarks', 'bookmarks', 'engines', 'youtube_channels'
-    config_data JSONB NOT NULL,
+    config_data JSONB NOT NULL,                   -- 해당 항목의 실제 JSON 객체/배열
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY(profile_id, config_type)
 );
 ```
+
+* **외부 터널 연동 명세 (`frontend/tunnel.json`):**
+  Cloudflare 터널 주소는 Git 기반의 `frontend/tunnel.json` 파일을 통해 자동 관리됩니다. `manage.sh`에서 11번(터널 시작) 시 최신 주소가 Git으로 자동 푸시되어, 모든 외부 브라우저(GitHub Pages 등)가 별도 설정 없이 100% 무설정(Zero-Config)으로 홈 서버 백엔드와 자동 직결됩니다.
 
 ### 5.2. `localStorage` 데이터 명세
 

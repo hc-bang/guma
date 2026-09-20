@@ -1,7 +1,6 @@
 """
-GUMA™ Config Hub & Auto-Discovery Router
-- Neon PostgreSQL 기반 Cloudflare 터널 자동 동기화
-- 기기별/개인별 프로필 및 북마크/채널 클라우드 동기화 API
+GUMA™ Config Hub Router
+- 기기별/개인별 프로필 및 북마크/채널/엔진 클라우드 동기화 API
 """
 
 from fastapi import APIRouter, HTTPException
@@ -10,13 +9,11 @@ from typing import Optional, List, Dict, Any
 
 try:
     from app.database import (
-        get_system_config, set_system_config,
         list_profiles, get_profile_config, set_profile_config,
         is_db_available
     )
 except ImportError:
     from backend.app.database import (
-        get_system_config, set_system_config,
         list_profiles, get_profile_config, set_profile_config,
         is_db_available
     )
@@ -24,39 +21,7 @@ except ImportError:
 router = APIRouter(prefix="/api", tags=["ConfigHub"])
 
 # ==========================================
-# 1. Cloudflare 터널 주소 자동 동기화
-# ==========================================
-
-class TunnelUpdateRequest(BaseModel):
-    url: str
-    status: Optional[str] = "online"
-
-@router.get("/system/tunnel")
-def get_active_tunnel():
-    """현재 활성화되어 Neon DB에 등록된 최신 Cloudflare 터널 URL을 반환합니다."""
-    tunnel_url = get_system_config("tunnel_url")
-    tunnel_status = get_system_config("tunnel_status") or "offline"
-    return {
-        "success": True,
-        "db_available": is_db_available(),
-        "tunnel_url": tunnel_url or "",
-        "status": tunnel_status if tunnel_url else "offline"
-    }
-
-@router.post("/system/tunnel")
-def update_active_tunnel(req: TunnelUpdateRequest):
-    """manage.sh / manage.ps1 등에서 새로 발급된 터널 URL을 Neon DB에 자동 등록합니다."""
-    clean_url = (req.url or "").strip().rstrip('/')
-    if clean_url:
-        set_system_config("tunnel_url", clean_url)
-        set_system_config("tunnel_status", req.status or "online")
-        return {"success": True, "message": "터널 URL이 Neon DB에 갱신되었습니다.", "url": clean_url}
-    else:
-        set_system_config("tunnel_status", "offline")
-        return {"success": True, "message": "터널 상태가 오프라인으로 갱신되었습니다."}
-
-# ==========================================
-# 2. 기기별/개인별 프로필 (설정 그룹)
+# 기기별/개인별 프로필 (설정 그룹)
 # ==========================================
 
 class CreateProfileRequest(BaseModel):

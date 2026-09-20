@@ -1,14 +1,7 @@
 -- GUMA™ Neon PostgreSQL Database Schema
--- Version: 2.0.0 (Cloud Single Source of Truth Architecture)
+-- Version: 2.1.0 (Cloud 2-Tier Core Schema: profiles, profile_configs)
 
--- 1. system_config 테이블 (Cloudflare 터널 주소, 시스템 전역 설정)
-CREATE TABLE IF NOT EXISTS system_config (
-    key VARCHAR(50) PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- 2. profiles 테이블 (기기별/환경별 프로필: 기본(PC), 모바일 등)
+-- 1. profiles 테이블 (기기별/환경별 프로필: 기본(PC), 모바일 등)
 CREATE TABLE IF NOT EXISTS profiles (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -17,7 +10,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. profile_configs 테이블 (프로필별 설정 데이터: 북마크, 바로가기, 채널, 검색엔진)
+-- 2. profile_configs 테이블 (프로필별 설정 데이터: 북마크, 바로가기, 채널, 검색엔진)
 CREATE TABLE IF NOT EXISTS profile_configs (
     profile_id VARCHAR(50) REFERENCES profiles(id) ON DELETE CASCADE,
     config_type VARCHAR(50) NOT NULL,

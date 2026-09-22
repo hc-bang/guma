@@ -656,6 +656,30 @@
     const analyzeBtn = document.getElementById('yt-analyze');
     const resultCard = document.getElementById('yt-result');
 
+    // 팝업 내부 폼 및 결과 카드 완전 초기화 함수
+    function resetModalForm() {
+      currentVideoUrl = '';
+      if (urlInput) urlInput.value = '';
+      if (clearBtn) clearBtn.style.display = 'none';
+      if (resultCard) resultCard.style.display = 'none';
+      if (analyzeBtn) {
+        analyzeBtn.disabled = false;
+        analyzeBtn.innerHTML = '<span>영상 분석</span>';
+      }
+      const thumb = document.getElementById('yt-thumb');
+      if (thumb) thumb.src = '';
+      const title = document.getElementById('yt-card-title');
+      if (title) title.textContent = '';
+      const uploader = document.getElementById('yt-card-uploader');
+      if (uploader) uploader.textContent = '👤 -';
+      const duration = document.getElementById('yt-card-duration');
+      if (duration) duration.textContent = '⏱️ 00:00';
+      const views = document.getElementById('yt-card-views');
+      if (views) views.textContent = '👁️ -';
+      const date = document.getElementById('yt-card-date');
+      if (date) date.textContent = '📅 -';
+    }
+
     // 내부 팝업(모달) 열기/닫기 제어
     function openModal(previewData = null) {
       if (!ytModal) return;
@@ -666,6 +690,8 @@
       if (previewData) {
         analyzeVideo(previewData.url, previewData);
       } else {
+        // [직접 URL 입력] 버튼으로 열었을 때는 이전 영상 정보를 깨끗하게 초기화
+        resetModalForm();
         setTimeout(() => {
           if (urlInput) urlInput.focus();
         }, 120);
@@ -677,6 +703,7 @@
       ytModal.classList.remove('open');
       ytModal.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
+      resetModalForm();
     }
 
     if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);

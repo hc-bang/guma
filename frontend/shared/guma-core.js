@@ -41,6 +41,8 @@
     return (cached && cached.trim()) ? cached.trim().replace(/\/+$/, '') : window.location.origin;
   }
 
+  let discoveryPromise = null;
+
   /**
    * 외부 GitHub Pages 접속 시 Git으로 동기화된 tunnel.json을 읽어 백엔드 터널 URL을 자동 감지합니다.
    */
@@ -49,32 +51,54 @@
       return window.location.origin;
     }
 
-    try {
-      // 1. 현재 페이지 위치에 따른 tunnel.json 경로 계산
-      const rootPrefix = (window.GUMA && window.GUMA.root) ? window.GUMA.root : (window.location.pathname.includes('/guma/') ? '/guma/' : './');
-      const tunnelJsonUrl = `${rootPrefix.replace(/\/+$/, '')}/tunnel.json`;
-
-      const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 3000);
-      const res = await fetch(tunnelJsonUrl, { signal: controller.signal, cache: 'no-store' });
-      clearTimeout(tid);
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.url && data.status === 'online') {
-          const clean = String(data.url).trim().replace(/\/+$/, '');
-          localStorage.setItem(STORAGE_KEYS.TUNNEL_CACHE, clean);
-          return clean;
-        } else if (data && data.status === 'offline') {
-          localStorage.removeItem(STORAGE_KEYS.TUNNEL_CACHE);
-          return window.location.origin;
-        }
-      }
-    } catch (e) {
-      console.warn('[GUMA Core] tunnel.json 자동 감지 건너뜀:', e);
+    if (discoveryPromise) {
+      return discoveryPromise;
     }
 
-    return getApiBaseSync();
+    discoveryPromise = (async () => {
+      try {
+        const rootPrefix = (window.GUMA && window.GUMA.root) ? window.GUMA.root : (window.location.pathname.includes('/guma/') ? '/guma/' : './');
+        const tunnelJsonUrl = `${rootPrefix.replace(/\/+$/, '')}/tunnel.json?_t=${Date.now()}`;
+
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(tunnelJsonUrl, { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(tid);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.url && data.status === 'online') {
+            const clean = String(data.url).trim().replace(/\/+$/, '');
+            localStorage.setItem(STORAGE_KEYS.TUNNEL_CACHE, clean);
+            return clean;
+          } else if (data && data.status === 'offline') {
+            localStorage.removeItem(STORAGE_KEYS.TUNNEL_CACHE);
+            return window.location.origin;
+          }
+        }
+      } catch (e) {
+        console.warn('[GUMA Core] tunnel.json 자동 감지 지연/실패:', e);
+      } finally {
+        discoveryPromise = null;
+      }
+      return getApiBaseSync();
+    })();
+
+    return discoveryPromise;
+  }
+
+  /**
+   * 백엔드 API 주소를 비동기로 확실히 보장합니다.
+   */
+  async function ensureApiBase() {
+    if (isLocalEnvironment()) {
+      return window.location.origin;
+    }
+    const cached = localStorage.getItem(STORAGE_KEYS.TUNNEL_CACHE);
+    if (cached && cached.trim()) {
+      return cached.trim().replace(/\/+$/, '');
+    }
+    return await discoverActiveTunnel();
   }
 
   /**
@@ -95,30 +119,74 @@
 
   /**
    * 백엔드 API를 통해 현재 활성 프로필의 특정 설정(topBookmarks, bookmarks, youtube_channels 등)을 조회합니다.
+   * - 타임아웃(3.5초) 제어 및 일시적 터널 지연 시 최대 2회 자동 재시도 탑재
    */
-  async function fetchProfileConfig(configType) {
+  async function fetchProfileConfig(configType, maxRetries = 2) {
     const profileId = getActiveProfileId();
-    const apiBase = getApiBaseSync();
-    try {
-      const res = await fetch(`${apiBase}/api/profiles/${profileId}/config/${configType}`, { cache: 'no-store' });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data !== null && json.data !== undefined) {
-          return json.data;
+    const apiBase = await ensureApiBase();
+
+    // GitHub Pages 등 정적 호스팅 환경에서 터널이 미확정된 채 자기 자신을 호출하는 오류 방지
+    if (!isLocalEnvironment() && apiBase === window.location.origin) {
+      console.warn(`[GUMA Core] 터널 주소 미확보로 프로필(${profileId}) ${configType} 조회 대기 건너뜀`);
+      return null;
+    }
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 3500);
+
+        const res = await fetch(`${apiBase}/api/profiles/${profileId}/config/${configType}`, {
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        clearTimeout(tid);
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data !== null && json.data !== undefined) {
+            try {
+              localStorage.setItem(`guma_cache_${configType}_${profileId}`, JSON.stringify(json.data));
+            } catch {}
+            return json.data;
+          }
+        } else if (res.status === 404) {
+          // 데이터가 실제로 없는 정상 응답인 경우 재시도 불필요
+          return null;
         }
+      } catch (err) {
+        if (attempt < maxRetries) {
+          // 일시적 터널 핑 지연/핸드셰이크 대기 (300ms, 600ms)
+          await new Promise(r => setTimeout(r, (attempt + 1) * 300));
+          continue;
+        }
+        console.warn(`[GUMA Core] 프로필(${profileId}) ${configType} 조회 실패 (재시도 완료):`, err);
       }
-    } catch (err) {
-      console.warn(`[GUMA Core] 프로필(${profileId}) ${configType} 조회 실패:`, err);
     }
     return null;
   }
 
   /**
    * 백엔드 API를 통해 현재 활성 프로필의 설정을 Neon DB에 영구 저장합니다.
+   * - 저장 즉시 로컬 캐시를 갱신하여 환경설정 변경 후 다른 페이지로 이동 시 0ms 즉각 반영 보장
    */
   async function saveProfileConfig(configType, data) {
     const profileId = getActiveProfileId();
-    const apiBase = getApiBaseSync();
+
+    // 1. 브라우저 로컬 캐시 즉시 갱신 (환경설정 변경사항 즉시 동기화)
+    try {
+      localStorage.setItem(`guma_cache_${configType}_${profileId}`, JSON.stringify(data));
+      // 구버전 키 호환
+      if (configType === 'topBookmarks') {
+        const topKey = (profileId === 'default') ? 'topBookmarks' : `topBookmarks_${profileId}`;
+        localStorage.setItem(topKey, JSON.stringify(data));
+      } else if (configType === 'engines') {
+        localStorage.setItem('searchEngines', JSON.stringify(data));
+      }
+    } catch {}
+
+    // 2. 백엔드 Neon DB 클라우드 영구 저장
+    const apiBase = await ensureApiBase();
     try {
       const res = await fetch(`${apiBase}/api/profiles/${profileId}/config/${configType}`, {
         method: 'POST',
@@ -177,6 +245,7 @@
   window.GumaCore = {
     isLocal: isLocalEnvironment,
     getApiBase: getApiBaseSync,
+    ensureApiBase: ensureApiBase,
     discoverActiveTunnel: discoverActiveTunnel,
     getActiveProfile: getActiveProfileId,
     setActiveProfile: setActiveProfileId,

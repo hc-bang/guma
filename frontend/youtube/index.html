@@ -891,25 +891,50 @@
       }
     }
 
+    function getYoutubeCacheKey() {
+      const profile = (window.GumaCore && window.GumaCore.getActiveProfile()) || localStorage.getItem('guma_active_profile') || 'default';
+      return `guma_cache_youtube_${profile}`;
+    }
+
+    function initChannelsFromCache() {
+      try {
+        const raw = localStorage.getItem(getYoutubeCacheKey());
+        if (raw) {
+          const cached = JSON.parse(raw);
+          const list = cached.channels || (Array.isArray(cached) ? cached : null);
+          if (list && list.length > 0) {
+            channelsList = list;
+            renderChannelTabs();
+            return true;
+          }
+        }
+      } catch {}
+      return false;
+    }
+
     async function initChannels() {
+      // 1단계 (0ms): 브라우저 캐시에서 즉시 채널 탭 복원
+      initChannelsFromCache();
+
+      // 2단계: 터널 확인
       if (window.GumaCore && window.GumaCore.discoverActiveTunnel) {
         try { await window.GumaCore.discoverActiveTunnel(); } catch {}
       }
+
+      // 3단계: 백그라운드 DB 동기화
       try {
-        let loadedFromDb = false;
         if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
           const dbData = await window.GumaCore.fetchProfileConfig('youtube_channels');
           if (dbData) {
             channelsList = dbData.channels || (Array.isArray(dbData) ? dbData : []);
-            loadedFromDb = true;
+            try { localStorage.setItem(getYoutubeCacheKey(), JSON.stringify({ channels: channelsList })); } catch {}
+            renderChannelTabs();
           }
         }
-        if (!loadedFromDb) {
-          channelsList = [];
-        }
       } catch (e) {
-        channelsList = [];
+        console.warn('[YouTube] 채널 목록 최신화 건너뜀 (캐시 유지):', e);
       }
+
       activeChannelUrl = ALL_FEED_ID;
       renderChannelTabs();
       resetAndLoadChannel();

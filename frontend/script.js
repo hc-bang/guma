@@ -75,6 +75,29 @@ function applyFavicon(imgEl, url, size = 32) {
   tryNext();
 }
 
+/* ── Cache Helpers (Stale-While-Revalidate) ──────────────── */
+function getProfileCacheKey(type) {
+  const profile = (window.GumaCore && window.GumaCore.getActiveProfile()) || localStorage.getItem('guma_active_profile') || 'default';
+  return `guma_cache_${type}_${profile}`;
+}
+
+function getCachedConfig(type) {
+  try {
+    const raw = localStorage.getItem(getProfileCacheKey(type));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedConfig(type, data) {
+  try {
+    if (data !== null && data !== undefined) {
+      localStorage.setItem(getProfileCacheKey(type), JSON.stringify(data));
+    }
+  } catch {}
+}
+
 /* ── Search engines ─────────────────────────────────────── */
 let engines = {}; // 동적 로드될 객체
 const SEARCH_ENGINES_KEY = 'searchEngines';
@@ -102,7 +125,16 @@ function renderEngineMenu() {
   if (!engineMenu) return;
   engineMenu.innerHTML = '';
   
-  Object.keys(engines).forEach(key => {
+  const keys = Object.keys(engines || {});
+  if (keys.length === 0) {
+    if (engineIcon) {
+      engineIcon.src = '';
+      engineIcon.alt = '';
+    }
+    return;
+  }
+
+  keys.forEach(key => {
     const e = engines[key];
     const btn = document.createElement('button');
     btn.className = 'engine-item';
@@ -129,34 +161,53 @@ function renderEngineMenu() {
   
   // 현재 선택된 엔진 적용
   const saved = localStorage.getItem('engine');
-  const currentEngine = (saved && engines[saved]) ? saved : Object.keys(engines)[0];
+  const currentEngine = (saved && engines[saved]) ? saved : keys[0];
   applyEngine(currentEngine);
 }
 
+// 1. 브라우저 캐시에서 즉시 복원 (0ms 렌더링)
+function initEnginesFromCache() {
+  const cached = getCachedConfig('engines');
+  if (cached && cached.engines && Object.keys(cached.engines).length > 0) {
+    engines = cached.engines;
+    renderEngineMenu();
+    return true;
+  }
+  const oldStored = localStorage.getItem(SEARCH_ENGINES_KEY);
+  if (oldStored) {
+    try {
+      const data = JSON.parse(oldStored);
+      if (data && data.engines && Object.keys(data.engines).length > 0) {
+        engines = data.engines;
+        renderEngineMenu();
+        return true;
+      }
+    } catch {}
+  }
+  return false;
+}
+
+// 2. 백엔드 DB 최신화 및 캐시 갱신
 async function loadEnginesJson() {
   try {
     if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
       const dbData = await window.GumaCore.fetchProfileConfig('engines');
-      if (dbData && dbData.engines) {
+      if (dbData && dbData.engines && typeof dbData.engines === 'object' && Object.keys(dbData.engines).length > 0) {
         engines = dbData.engines;
+        setCachedConfig('engines', dbData);
         renderEngineMenu();
         return;
       }
     }
-    const stored = localStorage.getItem(SEARCH_ENGINES_KEY);
-    if (stored) {
-      const data = JSON.parse(stored);
-      if (data && data.engines) {
-        engines = data.engines;
-        renderEngineMenu();
-        return;
-      }
-    }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[GUMA] 검색엔진 최신화 건너뜀 (캐시 유지):', e);
+  }
 
-  // 데이터가 없을 때 기본값을 내장하지 않고 빈 상태로 둠 (북마크/유튜브와 동일)
-  engines = {};
-  renderEngineMenu();
+  // DB에 데이터가 없고 기존 캐시도 비어있는 경우에만 빈 상태 적용
+  if (!engines || Object.keys(engines).length === 0) {
+    engines = {};
+    renderEngineMenu();
+  }
 }
 
 engineBtn.onclick = e => { e.stopPropagation(); engineMenu.classList.toggle('hidden'); };
@@ -175,6 +226,7 @@ form.addEventListener('submit', e => {
 let bookmarks = null;
 
 async function saveBookmarks() {
+  setCachedConfig('bookmarks', { shortcuts: bookmarks || [] });
   if (window.GumaCore && window.GumaCore.saveProfileConfig) {
     await window.GumaCore.saveProfileConfig('bookmarks', { shortcuts: bookmarks || [] });
   }
@@ -219,33 +271,41 @@ function render() {
   }
 }
 
+// 1. 브라우저 캐시에서 바로가기 즉시 복원 (0ms 렌더링)
+function initShortcutsFromCache() {
+  const cached = getCachedConfig('bookmarks');
+  if (cached) {
+    const list = Array.isArray(cached.shortcuts) ? cached.shortcuts : (Array.isArray(cached) ? cached : null);
+    if (list && list.length > 0) {
+      bookmarks = list.slice(0, 15);
+      render();
+      return true;
+    }
+  }
+  return false;
+}
+
+// 2. 백엔드 DB 최신화 및 캐시 갱신
 async function loadShortcutsJson() {
-  // 1. Neon DB 프로필 설정에서 항상 최신 데이터 조회 (단일 진실 공급원)
   let loaded = false;
   if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
     try {
       const dbData = await window.GumaCore.fetchProfileConfig('bookmarks');
       if (dbData) {
-        bookmarks = (Array.isArray(dbData.shortcuts) ? dbData.shortcuts : (Array.isArray(dbData) ? dbData : [])).slice(0, 15);
+        const list = Array.isArray(dbData.shortcuts) ? dbData.shortcuts : (Array.isArray(dbData) ? dbData : []);
+        bookmarks = list.slice(0, 15);
+        setCachedConfig('bookmarks', { shortcuts: bookmarks });
         loaded = true;
         render();
       }
-    } catch {}
+    } catch (e) {
+      console.warn('[GUMA] 바로가기 최신화 건너뜀 (캐시 유지):', e);
+    }
   }
 
-  // 2. Neon DB에 데이터가 없거나 통신 실패 시 기본 파일 조회 (Fallback)
-  if (!loaded) {
-    try {
-      const res = await fetch('./config/shortcuts.json', { cache: 'default' });
-      if (res.ok) {
-        const data = await res.json();
-        bookmarks = (Array.isArray(data.shortcuts) ? data.shortcuts : []).slice(0, 15);
-      } else {
-        bookmarks = [];
-      }
-    } catch {
-      bookmarks = [];
-    }
+  // DB 조회가 실패했고 캐시된 바로가기도 아직 없는 경우에만 빈 상태 적용
+  if (!loaded && (!bookmarks || bookmarks.length === 0)) {
+    bookmarks = [];
     render();
   }
 }
@@ -389,34 +449,67 @@ function getTopFromLocalStorage() {
   }
 }
 
+// 1. 브라우저 캐시에서 상단 북마크/폴더 즉시 복원 (0ms 렌더링)
+function initTopBookmarksFromCache() {
+  const cached = getCachedConfig('topBookmarks');
+  if (cached && (Array.isArray(cached.top) || Array.isArray(cached))) {
+    const topObj = Array.isArray(cached.top) ? cached : { top: cached };
+    if (topObj.top.length > 0) {
+      renderTopFolders(topObj);
+      return true;
+    }
+  }
+  const oldTop = getTopFromLocalStorage();
+  if (oldTop && Array.isArray(oldTop.top) && oldTop.top.length > 0) {
+    renderTopFolders(oldTop);
+    return true;
+  }
+  return false;
+}
+
+// 2. 백엔드 DB 최신화 및 캐시 갱신
 async function loadBookmarksJson() {
   let loaded = false;
-  // 1. Neon DB 프로필 설정에서 항상 최신 상단 북마크 조회
   if (window.GumaCore && window.GumaCore.fetchProfileConfig) {
     try {
       const dbData = await window.GumaCore.fetchProfileConfig('topBookmarks');
       if (dbData && (Array.isArray(dbData.top) || Array.isArray(dbData))) {
         const topObj = Array.isArray(dbData.top) ? dbData : { top: dbData };
         renderTopFolders(topObj);
+        setCachedConfig('topBookmarks', topObj);
         loaded = true;
       }
-    } catch {}
+    } catch (e) {
+      console.warn('[GUMA] 상단 북마크 최신화 건너뜀 (캐시 유지):', e);
+    }
   }
 
-  // 2. DB 연결 실패 시 기본값 처리
-  if (!loaded && topBookmarksDiv) {
+  // DB 조회가 실패했고 캐시된 요소도 전혀 없을 때만 빈 상태 적용
+  if (!loaded && topBookmarksDiv && !topBookmarksDiv.hasChildNodes()) {
     topBookmarksDiv.innerHTML = '';
   }
 }
 
-
 document.addEventListener('click', () => document.querySelectorAll('.engine-menu, .top-folder-menu').forEach(el => el.classList.add('hidden')));
 
 async function initApp() {
+  // 1단계 (0ms): 브라우저 로컬 캐시로부터 즉시 렌더링 (깜빡임 및 빈 화면 100% 방지)
+  initEnginesFromCache();
+  initShortcutsFromCache();
+  initTopBookmarksFromCache();
+
+  // 2단계: 백엔드 터널 감지 확인
   if (window.GumaCore && window.GumaCore.discoverActiveTunnel) {
     try { await window.GumaCore.discoverActiveTunnel(); } catch {}
   }
-  await Promise.all([loadEnginesJson(), loadShortcutsJson(), loadBookmarksJson()]);
-  input.focus();
+
+  // 3단계: 백그라운드에서 최신 DB 데이터 동기화
+  await Promise.allSettled([
+    loadEnginesJson(),
+    loadShortcutsJson(),
+    loadBookmarksJson()
+  ]);
+
+  if (input) input.focus();
 }
 initApp();

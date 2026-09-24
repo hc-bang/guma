@@ -610,6 +610,7 @@ def parse_task_status(raw: Dict[str, Any]) -> Dict[str, Any]:
     progress = round((completed_len / total_len * 100), 1) if total_len > 0 else 0.0
 
     meta = _TASK_METADATA.get(gid, {})
+    info_hash = raw.get("infoHash") or meta.get("info_hash", "")
     files = raw.get("files", [])
     primary_name = meta.get("original_filename", f"task_{gid[:6]}")
     file_path = ""

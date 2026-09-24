@@ -10,16 +10,18 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 try:
-    from app.routers import youtube, config_hub
+    from app.routers import youtube, config_hub, torrent
     from app.database import init_db
+    from app.services import aria2_service
 except ImportError:
-    from backend.app.routers import youtube, config_hub
+    from backend.app.routers import youtube, config_hub, torrent
     from backend.app.database import init_db
+    from backend.app.services import aria2_service
 
 app = FastAPI(
     title="GUMA™ Unified Server",
     description="GUMA™ 프론트엔드 및 파이썬 백엔드 통합 서비스",
-    version="1.2.0",
+    version="1.3.0",
     docs_url=None,
     redoc_url=None,
     openapi_url=None
@@ -27,10 +29,14 @@ app = FastAPI(
 
 @app.on_event("startup")
 def on_startup():
+    print("[Server Startup] 1. 데이터베이스 초기화 진행...")
     try:
         init_db()
+        print("[Server Startup] 1. 데이터베이스 초기화 완료")
     except Exception as e:
         print(f"[DB] 시작 시 초기화 예외: {e}")
+
+    print("[Server Startup] 2. README 문서 동기화...")
     try:
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         root_readme = os.path.join(base_dir, "README.md")
@@ -38,8 +44,34 @@ def on_startup():
         if os.path.isfile(root_readme):
             import shutil
             shutil.copy2(root_readme, fe_readme)
+        print("[Server Startup] 2. README 문서 동기화 완료")
     except Exception as e:
         print(f"[README] 동기화 실패: {e}")
+
+    print("[Server Startup] 3. 가비지 임시 파일 정리...")
+    try:
+        aria2_service.cleanup_startup_garbage()
+        print("[Server Startup] 3. 가비지 임시 파일 정리 완료")
+    except Exception as e:
+        print(f"[Garbage Cleanup] 시작 시 정리 예외: {e}")
+
+    print("[Server Startup] 4. aria2c 다운로드 엔진 비동기 기동...")
+    try:
+        # FastAPI 포트 80 바인딩을 지연시키지 않도록 백그라운드 스레드로 안전 기동
+        import threading
+        threading.Thread(target=aria2_service.start_daemon, daemon=True, name="aria2-starter").start()
+        print("[Server Startup] 4. aria2c 엔진 백그라운드 기동 시작")
+    except Exception as e:
+        print(f"[aria2] 시작 시 데몬 기동 안내: {e}")
+
+    print("[Server Startup] [OK] 모든 초기화 완료! 포트 80 웹 서버 가동 준비 완료.")
+
+@app.on_event("shutdown")
+def on_shutdown():
+    try:
+        aria2_service.stop_daemon()
+    except Exception as e:
+        print(f"[aria2] 종료 중 예외: {e}")
 
 # CORS 설정 (동일 출처 통합 시 기본 허용, 외부 도메인 및 클라우드 호환성 유지)
 app.add_middleware(
@@ -54,6 +86,7 @@ app.add_middleware(
 # 1. 백엔드 API 라우터 등록
 app.include_router(youtube.router)
 app.include_router(config_hub.router)
+app.include_router(torrent.router)
 
 @app.get("/api")
 @app.get("/api/status")

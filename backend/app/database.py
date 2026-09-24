@@ -86,6 +86,16 @@ def init_db():
                 );
             """)
 
+            # 3. torrent_trackers 테이블 (오직 100% 정상 작동하는 활성 트래커만 영구 관리)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS torrent_trackers (
+                    url VARCHAR(500) PRIMARY KEY,
+                    source VARCHAR(50) DEFAULT 'seed',
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                );
+                ALTER TABLE torrent_trackers DROP COLUMN IF EXISTS is_active;
+            """)
+
             # 불필요한 work(업무용) 프로필 삭제
             cur.execute("DELETE FROM profiles WHERE id = 'work';")
 
@@ -193,3 +203,94 @@ def set_profile_config(profile_id: str, config_type: str, data: Any) -> bool:
     finally:
         if conn and pool_obj:
             pool_obj.putconn(conn)
+
+
+# ==============================================================================
+# 토렌트 트래커 (torrent_trackers) 관리 함수
+# ==============================================================================
+
+def get_db_trackers() -> List[str]:
+    """Neon DB에서 정상 활성 토렌트 트래커 URL 목록을 조회합니다."""
+    pool_obj = get_connection_pool()
+    if not pool_obj:
+        return []
+    conn = None
+    try:
+        conn = pool_obj.getconn()
+        with conn.cursor() as cur:
+            cur.execute("SELECT url FROM torrent_trackers ORDER BY created_at DESC;")
+            rows = cur.fetchall()
+            return [r[0] for r in rows if r and r[0]]
+    except Exception as e:
+        logger.error(f"[DB] get_db_trackers 실패: {e}")
+        return []
+    finally:
+        if conn and pool_obj:
+            pool_obj.putconn(conn)
+
+
+def save_db_trackers(urls: List[str], source: str = "harvest") -> int:
+    """살아있는 정상 트래커 목록을 DB에 일괄 저장(중복 자동 무시)하고 추가된 개수를 반환합니다."""
+    if not urls:
+        return 0
+    pool_obj = get_connection_pool()
+    if not pool_obj:
+        return 0
+    conn = None
+    added_count = 0
+    try:
+        conn = pool_obj.getconn()
+        with conn.cursor() as cur:
+            clean_urls = []
+            for u in urls:
+                c = u.strip()
+                if c and (c.startswith("udp://") or c.startswith("http://") or c.startswith("https://") or c.startswith("wss://")):
+                    clean_urls.append(c)
+
+            if clean_urls:
+                from psycopg2.extras import execute_values
+                query = """
+                    INSERT INTO torrent_trackers (url, source)
+                    VALUES %s
+                    ON CONFLICT (url) DO NOTHING;
+                """
+                tuples = [(u, source) for u in clean_urls]
+                execute_values(cur, query, tuples)
+                added_count = cur.rowcount
+                conn.commit()
+        return added_count
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"[DB] save_db_trackers 실패: {e}")
+        return 0
+    finally:
+        if conn and pool_obj:
+            pool_obj.putconn(conn)
+
+
+def delete_db_trackers(urls: List[str]) -> int:
+    """응답이 없거나 죽어 있는 트래커 목록을 DB에서 영구 완전 삭제합니다."""
+    if not urls:
+        return 0
+    pool_obj = get_connection_pool()
+    if not pool_obj:
+        return 0
+    conn = None
+    deleted_count = 0
+    try:
+        conn = pool_obj.getconn()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM torrent_trackers WHERE url = ANY(%s);", (urls,))
+            deleted_count = cur.rowcount
+            conn.commit()
+        return deleted_count
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"[DB] delete_db_trackers 실패: {e}")
+        return 0
+    finally:
+        if conn and pool_obj:
+            pool_obj.putconn(conn)
+

@@ -11,3 +11,8 @@ __pycache__/
 
 # Log Directory
 logs/
+
+# Torrent Temporary Downloads
+downloads/
+backend/downloads/
+*.torrent

@@ -1,0 +1,791 @@
+/* ==============================================================================
+   GUMA™ Torrent Downloader Stylesheet (YouTube Styled Premium Dashboard)
+   Clean, Glassmorphism & High-Performance On-Demand Polling UI
+   ============================================================================== */
+
+:root {
+  --neon-blue: #0088ff;
+  --neon-green: #00d26a;
+  --neon-orange: #ff9900;
+  --neon-red: #ff3366;
+}
+
+.torrent-container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 16px 14px 32px;
+}
+
+/* ── 1. YouTube 섹션 헤더 & 버튼 스타일 일치 ───────────────────────── */
+.torrent-section {
+  margin-top: 6px;
+}
+
+.torrent-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.torrent-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.torrent-header-action-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--btn);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .18s ease;
+  white-space: nowrap;
+}
+
+.torrent-header-action-btn:hover {
+  background: var(--btnHover, var(--btn-hover));
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent);
+}
+
+.torrent-header-action-btn:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  border-color: var(--border) !important;
+  color: var(--muted) !important;
+}
+
+/* ── 2. 다운로드 카드 리스트 ────────────────────────────────────────── */
+.torrent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty-state {
+  background: var(--panel);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ── 4. YouTube 스타일 모던 토렌트 카드 ────────────────────────────── */
+.torrent-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: var(--shadow);
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  animation: fadeIn 0.22s ease-out;
+}
+
+.torrent-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+.torrent-card.duplicate-highlight {
+  animation: pulseGlow 1.2s ease-in-out 3;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    border-color: var(--border);
+    box-shadow: var(--shadow);
+  }
+  50% {
+    border-color: var(--neon-orange);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--neon-orange) 45%, transparent);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-icon {
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+.progress-indeterminate {
+  background: linear-gradient(90deg, 
+    color-mix(in srgb, var(--accent) 20%, transparent) 0%, 
+    var(--accent) 50%, 
+    color-mix(in srgb, var(--accent) 20%, transparent) 100%) !important;
+  background-size: 200% 100% !important;
+  animation: shimmer 1.2s infinite linear;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── 좌측 통합 현재 상태 박스 ───────────────────────────────────────── */
+.card-status-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 2px;
+  transition: all 0.18s ease;
+}
+
+.status-box-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.status-box-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.status-box-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  line-height: 1;
+}
+
+.card-status-box.active {
+  background: color-mix(in srgb, var(--neon-blue) 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--neon-blue) 35%, var(--border));
+  color: var(--neon-blue);
+}
+
+.card-status-box.complete {
+  background: color-mix(in srgb, var(--neon-green) 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--neon-green) 35%, var(--border));
+  color: var(--neon-green);
+}
+
+.card-status-box.waiting {
+  background: color-mix(in srgb, var(--neon-orange) 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--neon-orange) 35%, var(--border));
+  color: var(--neon-orange);
+}
+
+.card-status-box.paused {
+  background: color-mix(in srgb, var(--muted) 15%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--muted) 35%, var(--border));
+  color: var(--muted);
+}
+
+.card-status-box.error {
+  background: color-mix(in srgb, var(--neon-red) 12%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--neon-red) 35%, var(--border));
+  color: var(--neon-red);
+}
+
+/* ── 중앙 콘텐츠 영역 ─────────────────────────────────────────────── */
+.card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.card-header-line {
+  display: flex;
+  align-items: center;
+}
+
+.card-filename {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 프로그레스 바 (슬림 & 모던) */
+.progress-track {
+  width: 100%;
+  height: 3px;
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--neon-blue), color-mix(in srgb, var(--neon-blue) 60%, var(--accent)));
+  border-radius: 999px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-bar.complete {
+  background: var(--neon-green);
+}
+
+.progress-bar.error {
+  background: var(--neon-red);
+}
+
+/* 메타데이터 통계 라인 (유튜브 yt-ch-meta 감성의 11px 심플 텍스트) */
+.card-meta-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.meta-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.meta-tag {
+  display: inline-flex;
+  align-items: center;
+}
+
+.meta-tag strong {
+  color: var(--text);
+}
+
+.meta-tag.speed-down {
+  color: var(--neon-blue);
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+}
+
+.meta-tag.eta {
+  color: var(--neon-orange);
+  font-weight: 600;
+}
+
+/* ── 액션 버튼 그룹 (유튜브 버튼 수준의 28px 아담한 사이즈) ────────── */
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.btn-download-now {
+  padding: 4px 10px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--neon-green);
+  background: var(--neon-green);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--neon-green) 30%, transparent);
+  transition: all 0.18s ease;
+}
+
+.btn-download-now:hover {
+  background: color-mix(in srgb, var(--neon-green) 85%, black);
+  transform: translateY(-1px);
+}
+
+.btn-delete-card,
+.btn-cancel-card {
+  padding: 4px 9px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--btn);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.btn-delete-card:hover,
+.btn-cancel-card:hover {
+  border-color: var(--neon-red);
+  color: var(--neon-red);
+  background: color-mix(in srgb, var(--neon-red) 8%, var(--panel));
+}
+
+.btn-download-now:disabled,
+.btn-delete-card:disabled,
+.btn-cancel-card:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ── 모바일 세로모드 반응형 최적화 (뷰포트 640px 이하) ────────────── */
+@media (max-width: 640px) {
+  .torrent-container {
+    padding: 10px 8px 36px;
+  }
+
+  .torrent-section-header {
+    margin-bottom: 10px;
+  }
+
+  /* 카드: 상단 2단(상태 뱃지 + 내용) + 하단 1단(와이드 액션 버튼) 모바일 최적화 그리드 */
+  .torrent-card {
+    display: grid;
+    grid-template-columns: 42px 1fr;
+    grid-template-areas:
+      "status body"
+      "actions actions";
+    padding: 10px;
+    gap: 8px 10px;
+    align-items: center;
+  }
+
+  .card-status-box {
+    grid-area: status;
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    gap: 2px;
+  }
+
+  .status-box-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .status-box-label {
+    font-size: 8.5px;
+  }
+
+  .card-body {
+    grid-area: body;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .card-filename {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .card-meta-line {
+    font-size: 10.5px;
+    gap: 4px;
+    line-height: 1.25;
+  }
+
+  .card-actions {
+    grid-area: actions;
+    width: 100%;
+    margin-top: 2px;
+    gap: 6px;
+  }
+
+  .btn-download-now,
+  .btn-delete-card,
+  .btn-cancel-card {
+    flex: 1;
+    height: 34px; /* 모바일 엄지손가락 터치 타겟 최적화 */
+    font-size: 12px;
+    justify-content: center;
+  }
+
+  /* 모바일 상세 모달 최적화 */
+  .torrent-modal-overlay {
+    padding: 10px;
+  }
+
+  .torrent-modal-dialog {
+    padding: 14px 12px;
+    border-radius: 14px;
+    gap: 12px;
+    max-height: 90vh;
+  }
+
+  .torrent-modal-header {
+    padding-bottom: 10px;
+  }
+
+  .modal-task-name {
+    max-width: calc(100vw - 110px);
+    font-size: 13px;
+  }
+
+  .modal-summary-box {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .modal-stats-grid {
+    gap: 6px 10px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .stat-val {
+    font-size: 11px;
+  }
+
+  .modal-files-list {
+    max-height: 160px; /* 스마트폰 세로 화면에서 스크롤 혼선 방지 */
+  }
+
+  .modal-file-item {
+    padding: 7px 10px;
+    font-size: 10.5px;
+  }
+
+  .torrent-modal-footer {
+    padding-top: 10px;
+    gap: 6px;
+  }
+
+  .torrent-modal-footer button {
+    flex: 1;
+    height: 38px; /* 모바일 전용 시원한 터치 높이 */
+    font-size: 13px;
+    justify-content: center;
+  }
+}
+
+/* ── 5. 토렌트 상세 정보 모달 (YouTube 1:1 스타일) ─────────────────────── */
+.torrent-card .card-body,
+.torrent-card .card-status-box {
+  cursor: pointer;
+}
+
+.torrent-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+.torrent-modal-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.torrent-modal-dialog {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  transform: scale(0.95);
+  transition: transform 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.torrent-modal-overlay.open .torrent-modal-dialog {
+  transform: scale(1);
+}
+
+.torrent-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.torrent-modal-heading {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.modal-task-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 480px;
+}
+
+.torrent-modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 8px;
+  transition: color 0.18s, background 0.18s;
+}
+
+.torrent-modal-close:hover {
+  color: var(--text);
+  background: var(--btnHover, var(--btn-hover));
+}
+
+.torrent-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 요약 통계 박스 */
+.modal-summary-box {
+  background: color-mix(in srgb, var(--panel) 60%, var(--bg, #111));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-status-pill-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 15%, var(--panel));
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.modal-status-pill.complete {
+  background: color-mix(in srgb, var(--neon-green) 15%, var(--panel));
+  color: var(--neon-green);
+  border-color: color-mix(in srgb, var(--neon-green) 30%, var(--border));
+}
+
+.modal-status-pill.error {
+  background: color-mix(in srgb, var(--neon-red) 15%, var(--panel));
+  color: var(--neon-red);
+  border-color: color-mix(in srgb, var(--neon-red) 30%, var(--border));
+}
+
+.modal-progress-text {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text);
+}
+
+.modal-track {
+  height: 4px;
+}
+
+.modal-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 14px;
+  padding-top: 4px;
+}
+
+@media (min-width: 520px) {
+  .modal-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.modal-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-label {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.stat-val {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+
+
+/* 포함된 파일 목록 */
+.modal-files-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal-files-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.modal-files-list {
+  max-height: 220px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--border) 80%, transparent) transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-files-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.modal-files-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.modal-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  font-size: 11px;
+  gap: 10px;
+  transition: background 0.15s ease;
+}
+
+.modal-file-item:last-child {
+  border-bottom: none;
+}
+
+.modal-file-item:hover {
+  background: color-mix(in srgb, var(--btnHover, var(--btn-hover)) 50%, transparent);
+}
+
+.file-name-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.file-name-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.file-meta-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.file-prog-badge {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--border) 50%, transparent);
+}
+
+.file-prog-badge.complete {
+  color: var(--neon-green);
+  background: color-mix(in srgb, var(--neon-green) 12%, transparent);
+}
+
+/* 모달 하단 푸터 액션 */
+.torrent-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}

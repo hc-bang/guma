@@ -4,10 +4,13 @@
 # Usage: ./manage.sh (or: sudo ./manage.sh for Port 80 binding)
 # ==============================================================================
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PORT="80"
-VENV_PYTHON="./.venv/bin/python"
-VENV_PIP="./.venv/bin/pip"
-LOG_DIR="./logs"
+export PYTHONIOENCODING="utf-8"
+export PYTHONUTF8="1"
+VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python"
+VENV_PIP="$SCRIPT_DIR/.venv/bin/pip"
+LOG_DIR="$SCRIPT_DIR/logs"
 
 load_env() {
     if [ -f "./.env" ]; then
@@ -56,8 +59,19 @@ check_port_root() {
     fi
 }
 
+clean_garbage_files() {
+    # downloads 폴더 및 임시 디렉터리 내 잔여 가비지 일괄 청소
+    local dirs=("$SCRIPT_DIR/downloads" "$SCRIPT_DIR/downloads/torrent" "$SCRIPT_DIR/backend/downloads" "$SCRIPT_DIR/backend/downloads/torrent")
+    for d in "${dirs[@]}"; do
+        if [ -d "$d" ]; then
+            find "$d" -mindepth 1 ! -name ".gitkeep" ! -name ".gitignore" -exec rm -rf {} + 2>/dev/null
+        fi
+    done
+}
+
 start_unified_server() {
     ensure_log_dir
+    clean_garbage_files
     check_port_root
 
     # 유효성 검사
@@ -105,8 +119,16 @@ start_unified_server() {
     local server_pid=$!
     echo "$server_pid" > "$LOG_DIR/server.pid"
 
-    sleep 2
-    if ss -tulpn 2>/dev/null | grep -q ":$PORT "; then
+    local is_started=0
+    for i in {1..12}; do
+        sleep 0.5
+        if ss -tulpn 2>/dev/null | grep -q ":$PORT "; then
+            is_started=1
+            break
+        fi
+    done
+
+    if [ $is_started -eq 1 ]; then
         echo ""
         echo -e "\033[1;32m=================================================\033[0m"
         echo -e "\033[1;32m✔ GUMA™ 단일 통합 서버 백그라운드 실행 완료\033[0m"
@@ -136,6 +158,9 @@ stop_unified_server() {
     # 2. uvicorn 백엔드 프로세스 종료
     pkill -f "uvicorn backend.main:app" 2>/dev/null && stopped=$((stopped + 1))
 
+    # 3. aria2c 다운로드 엔진 데몬 종료
+    pkill -f "aria2c" 2>/dev/null && stopped=$((stopped + 1))
+
     # 3. 포트 점유 프로세스 강제 종료 (fuser 또는 lsof)
     if command -v fuser >/dev/null 2>&1; then
         fuser -k -9 "${PORT}/tcp" >/dev/null 2>&1 && stopped=$((stopped + 1))
@@ -148,6 +173,10 @@ stop_unified_server() {
         fi
     fi
 
+    # 프로세스 파일 핸들 릴리즈 대기 후 임시 잔여 파일 청소
+    sleep 0.4
+    clean_garbage_files
+
     # 포트 해제 대기 (최대 3초)
     for i in {1..6}; do
         if ! ss -tulpn 2>/dev/null | grep -q ":$PORT "; then
@@ -157,7 +186,7 @@ stop_unified_server() {
     done
 
     if ! ss -tulpn 2>/dev/null | grep -q ":$PORT "; then
-        echo -e "\033[1;32m[INFO] 서버가 안전하게 종료되었습니다. (포트 $PORT 해제)\033[0m"
+        echo -e "\033[1;32m[INFO] 서버가 안전하게 종료되었으며 잔여 임시 파일이 정리되었습니다. (포트 $PORT 해제)\033[0m"
     else
         echo -e "\033[1;31m[WARN] 포트 $PORT 해제에 실패했습니다. root 권한('sudo ./manage.sh')으로 종료해 주세요.\033[0m"
     fi
@@ -165,7 +194,7 @@ stop_unified_server() {
 
 check_unified_server() {
     echo -e "\033[1;36m================================================\033[0m"
-    echo -e "\033[1;33m■  GUMA™ 통합 서버 상태 점검\033[0m"
+    echo -e "\033[1;33m■  GUMA™ 통합 서버 및 서비스 상태 점검\033[0m"
     echo -e "\033[1;36m================================================\033[0m"
 
     if ss -tulpn 2>/dev/null | grep -q ":$PORT "; then
@@ -174,6 +203,17 @@ check_unified_server() {
         echo -e "  - 로컬 접속주소: http://localhost"
     else
         echo -e "\033[1;31m✖ 통합 웹 서버 (Port $PORT):\033[0m"
+        echo -e "  - 상태         : \033[1;31m중지됨 (STOPPED)\033[0m"
+    fi
+
+    echo ""
+    local aria2_port="${ARIA2_RPC_PORT:-6800}"
+    if ss -tulpn 2>/dev/null | grep -q ":$aria2_port " || pgrep -f "aria2c" >/dev/null 2>&1; then
+        echo -e "\033[1;32m✔ aria2 다운로드 엔진 (Port $aria2_port):\033[0m"
+        echo -e "  - 상태         : \033[1;32m정상 가동 중 (ONLINE, JSON-RPC)\033[0m"
+        echo -e "  - RPC 주소     : http://127.0.0.1:$aria2_port/jsonrpc"
+    else
+        echo -e "\033[1;31m✖ aria2 다운로드 엔진 (Port $aria2_port):\033[0m"
         echo -e "  - 상태         : \033[1;31m중지됨 (STOPPED)\033[0m"
     fi
     echo -e "\033[1;36m================================================\033[0m"
@@ -451,6 +491,48 @@ install_git_linux() {
     fi
 }
 
+install_aria2_linux() {
+    echo -e "\033[1;36m================================================\033[0m"
+    echo -e "\033[1;33m■  aria2 다운로드 엔진 설치 (Install aria2)\033[0m"
+    echo -e "\033[1;36m================================================\033[0m"
+
+    if command -v aria2c >/dev/null 2>&1; then
+        local aria2_ver
+        aria2_ver=$(aria2c --version | head -n 1)
+        echo -e "\033[1;32m[INFO] 이미 aria2가 설치되어 있습니다: $aria2_ver\033[0m"
+        return 0
+    fi
+
+    echo -e "\033[1;36m[INFO] apt 패키지 관리자를 통해 aria2를 설치합니다...\033[0m"
+    sudo apt update && sudo apt install -y aria2
+
+    if command -v aria2c >/dev/null 2>&1; then
+        echo -e "\033[1;32m[INFO] aria2 설치가 정상 완료되었습니다! ($(aria2c --version | head -n 1))\033[0m"
+    else
+        echo -e "\033[1;31m[ERROR] aria2 설치에 실패했습니다. 수동으로 설치해주세요.\033[0m"
+    fi
+}
+
+uninstall_aria2_linux() {
+    echo -e "\033[1;36m================================================\033[0m"
+    echo -e "\033[1;33m■  aria2 다운로드 엔진 설치 제거 (Uninstall aria2)\033[0m"
+    echo -e "\033[1;36m================================================\033[0m"
+
+    if ! command -v aria2c >/dev/null 2>&1; then
+        echo -e "\033[1;33m[INFO] aria2가 설치되어 있지 않습니다.\033[0m"
+        return 0
+    fi
+
+    read -rp "정말로 aria2를 시스템에서 완전히 삭제하시겠습니까? (y/N): " confirm
+    if [[ "$confirm" =~ ^[yY]$ ]]; then
+        echo -e "\033[1;36m[INFO] apt 패키지 관리자를 통해 aria2를 삭제합니다...\033[0m"
+        sudo apt purge -y aria2 && sudo apt autoremove -y
+        echo -e "\033[1;32m[INFO] aria2 삭제 작업이 완료되었습니다.\033[0m"
+    else
+        echo -e "\033[1;33m[INFO] 삭제 작업을 취소했습니다.\033[0m"
+    fi
+}
+
 # ==========================================
 # 메뉴 루프
 # ==========================================
@@ -476,6 +558,8 @@ show_menu() {
     echo " 92. 백엔드 패키지 설치 (backend/requirements.txt)"
     echo " 93. Cloudflare(cloudflared) 자동 설치"
     echo " 94. Git 도구 설치 (Install Git)"
+    echo " 95. aria2 엔진 설치 (Install aria2)"
+    echo " 96. aria2 엔진 설치 제거 (Uninstall aria2)"
     echo ""
     echo " 0. 프로그램 종료"
     echo -e "\033[1;36m================================================\033[0m"
@@ -522,6 +606,12 @@ while true; do
             ;;
         94)
             install_git_linux
+            ;;
+        95)
+            install_aria2_linux
+            ;;
+        96)
+            uninstall_aria2_linux
             ;;
         *)
             echo -e "\033[1;31m[WARN] 잘못된 선택입니다.\033[0m"

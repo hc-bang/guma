@@ -562,7 +562,8 @@
         <h3 id="yt-modal-title" class="yt-modal-heading">
           <span class="icon-svg" aria-hidden="true">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="#ff4b4b">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+              <path
+                d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
             </svg>
           </span>
           <span>영상 상세 및 다운로드</span>
@@ -613,12 +614,14 @@
         <h2 class="yt-channel-title">📺 최근 영상</h2>
         <div style="display: flex; gap: 8px; align-items: center;">
           <button id="btnSubOpenUrlModal" class="yt-header-action-btn" type="button" aria-label="URL 직접 입력">
-            <span>🔗 직접 URL 입력</span>
+            <span>🔗 직접 입력</span>
           </button>
-          <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" class="yt-header-action-btn" aria-label="YouTube 공식 사이트 새 탭 열기" style="text-decoration: none;">
+          <a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" class="yt-header-action-btn"
+            aria-label="YouTube 공식 사이트 새 탭 열기" style="text-decoration: none;">
             <span class="icon-svg" aria-hidden="true">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="#ff4b4b">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                <path
+                  d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
               </svg>
             </span>
             <span>YouTube</span>
@@ -690,7 +693,7 @@
       if (previewData) {
         analyzeVideo(previewData.url, previewData);
       } else {
-        // [직접 URL 입력] 버튼으로 열었을 때는 이전 영상 정보를 깨끗하게 초기화
+        // [직접 입력] 버튼으로 열었을 때는 이전 영상 정보를 깨끗하게 초기화
         resetModalForm();
         setTimeout(() => {
           if (urlInput) urlInput.focus();
@@ -781,7 +784,7 @@
         if (previewData.title) document.getElementById('yt-card-title').textContent = previewData.title;
         const chName = previewData.channel_name || previewData.uploader || '유튜브 채널';
         document.getElementById('yt-card-uploader').textContent = `👤 ${chName}`;
-        
+
         const durText = previewData.duration_text || (previewData.duration ? formatDuration(previewData.duration) : '');
         if (durText) {
           document.getElementById('yt-card-duration').textContent = `⏱️ ${durText}`;
@@ -789,8 +792,8 @@
 
         let pViews = '-';
         if (previewData.view_count) {
-          pViews = previewData.view_count >= 10000 
-            ? (previewData.view_count / 10000).toFixed(1) + '만회' 
+          pViews = previewData.view_count >= 10000
+            ? (previewData.view_count / 10000).toFixed(1) + '만회'
             : previewData.view_count.toLocaleString() + '회';
         } else if (previewData.views_text) {
           pViews = previewData.views_text.includes('회') ? previewData.views_text : `${previewData.views_text}회`;
@@ -919,7 +922,7 @@
             return true;
           }
         }
-      } catch {}
+      } catch { }
       return false;
     }
 
@@ -929,7 +932,7 @@
 
       // 2단계: 터널 확인
       if (window.GumaCore && window.GumaCore.discoverActiveTunnel) {
-        try { await window.GumaCore.discoverActiveTunnel(); } catch {}
+        try { await window.GumaCore.discoverActiveTunnel(); } catch { }
       }
 
       // 3단계: 백그라운드 DB 동기화
@@ -938,7 +941,7 @@
           const dbData = await window.GumaCore.fetchProfileConfig('youtube_channels');
           if (dbData) {
             channelsList = dbData.channels || (Array.isArray(dbData) ? dbData : []);
-            try { localStorage.setItem(getYoutubeCacheKey(), JSON.stringify({ channels: channelsList })); } catch {}
+            try { localStorage.setItem(getYoutubeCacheKey(), JSON.stringify({ channels: channelsList })); } catch { }
             renderChannelTabs();
           }
         }
@@ -1178,7 +1181,7 @@
 
         targetBtn.innerHTML = `<span>💾 파일 저장 중...</span>`;
         const blob = await response.blob();
-        
+
         // 1순위: 현재 카드에 표시된 실제 영상 제목 가져오기
         const currentTitle = document.getElementById('yt-card-title')?.textContent?.trim() || '';
         const safeTitle = currentTitle.replace(/[\\/:*?"<>|]/g, '_');

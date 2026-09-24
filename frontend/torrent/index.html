@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GUMA™ Torrent</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="../config/config.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- Global Root Window Config -->
+  <script src="../shared/guma-core.js"></script>
+  <script>window.GUMA = { root: '../', page: 'torrent' };</script>
+  <script src="../shared/topbar.js" defer></script>
+
+  <!-- 상단 공통 네비게이션 헤더 -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="title">
+        <span class="title-icon icon-svg" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </span>
+        Torrent
+      </h1>
+    </div>
+    <div class="topbar-right">
+      <a class="btn icon-btn" href="../" aria-label="홈으로">
+        <span class="icon-svg" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9,22 9,12 15,12 15,22" />
+          </svg>
+        </span>
+      </a>
+      <button id="themeToggle" class="btn icon-btn" type="button" aria-label="모드 토글">
+        <span class="icon-svg" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </span>
+      </button>
+      <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴">
+        <span class="icon-svg" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 사이드패널 드로어 -->
+  <div id="sidepanelOverlay" class="sidepanel-overlay"></div>
+  <aside id="sidepanel" class="sidepanel" aria-label="메뉴">
+    <div class="sidepanel-title">메뉴</div>
+    <div id="sidepanel-nav" class="sidepanel-actions"></div>
+  </aside>
+
+  <!-- 메인 대시보드 컨테이너 -->
+  <div class="torrent-container">
+
+    <!-- 상단 헤더: 유튜브 페이지 [최근 영상] / [직접 입력]과 100% 동일한 구성 및 스타일 -->
+    <div class="torrent-section">
+      <div class="torrent-section-header">
+        <h2 class="torrent-section-title">
+          <span class="icon-svg" aria-hidden="true" style="display:inline-flex; align-items:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </span>
+          <span>다운로드 목록</span>
+        </h2>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="btn-choose-file" class="torrent-header-action-btn" type="button" aria-label="파일 선택">
+            <span class="icon-svg" aria-hidden="true" style="display:inline-flex; align-items:center;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </span>
+            <span>파일 선택</span>
+          </button>
+          <input type="file" id="torrent-file-input" accept=".torrent" multiple style="display: none;">
+        </div>
+      </div>
+
+      <!-- 다운로드 작업 목록 스트림 -->
+      <div id="torrent-list" class="torrent-list">
+        <!-- 빈 상태 표시 (설명문 없이 미니멀) -->
+        <div id="empty-state" class="empty-state">
+          <p class="empty-text">진행 중인 다운로드 작업이 없습니다.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 토렌트 상세 정보 & 파일 목록 모달 (YouTube 팝업 1:1 감성) -->
+  <div id="torrent-modal" class="torrent-modal-overlay" aria-hidden="true">
+    <div class="torrent-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="torrent-modal-title">
+      <div class="torrent-modal-header">
+        <h3 id="torrent-modal-title" class="torrent-modal-heading">
+          <span class="icon-svg" aria-hidden="true" style="display:inline-flex; align-items:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </span>
+          <span id="modal-task-name" class="modal-task-name">상세 정보</span>
+        </h3>
+        <button id="torrent-modal-close" class="torrent-modal-close" type="button" aria-label="닫기">&times;</button>
+      </div>
+
+      <div class="torrent-modal-body">
+        <!-- 기본 상태 및 진행률 요약 -->
+        <div class="modal-summary-box">
+          <div class="modal-status-pill-wrap">
+            <span id="modal-status-pill" class="modal-status-pill">받는중</span>
+            <span id="modal-progress-text" class="modal-progress-text">0.0%</span>
+          </div>
+          <div class="progress-track modal-track">
+            <div id="modal-progress-bar" class="progress-bar" style="width: 0%;"></div>
+          </div>
+          <div class="modal-stats-grid">
+            <div class="modal-stat-item">
+              <span class="stat-label">용량</span>
+              <span id="modal-stat-size" class="stat-val">- / -</span>
+            </div>
+            <div class="modal-stat-item">
+              <span class="stat-label">속도</span>
+              <span id="modal-stat-speed" class="stat-val">-</span>
+            </div>
+            <div class="modal-stat-item">
+              <span class="stat-label">피어 (시더)</span>
+              <span id="modal-stat-peers" class="stat-val">0 (0)</span>
+            </div>
+            <div class="modal-stat-item">
+              <span class="stat-label">남은 시간</span>
+              <span id="modal-stat-eta" class="stat-val">-</span>
+            </div>
+          </div>
+        </div>
+
+
+
+        <!-- 포함된 파일 목록 섹션 -->
+        <div class="modal-files-section">
+          <div class="modal-files-header">
+            <span class="files-title">포함된 파일 (<span id="modal-files-count">0</span>개)</span>
+          </div>
+          <div id="modal-files-list" class="modal-files-list">
+            <!-- 파일 항목들 동적 주입 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 모달 하단 액션 버튼 -->
+      <div id="modal-footer-actions" class="torrent-modal-footer">
+        <!-- 버튼 동적 주입 (내려받기, 삭제, 취소) -->
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

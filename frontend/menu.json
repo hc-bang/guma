@@ -16,6 +16,11 @@
       "icon": "youtube"
     },
     {
+      "label": "Torrent",
+      "href": "torrent/",
+      "icon": "download"
+    },
+    {
       "label": "게임",
       "href": "games/",
       "icon": "gamepad"

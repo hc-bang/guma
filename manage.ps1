@@ -2,6 +2,8 @@
 
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
 
 $PORT = "80"
 $VENV_PYTHON = ".\.venv\Scripts\python.exe"
@@ -68,8 +70,26 @@ function Get-CloudflaredPath {
 # 1, 2, 3: 백엔드/웹 통합 서버 제어 (포트 80)
 # ==========================================
 
+function Clean-GarbageFiles {
+    # downloads 폴더 및 임시 디렉터리 내 잔여 가비지 일괄 청소
+    $dirsToClean = @(
+        (Join-Path $PSScriptRoot "downloads"),
+        (Join-Path $PSScriptRoot "downloads\torrent"),
+        (Join-Path $PSScriptRoot "backend\downloads"),
+        (Join-Path $PSScriptRoot "backend\downloads\torrent")
+    )
+    foreach ($d in $dirsToClean) {
+        if (Test-Path $d) {
+            Get-ChildItem -Path $d -Exclude ".gitkeep", ".gitignore" -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+}
+
 function Start-UnifiedServer {
     Ensure-LogDir
+    Clean-GarbageFiles
 
     if (-not (Test-Path ".\frontend")) {
         Write-Host "[ERROR] frontend 디렉터리가 존재하지 않습니다." -ForegroundColor Red
@@ -106,7 +126,12 @@ function Start-UnifiedServer {
 
     Write-Host "[INFO] GUMA™ 단일 통합 서버(포트 $PORT)를 백그라운드로 시작합니다..." -ForegroundColor Cyan
 
+    $stdOutLog = Join-Path $LOG_DIR "server.log"
+    $stdErrLog = Join-Path $LOG_DIR "server.err.log"
+
     $serverProc = Start-Process $VENV_PYTHON -ArgumentList "-m uvicorn backend.main:app --host 0.0.0.0 --port $PORT" `
+        -RedirectStandardOutput $stdOutLog `
+        -RedirectStandardError $stdErrLog `
         -WindowStyle Hidden `
         -PassThru
 
@@ -114,8 +139,13 @@ function Start-UnifiedServer {
         $serverProc.Id | Out-File -FilePath (Join-Path $LOG_DIR "server.pid") -Encoding ASCII
     }
 
-    Start-Sleep -Seconds 2
-    $checkConn = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
+    $checkConn = $null
+    for ($i = 0; $i -lt 12; $i++) {
+        Start-Sleep -Milliseconds 500
+        $checkConn = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
+        if ($checkConn) { break }
+    }
+
     if ($checkConn) {
         Write-Host ""
         Write-Host "=================================================" -ForegroundColor Green
@@ -158,25 +188,40 @@ function Stop-UnifiedServer {
         }
     }
 
-    # 3. uvicorn 관련 프로세스 정리
-    Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object {
-        $_.CommandLine -like "*backend.main:app*" -or $_.CommandLine -like "*uvicorn*"
-    } | ForEach-Object {
+    # 3. uvicorn 관련 프로세스 정리 (Get-CimInstance로 CommandLine 정밀 감지)
+    try {
+        Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" -ErrorAction SilentlyContinue | Where-Object {
+            $_.CommandLine -like "*backend.main:app*" -or $_.CommandLine -like "*uvicorn*"
+        } | ForEach-Object {
+            cmd.exe /c "taskkill /F /PID $($_.ProcessId) /T" 2>$null | Out-Null
+            Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+            $stopped++
+        }
+    } catch {}
+
+    # 4. aria2c 다운로드 엔진 프로세스 정리
+    Get-Process -Name aria2c -ErrorAction SilentlyContinue | ForEach-Object {
+        cmd.exe /c "taskkill /F /PID $($_.Id) /T" 2>$null | Out-Null
         Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+        Write-Host "  ✔ aria2c 엔진 프로세스 종료 완료 (PID: $($_.Id))" -ForegroundColor Green
         $stopped++
     }
 
-    Start-Sleep -Milliseconds 500
+    # 프로세스 파일 핸들 릴리즈 대기 후 임시 잔여 파일 청소
+    Start-Sleep -Milliseconds 400
+    Clean-GarbageFiles
+
+    Start-Sleep -Milliseconds 200
     if ($stopped -gt 0) {
-        Write-Host "[INFO] 서버가 안전하게 종료되었습니다. (포트 $PORT 해제)" -ForegroundColor Green
+        Write-Host "[INFO] 서버가 안전하게 종료되었으며 잔여 임시 파일이 정리되었습니다. (포트 $PORT 해제)" -ForegroundColor Green
     } else {
-        Write-Host "[INFO] 현재 실행 중인 서버가 없습니다." -ForegroundColor Yellow
+        Write-Host "[INFO] 현재 실행 중인 서버가 없습니다. (잔여 임시 파일 정리 완료)" -ForegroundColor Yellow
     }
 }
 
 function Check-UnifiedServer {
     Write-Host "================================================" -ForegroundColor Cyan
-    Write-Host "■  GUMA™ 통합 서버 상태 점검" -ForegroundColor Yellow
+    Write-Host "■  GUMA™ 통합 서버 및 서비스 상태 점검" -ForegroundColor Yellow
     Write-Host "================================================" -ForegroundColor Cyan
 
     $conn = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
@@ -188,6 +233,22 @@ function Check-UnifiedServer {
         Write-Host "  - 프로세스 PID : $pids" -ForegroundColor Gray
     } else {
         Write-Host "✖ 통합 웹 서버 (Port $PORT):" -ForegroundColor Red
+        Write-Host "  - 상태         : 중지됨 (STOPPED)" -ForegroundColor Red
+    }
+
+    Write-Host ""
+    $aria2Port = if ($env:ARIA2_RPC_PORT) { $env:ARIA2_RPC_PORT } else { "6800" }
+    $aria2Conn = Get-NetTCPConnection -LocalPort $aria2Port -State Listen -ErrorAction SilentlyContinue
+    $aria2Proc = Get-Process -Name aria2c -ErrorAction SilentlyContinue
+
+    if ($aria2Conn -or $aria2Proc) {
+        $aPids = if ($aria2Proc) { ($aria2Proc | Select-Object -ExpandProperty Id) -join ", " } else { ($aria2Conn | Select-Object -ExpandProperty OwningProcess -Unique) -join ", " }
+        Write-Host "✔ aria2 다운로드 엔진 (Port $aria2Port):" -ForegroundColor Green
+        Write-Host "  - 상태         : 정상 가동 중 (ONLINE, JSON-RPC)" -ForegroundColor Green
+        Write-Host "  - RPC 주소     : http://127.0.0.1:$aria2Port/jsonrpc" -ForegroundColor White
+        Write-Host "  - 프로세스 PID : $aPids" -ForegroundColor Gray
+    } else {
+        Write-Host "✖ aria2 다운로드 엔진 (Port $aria2Port):" -ForegroundColor Red
         Write-Host "  - 상태         : 중지됨 (STOPPED)" -ForegroundColor Red
     }
     Write-Host "================================================" -ForegroundColor Cyan
@@ -464,6 +525,51 @@ function Install-GitTool {
     }
 }
 
+function Install-Aria2Tool {
+    Write-Host "================================================" -ForegroundColor Cyan
+    Write-Host "■  aria2 다운로드 엔진 설치 (Install aria2)" -ForegroundColor Yellow
+    Write-Host "================================================" -ForegroundColor Cyan
+
+    $aria2Cmd = Get-Command aria2c -ErrorAction SilentlyContinue
+    if ($aria2Cmd) {
+        $ver = (& aria2c --version | Select-Object -First 1)
+        Write-Host "[INFO] 이미 aria2가 설치되어 있습니다. ($ver)" -ForegroundColor Yellow
+        return
+    }
+
+    Write-Host "[INFO] winget 도구를 통해 aria2 설치를 시작합니다..." -ForegroundColor Cyan
+    winget install --id aria2.aria2 -e --source winget
+    Print-TaskResult
+
+    $checkAria2 = Get-Command aria2c -ErrorAction SilentlyContinue
+    if ($checkAria2) {
+        Write-Host "[INFO] aria2 설치가 정상 확인되었습니다." -ForegroundColor Green
+    } else {
+        Write-Host "[WARN] 설치 완료 후 현재 터미널을 재시작해야 aria2c 명령어가 인식될 수 있습니다." -ForegroundColor Yellow
+    }
+}
+
+function Uninstall-Aria2Tool {
+    Write-Host "================================================" -ForegroundColor Cyan
+    Write-Host "■  aria2 다운로드 엔진 설치 제거 (Uninstall aria2)" -ForegroundColor Yellow
+    Write-Host "================================================" -ForegroundColor Cyan
+
+    $aria2Cmd = Get-Command aria2c -ErrorAction SilentlyContinue
+    if (-not $aria2Cmd) {
+        Write-Host "[INFO] aria2가 설치되어 있지 않습니다." -ForegroundColor Yellow
+        return
+    }
+
+    $confirm = Read-Host "정말로 aria2를 시스템에서 삭제하시겠습니까? (y/N)"
+    if ($confirm -eq "y" -or $confirm -eq "Y") {
+        Write-Host "[INFO] winget 도구를 통해 aria2를 삭제합니다..." -ForegroundColor Cyan
+        winget uninstall --id aria2.aria2
+        Print-TaskResult
+    } else {
+        Write-Host "[INFO] 삭제 작업을 취소했습니다." -ForegroundColor Gray
+    }
+}
+
 # ==========================================
 # 메뉴 루프
 # ==========================================
@@ -489,6 +595,8 @@ function Show-Menu {
     Write-Host " 92. 백엔드 패키지 설치 (backend/requirements.txt)"
     Write-Host " 93. Cloudflare(cloudflared) 설치"
     Write-Host " 94. Git 도구 설치 (Install Git)"
+    Write-Host " 95. aria2 엔진 설치 (Install aria2)"
+    Write-Host " 96. aria2 엔진 설치 제거 (Uninstall aria2)"
     Write-Host "`n 0. 프로그램 종료"
     Write-Host "================================================" -ForegroundColor Cyan
 }
@@ -545,6 +653,8 @@ while ($true) {
         }
         "93" { Install-CloudflaredTool }
         "94" { Install-GitTool }
+        "95" { Install-Aria2Tool }
+        "96" { Uninstall-Aria2Tool }
         default { Write-Host "[WARN] 잘못된 선택입니다." -ForegroundColor Red }
     }
 

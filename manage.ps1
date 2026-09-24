@@ -1,4 +1,4 @@
-﻿# Usage: .\manage.ps1
+# Usage: .\manage.ps1
 
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -277,6 +277,12 @@ function Update-Project {
     git pull origin main
     if ($LASTEXITCODE -ne 0) { git pull }
     Print-TaskResult
+
+    # 백엔드 의존성 패키지 자동 동기화
+    if (Test-Path $VENV_PYTHON) {
+        Write-Host "[INFO] 백엔드 패키지 의존성을 최신 상태로 동기화합니다..." -ForegroundColor Cyan
+        & $VENV_PYTHON -m pip install -r backend/requirements.txt --quiet
+    }
 
     # 3. 서버 실행 중인 경우 재시작 제안
     $conn = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue

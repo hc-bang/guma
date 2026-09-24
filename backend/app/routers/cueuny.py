@@ -15,16 +15,28 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, RedirectResponse
 
-from backend.app.services.cueuny_service import (
-    fetch_and_sync_replays,
-    download_single_replay,
-    trigger_background_download,
-    get_cueuny_status,
-    get_verified_completed_replays,
-    get_cueuny_storage_dir,
-    get_replay_metadata
-)
-from backend.app.services.cueuny_scheduler import get_next_run_time
+try:
+    from app.services.cueuny_service import (
+        fetch_and_sync_replays,
+        download_single_replay,
+        trigger_background_download,
+        get_cueuny_status,
+        get_verified_completed_replays,
+        get_cueuny_storage_dir,
+        get_replay_metadata
+    )
+    from app.services.cueuny_scheduler import get_next_run_time
+except ImportError:
+    from backend.app.services.cueuny_service import (
+        fetch_and_sync_replays,
+        download_single_replay,
+        trigger_background_download,
+        get_cueuny_status,
+        get_verified_completed_replays,
+        get_cueuny_storage_dir,
+        get_replay_metadata
+    )
+    from backend.app.services.cueuny_scheduler import get_next_run_time
 
 logger = logging.getLogger("guma.cueuny.router")
 router = APIRouter(prefix="/api/cueuny", tags=["cueuny"])

@@ -12,10 +12,16 @@ from datetime import datetime
 from croniter import croniter
 from dotenv import load_dotenv
 
-from backend.app.services.cueuny_service import (
-    fetch_and_sync_replays,
-    get_cueuny_status
-)
+try:
+    from app.services.cueuny_service import (
+        fetch_and_sync_replays,
+        get_cueuny_status
+    )
+except ImportError:
+    from backend.app.services.cueuny_service import (
+        fetch_and_sync_replays,
+        get_cueuny_status
+    )
 
 logger = logging.getLogger("guma.cueuny.scheduler")
 

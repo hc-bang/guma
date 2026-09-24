@@ -241,6 +241,12 @@ update_project() {
     echo -e "\033[1;36m[INFO] 원격 저장소에서 최신 버전을 가져옵니다 (git pull origin main)...\033[0m"
     git pull origin main || git pull
 
+    # 백엔드 의존성 패키지 자동 동기화
+    if [ -f "$VENV_PIP" ] && [ -f "./backend/requirements.txt" ]; then
+        echo -e "\033[1;36m[INFO] 백엔드 패키지 의존성을 최신 상태로 동기화합니다...\033[0m"
+        "$VENV_PIP" install -r ./backend/requirements.txt --quiet
+    fi
+
     # 3. 서버 실행 중인 경우 재시작 제안
     if ss -tulpn 2>/dev/null | grep -q ":$PORT "; then
         echo ""

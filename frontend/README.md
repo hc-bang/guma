@@ -1,10 +1,11 @@
 # GUMA™ — 운용 통합 마스터 가이드
 
-> 검색, 북마크, 문서 뷰어, 자료실부터 유튜브 다운로더까지 한곳에서 통합 관리하는 차세대 3-Tier 하이브리드 브라우저 시작 페이지입니다.
+> 검색, 북마크, 문서 뷰어, 자료실부터 유튜브 & 고성능 토렌트 다운로더까지 한곳에서 통합 관리하는 차세대 3-Tier 하이브리드 브라우저 시작 페이지입니다.
 
 ![GitHub Pages](https://img.shields.io/badge/Hosted-GitHub%20Pages-181717?logo=github&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)
 ![Neon PostgreSQL](https://img.shields.io/badge/Database-Neon%20Postgres-00E599?logo=postgresql&logoColor=black)
+![aria2](https://img.shields.io/badge/Engine-aria2c-A30000?logo=bittorrent&logoColor=white)
 ![Vanilla JS](https://img.shields.io/badge/Frontend-Vanilla%20JS-F7DF1E?logo=javascript&logoColor=black)
 
 ---
@@ -13,7 +14,7 @@
 
 1. [🔍 프로젝트 개요](#1--프로젝트-개요)
 2. [🗂️ 전체 디렉토리 구조](#2-️-전체-디렉토리-구조)
-3. [🚀 빠른 시작 & 로컬 실행 (manage.ps1)](#3--빠른-시작--로컬-실행-manageps1)
+3. [🚀 빠른 시작 & 로컬/서버 실행 (manage.ps1 / manage.sh)](#3--빠른-시작--로컬서버-실행-manageps1--managesh)
 4. [🖥️ 대시보드 화면 및 주요 기능](#4-️-대시보드-화면-및-주요-기능)
    - [4.1. 화면 구성](#41-화면-구성)
    - [4.2. 주요 기능 상세](#42-주요-기능-상세)
@@ -38,7 +39,7 @@
 * **단일 진실 공급원 (SSOT):** 모든 북마크, 바로가기, 검색 엔진, 유튜브 채널 설정이 Neon PostgreSQL 클라우드 DB에 영구 저장되어 어떤 기기나 브라우저에서 접속하든 실시간으로 동일한 최신 환경이 동기화됩니다.
 * **기기별 맞춤 프로필:** 상단 탭에서 손쉽게 **기본 (PC)** 환경과 **모바일** 전용 환경을 전환하며 최적화된 바로가기와 북마크 구성을 사용할 수 있습니다.
 * **초경량 & 초고속 UX:** 프레임워크 없는 순수 Vanilla JS로 빌드되어 번들링 지연 없이 즉각적인 반응성과 쾌적한 사용감을 보장합니다.
-* **원스톱 미디어 & 유틸리티:** YouTube 클립/음원 다운로더, 마크다운 문서 뷰어, 파일 자료실, 레트로 미니게임 3종을 내장하고 있습니다.
+* **원스톱 미디어 & 유틸리티:** YouTube 클립/음원 다운로더, 고성능 멀티피어 토렌트 다운로더, 마크다운 문서 뷰어, 파일 자료실, 레트로 미니게임 3종을 내장하고 있습니다.
 
 ---
 
@@ -55,21 +56,28 @@ guma/                                   # 단일 Git 통합 저장소
 │   ├── script.js                       # 대시보드 메인 로직 (검색, 바로가기, 북마크)
 │   ├── style.css                       # 대시보드 전역 스타일
 │   ├── menu.json, favicon.svg          # 사이드바 메뉴 라우팅 및 파비콘
-│   ├── shared/                         # 공통 모듈 (topbar, theme, tree)
+│   ├── shared/                         # 공통 모듈 (topbar, guma-core, theme, tree)
 │   ├── config/                         # 환경설정 화면 (config.css, config.js, index.html)
 │   ├── posts/                          # 마크다운 문서 뷰어
 │   ├── resources/                      # 트리 구조 파일 자료실
 │   ├── games/                          # 내장 레트로 미니게임 3종
-│   └── youtube/                        # 유튜브 클립 & 음원 다운로더
+│   ├── youtube/                        # 유튜브 클립 & 음원 다운로더
+│   └── torrent/                        # 고성능 멀티피어 토렌트 다운로더 (index.html, script.js, style.css)
 │
 ├── backend/                            # [2] 파이썬 백엔드 영역 (FastAPI 단일 통합 서빙)
 │   ├── main.py                         # FastAPI 진입점 (정적 웹 서빙 + API 라우팅)
-│   ├── requirements.txt                # 백엔드 의존성 패키지 (fastapi, psycopg2, yt-dlp 등)
-│   └── app/                            # 핵심 모듈 (database.py, youtube_downloader.py 등)
+│   ├── requirements.txt                # 백엔드 의존성 패키지 (fastapi, psycopg2, yt-dlp, bencodepy 등)
+│   └── app/                            # 핵심 백엔드 모듈
+│       ├── routers/                    # API 라우터 (torrent.py, youtube.py, config_hub.py)
+│       ├── services/                   # 백엔드 서비스 (aria2_service.py)
+│       └── database.py                 # Neon DB 연동 모듈
 │
 ├── database/                           # [3] 데이터베이스 DDL & SQL 관리 영역
 │   ├── schema.sql                      # Neon PostgreSQL 테이블 생성 쿼리 (CREATE TABLE)
 │   └── seed.sql                        # 실무 초기 시드 데이터 삽입 쿼리 (INSERT INTO)
+│
+├── downloads/                          # [4] 다운로드 파일 저장소 (미디어 및 토렌트 임시/완료 파일)
+│   └── torrent/                        # 토렌트 다운로드 작업 디렉터리
 │
 ├── .env                                # 로컬 환경 변수 (DATABASE_URL 등 - 보안 유지)
 ├── .env.example                        # 환경 변수 템플릿
@@ -79,27 +87,37 @@ guma/                                   # 단일 Git 통합 저장소
 
 ---
 
-## 3. 🚀 빠른 시작 & 로컬 실행 (manage.ps1)
+## 3. 🚀 빠른 시작 & 로컬/서버 실행 (manage.ps1 / manage.sh)
 
-프로젝트 루트의 `manage.ps1`을 실행하면 콘솔 메뉴를 통해 백엔드 환경 구성부터 통합 서버 구동, 외부 터널 연동까지 한곳에서 제어할 수 있습니다.
+Windows(`manage.ps1`) 또는 Linux/Ubuntu(`manage.sh`) 관리 스크립트를 실행하면 대화형 콘솔 메뉴를 통해 백엔드 환경 구성부터 통합 서버 구동, 외부 터널 연동까지 원스톱으로 제어할 수 있습니다.
 
 ```powershell
+# Windows PowerShell 환경
 .\manage.ps1
+```
+
+```bash
+# Linux / Ubuntu 서버 환경 (포트 80 바인딩을 위해 sudo 권장)
+sudo ./manage.sh
 ```
 
 ### 콘솔 메뉴 가이드
 * **통합 웹 서버 제어 (포트 80)**:
   * `1`: 백그라운드 서버 시작 (프론트엔드 + FastAPI 통합 서빙)
   * `2`: 백그라운드 서버 종료 (프로세스 및 포트 안전 해제)
-  * `3`: 서버 구동 상태 및 로그 실시간 점검
+  * `3`: 서버 구동 상태 점검 (포트 80 웹 서버 및 6800 aria2 엔진)
+  * `4`: 프로젝트 최신 버전 업데이트 (`git pull origin main` 및 자동 재시작 지원)
 * **Cloudflare 보안 터널 제어 (외부 접속용)**:
-  * `11`: 터널 백그라운드 시작 (외부 접속용 전용 HTTPS URL 발급 및 DB 자동 등록)
+  * `11`: 터널 백그라운드 시작 (외부 접속용 전용 HTTPS URL 발급 및 `tunnel.json` Git 자동 동기화)
   * `12`: 터널 백그라운드 종료
   * `13`: 터널 상태 및 현재 발급된 URL 확인
 * **환경 구축 및 설정**:
   * `91`: Python 가상환경(`.venv`) 생성
   * `92`: 백엔드 의존성 패키지 설치 (`requirements.txt`)
   * `93`: Cloudflare CLI (`cloudflared`) 자동 설치
+  * `94`: Git 도구 설치 (`Install Git`)
+  * `95`: aria2 다운로드 엔진 자동 설치 (`Install aria2`)
+  * `96`: aria2 엔진 완전 삭제 (`Uninstall aria2`)
   * `0`: 종료
 
 ---
@@ -113,7 +131,7 @@ guma/                                   # 단일 Git 통합 저장소
 | **상단 북마크 바** | 자주 찾는 사이트 링크 및 다단계 폴더형 드롭다운 메뉴 |
 | **메인 검색창** | 다중 검색 엔진 전환, 키보드 자동 포커싱, 즉시 검색 |
 | **바로가기 그리드** | 최대 15개의 자주 방문하는 사이트 타일 (추가/우클릭 삭제 가능) |
-| **우측 사이드바** | 문서, 자료실, 게임, 유튜브 다운로더, 환경설정 이동 메뉴 |
+| **우측 사이드바** | 문서, 자료실, 게임, 유튜브 다운로더, 토렌트 다운로더, 환경설정 이동 메뉴 |
 
 ### 4.2. 주요 기능 상세
 
@@ -128,7 +146,13 @@ guma/                                   # 단일 Git 통합 저장소
 4. **유튜브 클립 & 음원 다운로더 (`/youtube`)**
    * YouTube 영상 URL 분석, 원하는 구간 정밀 트리밍(Start/End)을 지원합니다.
    * 고화질 MP4 동영상 및 고음질 MP3 음원 다운로드, 채널별 피드 탐색을 제공합니다.
-5. **다크 / 라이트 모드**
+5. **고성능 멀티피어 토렌트 다운로더 (`/torrent`)**
+   * **고속 P2P 다운로드:** `aria2c` JSON-RPC 데몬 연동 및 Neon DB 트래커 풀 자동 수집/검증 지원.
+   * **0ms 즉각 반응 UX:** `.torrent` 파일 선택 즉시 낙관적(Optimistic) 카드 생성 및 다중/연속 파일 일괄 등록 지원.
+   * **온디맨드(On-Demand) 스마트 폴링:** 다운로드 진행 중에만 1.5초 주기로 고속 갱신되며, 유휴 상태/완료/화면 꺼짐 시 폴링을 즉각 중단하여 모바일 데이터 소모 0을 보장.
+   * **원클릭 브라우저 전송 & 자동 청소:** 완료 시 단일 파일 원본명 보존 스트리밍 / 다중 파일 즉시 ZIP 압축 스트리밍 제공 및 서버 디스크 잔여물 자동 정리.
+   * **상세 정보 모달:** 개별 파일 목록(슬림 스크롤), 시더/피어 수, 전송 속도, 남은 시간(ETA) 상세 확인.
+6. **다크 / 라이트 모드**
    * 우측 상단 🌙/☀️ 버튼으로 테마를 전환하며, 첫 방문 시 시스템 테마를 자동 감지합니다.
 
 ### 4.3. 환경설정 및 클라우드 DB 동기화
@@ -224,9 +248,9 @@ CREATE TABLE profile_configs (
 
 ### 7.2. 단일 통합 서버 및 외부 터널 운용
 
-로컬 PC 또는 홈 서버에서 `manage.ps1`을 실행하여 24시간 안정적으로 개인 대시보드를 운용할 수 있습니다.
+로컬 PC(Windows) 또는 홈 서버(Linux/Ubuntu)에서 `manage.ps1` 또는 `manage.sh`를 실행하여 24시간 안정적으로 개인 대시보드를 운용할 수 있습니다.
 * 통합 서버(포트 80)를 실행하면 별도의 프론트엔드 빌드 과정 없이 정적 파일과 백엔드 API가 동시에 서빙됩니다.
-* Cloudflare 터널(`manage.ps1` 메뉴 11)을 가동하면 공인 IP나 포트 포워딩 없이도 외부 어디서나 안전한 HTTPS 보안 주소로 개인 대시보드에 접근할 수 있습니다.
+* Cloudflare 터널(`manage.ps1` / `manage.sh` 메뉴 11)을 가동하면 공인 IP나 포트 포워딩 없이도 외부 어디서나 안전한 HTTPS 보안 주소로 개인 대시보드에 접근할 수 있으며, GitHub Pages와 무설정으로 자동 연동됩니다.
 
 ---
 

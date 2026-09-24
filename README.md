@@ -1,11 +1,12 @@
 # GUMA™ — 운용 통합 마스터 가이드
 
-> 검색, 북마크, 문서 뷰어, 자료실부터 유튜브 & 고성능 토렌트 다운로더까지 한곳에서 통합 관리하는 차세대 3-Tier 하이브리드 브라우저 시작 페이지입니다.
+> 검색, 북마크, 문서 뷰어, 자료실부터 유튜브 & 고성능 토렌트 다운로더, 큐스코 큐니 당구 리플레이 아카이브까지 한곳에서 통합 관리하는 차세대 3-Tier 하이브리드 브라우저 시작 페이지입니다.
 
 ![GitHub Pages](https://img.shields.io/badge/Hosted-GitHub%20Pages-181717?logo=github&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)
 ![Neon PostgreSQL](https://img.shields.io/badge/Database-Neon%20Postgres-00E599?logo=postgresql&logoColor=black)
 ![aria2](https://img.shields.io/badge/Engine-aria2c-A30000?logo=bittorrent&logoColor=white)
+![Cueuny](https://img.shields.io/badge/Replay-Cueuny%20Archive-0284c7)
 ![Vanilla JS](https://img.shields.io/badge/Frontend-Vanilla%20JS-F7DF1E?logo=javascript&logoColor=black)
 
 ---
@@ -23,6 +24,7 @@
 5. [⚙️ 데이터베이스 및 저장소 명세](#5-️-데이터베이스-및-저장소-명세)
    - [5.1. Neon PostgreSQL 테이블 구조](#51-neon-postgresql-테이블-구조)
    - [5.2. `localStorage` 데이터 명세](#52-localstorage-데이터-명세)
+   - [5.3. 큐스코 큐니(CUEUNY) 파일 스토리지 명세](#53-큐스코-큐니cueuny-파일-스토리지-명세)
 6. [📚 콘텐츠 관리 및 공통 모듈](#6--콘텐츠-관리-및-공통-모듈)
    - [6.1. 신규 콘텐츠 추가 (문서 · 자료실)](#61-신규-콘텐츠-추가-문서--자료실)
    - [6.2. 공통 모듈 (`shared/`)](#62-공통-모듈-shared)
@@ -39,7 +41,7 @@
 * **단일 진실 공급원 (SSOT):** 모든 북마크, 바로가기, 검색 엔진, 유튜브 채널 설정이 Neon PostgreSQL 클라우드 DB에 영구 저장되어 어떤 기기나 브라우저에서 접속하든 실시간으로 동일한 최신 환경이 동기화됩니다.
 * **기기별 맞춤 프로필:** 상단 탭에서 손쉽게 **기본 (PC)** 환경과 **모바일** 전용 환경을 전환하며 최적화된 바로가기와 북마크 구성을 사용할 수 있습니다.
 * **초경량 & 초고속 UX:** 프레임워크 없는 순수 Vanilla JS로 빌드되어 번들링 지연 없이 즉각적인 반응성과 쾌적한 사용감을 보장합니다.
-* **원스톱 미디어 & 유틸리티:** YouTube 클립/음원 다운로더, 고성능 멀티피어 토렌트 다운로더, 마크다운 문서 뷰어, 파일 자료실, 레트로 미니게임 3종을 내장하고 있습니다.
+* **원스톱 미디어 & 유틸리티:** YouTube 클립/음원 다운로더, 고성능 멀티피어 토렌트 다운로더, **큐스코 큐니(CUEUNY) 당구 리플레이 아카이브 & 다차원 검색기**, 마크다운 문서 뷰어, 파일 자료실, 레트로 미니게임 3종을 내장하고 있습니다.
 
 ---
 
@@ -62,24 +64,30 @@ guma/                                   # 단일 Git 통합 저장소
 │   ├── resources/                      # 트리 구조 파일 자료실
 │   ├── games/                          # 내장 레트로 미니게임 3종
 │   ├── youtube/                        # 유튜브 클립 & 음원 다운로더
-│   └── torrent/                        # 고성능 멀티피어 토렌트 다운로더 (index.html, script.js, style.css)
+│   ├── torrent/                        # 고성능 멀티피어 토렌트 다운로더
+│   └── cueuny/                         # 큐스코 큐니 당구 리플레이 아카이브 UI
 │
 ├── backend/                            # [2] 파이썬 백엔드 영역 (FastAPI 단일 통합 서빙)
 │   ├── main.py                         # FastAPI 진입점 (정적 웹 서빙 + API 라우팅)
-│   ├── requirements.txt                # 백엔드 의존성 패키지 (fastapi, psycopg2, yt-dlp, bencodepy 등)
+│   ├── requirements.txt                # 백엔드 의존성 패키지 (fastapi, psycopg2, yt-dlp 등)
 │   └── app/                            # 핵심 백엔드 모듈
-│       ├── routers/                    # API 라우터 (torrent.py, youtube.py, config_hub.py)
-│       ├── services/                   # 백엔드 서비스 (aria2_service.py)
+│       ├── routers/                    # API 라우터 (cueuny.py, torrent.py, youtube.py, config_hub.py)
+│       ├── services/                   # 백엔드 서비스 (cueuny_service.py, cueuny_scheduler.py, aria2_service.py)
 │       └── database.py                 # Neon DB 연동 모듈
 │
-├── database/                           # [3] 데이터베이스 DDL & SQL 관리 영역
+├── storage/                            # [3] 로컬 영구 보관소 (파일 기반 자립형 저장소)
+│   └── cueuny/                         # 큐니 리플레이 스토리지
+│       ├── index.json                  # 전체 경기 마스터 인덱스 (1ms 초고속 필터링 캐시)
+│       └── YYYY/MM/                    # 연도/월별 물리 격리 디렉터리 (MP4 및 사이드카 JSON)
+│
+├── database/                           # [4] 데이터베이스 DDL & SQL 관리 영역
 │   ├── schema.sql                      # Neon PostgreSQL 테이블 생성 쿼리 (CREATE TABLE)
 │   └── seed.sql                        # 실무 초기 시드 데이터 삽입 쿼리 (INSERT INTO)
 │
-├── downloads/                          # [4] 다운로드 파일 저장소 (미디어 및 토렌트 임시/완료 파일)
+├── downloads/                          # [5] 다운로드 파일 저장소 (미디어 및 토렌트 임시/완료 파일)
 │   └── torrent/                        # 토렌트 다운로드 작업 디렉터리
 │
-├── .env                                # 로컬 환경 변수 (DATABASE_URL 등 - 보안 유지)
+├── .env                                # 로컬 환경 변수 (DATABASE_URL, CUEUNY_SESSION 등)
 ├── .env.example                        # 환경 변수 템플릿
 ├── .gitignore                          # Git 버전 관리 예외 파일
 └── README.md                           # 차세대 통합 운용 마스터 가이드
@@ -131,7 +139,7 @@ sudo ./manage.sh
 | **상단 북마크 바** | 자주 찾는 사이트 링크 및 다단계 폴더형 드롭다운 메뉴 |
 | **메인 검색창** | 다중 검색 엔진 전환, 키보드 자동 포커싱, 즉시 검색 |
 | **바로가기 그리드** | 최대 15개의 자주 방문하는 사이트 타일 (추가/우클릭 삭제 가능) |
-| **우측 사이드바** | 문서, 자료실, 게임, 유튜브 다운로더, 토렌트 다운로더, 환경설정 이동 메뉴 |
+| **우측 사이드바** | 문서, 자료실, 게임, 유튜브, 토렌트, **당구 리플레이**, 환경설정 이동 메뉴 |
 
 ### 4.2. 주요 기능 상세
 
@@ -151,8 +159,20 @@ sudo ./manage.sh
    * **0ms 즉각 반응 UX:** `.torrent` 파일 선택 즉시 낙관적(Optimistic) 카드 생성 및 다중/연속 파일 일괄 등록 지원.
    * **온디맨드(On-Demand) 스마트 폴링:** 다운로드 진행 중에만 1.5초 주기로 고속 갱신되며, 유휴 상태/완료/화면 꺼짐 시 폴링을 즉각 중단하여 모바일 데이터 소모 0을 보장.
    * **원클릭 브라우저 전송 & 자동 청소:** 완료 시 단일 파일 원본명 보존 스트리밍 / 다중 파일 즉시 ZIP 압축 스트리밍 제공 및 서버 디스크 잔여물 자동 정리.
-   * **상세 정보 모달:** 개별 파일 목록(슬림 스크롤), 시더/피어 수, 전송 속도, 남은 시간(ETA) 상세 확인.
-6. **다크 / 라이트 모드**
+6. **큐스코 큐니(CUEUNY) 당구 리플레이 아카이브 & 다차원 검색기 (`/cueuny`)**
+   * **100% 파일 시스템 & 사이드카 JSON 기반:** 외부 데이터베이스 없이 순수 파일과 메타데이터로 작동하여 서버 이전 및 영구 보존이 매우 용이합니다.
+   * **연도/월별 물리 분할 (`storage/cueuny/YYYY/MM/`):** 수년간 축적된 대용량 영상 파일이 단일 폴더에 몰리지 않도록 연/월별로 자동 계층 분류됩니다.
+   * **다차원 실시간 검색 & 상세 필터:**
+     * **실시간 통합 검색:** 상대 선수명, 당구장명을 300ms 디바운스로 즉각 검색.
+     * **퀵 셀렉터:** 실제 영상이 존재하는 연도(자동 추출), 월(1~12월), 승/패(WIN/LOSE) 필터.
+     * **상세 필터 패널:** 내 에버리지(이상/이하), 내 하이런(이상), 경기 시간(분 이상/이하), 총 이닝 수(이상/이하) 복합 필터링.
+     * **스마트 클라이언트 엔진:** 브라우저 메모리 캐시(`cachedMasterReplays`)를 통해 0.001초 만에 즉각 필터링 및 조건 태그 칩 제공.
+   * **직관적인 비디오 재생 모달 (HTML5 스트리밍):**
+      * 모달 상단 헤더에 구장명 · ⏱️ 경기 일시 · 소요 시간 · 이닝 메타 정보를 한 줄로 통합 표시.
+      * 하단 푸터에는 중복 행을 제거하고 양 선수 스코어보드(득점/목표치), 에버리지/하이런 비교 및 승리자 왕관 👑을 시원하게 시각화하여 재생 뷰포트 공간 극대화.
+   * **알아보기 쉬운 한글 파일명 자동 변환 다운로드:**
+     * `[YYYYMMDD_HHMM] 구장명 - 물주(스코어) vs 상대선수(스코어).mp4` 포맷으로 원클릭 저장.
+7. **다크 / 라이트 모드**
    * 우측 상단 🌙/☀️ 버튼으로 테마를 전환하며, 첫 방문 시 시스템 테마를 자동 감지합니다.
 
 ### 4.3. 환경설정 및 클라우드 DB 동기화
@@ -169,7 +189,7 @@ sudo ./manage.sh
 
 ### 5.1. Neon PostgreSQL 테이블 구조
 
-모든 데이터는 [`database/schema.sql`](file:///c:/workspace/git-hub(hc-bang)/guma/database/schema.sql)에 정의된 최신 스키마를 통해 중앙 집중 관리됩니다.
+설정 데이터는 [`database/schema.sql`](file:///c:/workspace/git-hub(hc-bang)/guma/database/schema.sql)에 정의된 스키마를 통해 중앙 집중 관리됩니다.
 
 ```sql
 -- 1. profiles (기기별/사용자별 프로필)
@@ -202,6 +222,16 @@ CREATE TABLE profile_configs (
 | :--- | :--- |
 | `guma_active_profile` | 현재 기기에서 활성화된 프로필 ID (`default` 또는 `mobile`) |
 | `theme` | 현재 화면 테마 (`dark` 또는 `light`) |
+
+### 5.3. 큐스코 큐니(CUEUNY) 파일 스토리지 명세
+
+큐니 리플레이는 데이터베이스를 전혀 사용하지 않는 **100% 파일 시스템 자립형 아키텍처**입니다.
+
+| 파일/경로 | 구조 및 역할 |
+| :--- | :--- |
+| `storage/cueuny/index.json` | 전체 보관 영상의 메타데이터가 집약된 마스터 인덱스 (서버 시작 및 변경 시 1ms 인메모리 캐시 구축) |
+| `storage/cueuny/YYYY/MM/{폴더명}.mp4` | 다운로드 완료된 실제 고화질 경기 영상 파일 |
+| `storage/cueuny/YYYY/MM/{폴더명}.json` | 경기 세부 기록(스코어, 이닝, 에버리지, 하이런, 구장, 일시)이 담긴 개별 사이드카 메타데이터 |
 
 ---
 
@@ -255,3 +285,4 @@ CREATE TABLE profile_configs (
 ---
 
 **GUMA™ — All-in-One Dashboard System**
+

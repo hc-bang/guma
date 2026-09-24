@@ -10,13 +10,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 try:
-    from app.routers import youtube, config_hub, torrent
+    from app.routers import youtube, config_hub, torrent, cueuny
     from app.database import init_db
     from app.services import aria2_service
+    from app.services.cueuny_scheduler import start_cueuny_scheduler, stop_cueuny_scheduler
 except ImportError:
-    from backend.app.routers import youtube, config_hub, torrent
+    from backend.app.routers import youtube, config_hub, torrent, cueuny
     from backend.app.database import init_db
     from backend.app.services import aria2_service
+    from backend.app.services.cueuny_scheduler import start_cueuny_scheduler, stop_cueuny_scheduler
 
 app = FastAPI(
     title="GUMA™ Unified Server",
@@ -64,6 +66,13 @@ def on_startup():
     except Exception as e:
         print(f"[aria2] 시작 시 데몬 기동 안내: {e}")
 
+    print("[Server Startup] 5. 큐스코 큐니(CUEUNY) 크론 스케줄러 기동...")
+    try:
+        start_cueuny_scheduler()
+        print("[Server Startup] 5. 큐스코 큐니 스케줄러 기동 완료")
+    except Exception as e:
+        print(f"[CUEUNY] 스케줄러 기동 예외: {e}")
+
     print("[Server Startup] [OK] 모든 초기화 완료! 포트 80 웹 서버 가동 준비 완료.")
 
 @app.on_event("shutdown")
@@ -72,6 +81,10 @@ def on_shutdown():
         aria2_service.stop_daemon()
     except Exception as e:
         print(f"[aria2] 종료 중 예외: {e}")
+    try:
+        stop_cueuny_scheduler()
+    except Exception as e:
+        print(f"[CUEUNY] 스케줄러 정지 예외: {e}")
 
 # CORS 설정 (동일 출처 통합 시 기본 허용, 외부 도메인 및 클라우드 호환성 유지)
 app.add_middleware(
@@ -87,6 +100,7 @@ app.add_middleware(
 app.include_router(youtube.router)
 app.include_router(config_hub.router)
 app.include_router(torrent.router)
+app.include_router(cueuny.router)
 
 @app.get("/api")
 @app.get("/api/status")

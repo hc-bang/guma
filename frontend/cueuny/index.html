@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GUMA™ 당구 리플레이</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="../config/config.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- Global Root Window Config -->
+  <script src="../shared/guma-core.js"></script>
+  <script>window.GUMA = { root: '../', page: 'cueuny' };</script>
+  <script src="../shared/topbar.js" defer></script>
+
+  <!-- 상단 공통 네비게이션 헤더 (유튜브 / 토렌트와 100% 동일) -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="title">
+        <span class="title-icon icon-svg" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="23 7 16 12 23 17 23 7" />
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+          </svg>
+        </span>
+        당구 리플레이
+      </h1>
+    </div>
+    <div class="topbar-right">
+      <a class="btn icon-btn" href="../" aria-label="홈으로">
+        <span class="icon-svg" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9,22 9,12 15,12 15,22" />
+          </svg>
+        </span>
+      </a>
+      <button id="themeToggle" class="btn icon-btn" type="button" aria-label="모드 토글">
+        <span class="icon-svg" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </span>
+      </button>
+      <button id="openSidepanel" class="btn icon-btn" type="button" aria-label="메뉴">
+        <span class="icon-svg" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 사이드패널 드로어 -->
+  <div id="sidepanelOverlay" class="sidepanel-overlay"></div>
+  <aside id="sidepanel" class="sidepanel" aria-label="메뉴">
+    <div class="sidepanel-title">메뉴</div>
+    <div id="sidepanel-nav" class="sidepanel-actions"></div>
+  </aside>
+
+  <!-- 메인 대시보드 컨테이너 (토렌트 / 유튜브 스타일: 980px) -->
+  <div class="cueuny-container">
+
+    <!-- 세션 만료 경고 배너 (평소 숨김) -->
+    <div id="sessionAlertBanner" class="session-alert-banner" style="display: none;">
+      <span class="alert-icon">⚠️</span>
+      <div class="alert-content">
+        <strong id="sessionAlertTitle">큐스코 큐니 세션 안내</strong>
+        <p id="sessionAlertDesc">큐니 세션 토큰이 만료되었거나 비어있습니다. .env의 CUEUNY_SESSION을 최신 값으로 업데이트해 주세요.</p>
+      </div>
+    </div>
+
+    <!-- 섹션 헤더 (유튜브와 100% 동일: '최근 영상' 타이틀 & '동기화' 버튼 1개만 배치) -->
+    <div class="cueuny-section">
+      <div class="cueuny-section-header">
+        <h2 class="cueuny-section-title">
+          <span class="icon-svg" aria-hidden="true" style="display:inline-flex; align-items:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="23 7 16 12 23 17 23 7" />
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+            </svg>
+          </span>
+          <span>리플레이 영상</span>
+        </h2>
+
+        <!-- 우측 액션 버튼: [새로고침] -> [동기화] -> [큐니] -->
+        <div class="header-actions">
+          <button id="btnRefresh" class="cueuny-header-action-btn" type="button" aria-label="목록 새로고침">
+            <span class="icon-svg" aria-hidden="true" style="display:inline-flex; align-items:center;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 4v6h-6"></path>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+            </span>
+            <span>새로고침</span>
+          </button>
+          <button id="btnSync" class="cueuny-header-action-btn" type="button" aria-label="영상 수집">
+            <span class="icon-svg" aria-hidden="true" style="display:inline-flex; align-items:center;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+            </span>
+            <span>영상 수집</span>
+          </button>
+          <a href="http://m.cueuny.com" target="_blank" rel="noopener noreferrer" class="cueuny-header-action-btn"
+            aria-label="큐니 공식 사이트 새 탭 열기">
+            <span class="icon-svg" aria-hidden="true" style="display:inline-flex; align-items:center;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </span>
+            <span>큐니</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- 다차원 검색 및 필터 패널 (수년간 축적된 대용량 영상 즉시 탐색) -->
+      <section class="cueuny-filter-section" aria-label="리플레이 영상 검색 및 필터">
+        <!-- 퀵 필터 바 -->
+        <div class="cueuny-filter-bar">
+          <div class="filter-search-box">
+            <span class="search-icon icon-svg" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </span>
+            <input id="filterSearchInput" type="text" class="filter-input-text" placeholder="상대선수 또는 구장명 검색..." autocomplete="off">
+            <button id="btnClearSearch" class="btn-clear-search" type="button" aria-label="검색어 지우기" style="display: none;">&times;</button>
+          </div>
+
+          <div class="filter-controls-group">
+            <select id="filterYearSelect" class="filter-select" aria-label="연도 필터">
+              <option value="all">전체 연도</option>
+            </select>
+
+            <select id="filterMonthSelect" class="filter-select" aria-label="월 필터">
+              <option value="all">전체 월</option>
+              <option value="1">1월</option>
+              <option value="2">2월</option>
+              <option value="3">3월</option>
+              <option value="4">4월</option>
+              <option value="5">5월</option>
+              <option value="6">6월</option>
+              <option value="7">7월</option>
+              <option value="8">8월</option>
+              <option value="9">9월</option>
+              <option value="10">10월</option>
+              <option value="11">11월</option>
+              <option value="12">12월</option>
+            </select>
+
+            <select id="filterResultSelect" class="filter-select" aria-label="경기 결과 필터">
+              <option value="all">결과 전체</option>
+              <option value="win">승리 (WIN)</option>
+              <option value="lose">패배 (LOSE)</option>
+            </select>
+
+            <button id="btnToggleAdvanced" class="filter-btn-toggle" type="button" aria-label="상세 필터 펼치기">
+              <span class="icon-svg" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+              </span>
+              <span>상세 필터</span>
+              <span id="advancedFilterBadge" class="filter-active-badge" style="display: none;">0</span>
+            </button>
+
+            <button id="btnResetAllFilters" class="filter-btn-reset" type="button" aria-label="필터 초기화">
+              <span class="icon-svg" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  <path d="M3 3v5h5"></path>
+                </svg>
+              </span>
+              <span>초기화</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 상세 필터 패널 (접이식 서랍) -->
+        <div id="advancedFilterPanel" class="advanced-filter-panel" style="display: none;">
+          <div class="advanced-grid">
+            <!-- 에버리지 (이상 / 이하) -->
+            <div class="filter-field-card">
+              <label class="filter-label">내 에버리지 (Avg)</label>
+              <div class="range-inputs-row">
+                <input id="inputMinAvg" type="number" step="0.05" min="0" max="3" placeholder="최소" class="filter-number-input">
+                <span class="range-separator">~</span>
+                <input id="inputMaxAvg" type="number" step="0.05" min="0" max="3" placeholder="최대" class="filter-number-input">
+                <span class="range-unit">이상/이하</span>
+              </div>
+            </div>
+
+            <!-- 하이런 (이상) -->
+            <div class="filter-field-card">
+              <label class="filter-label">내 하이런 (HR)</label>
+              <div class="range-inputs-row">
+                <input id="inputMinHr" type="number" step="1" min="1" max="30" placeholder="점수" class="filter-number-input">
+                <span class="range-unit">점 이상</span>
+              </div>
+            </div>
+
+            <!-- 경기 시간 (분 이상 / 분 이하) -->
+            <div class="filter-field-card">
+              <label class="filter-label">경기 시간 (분)</label>
+              <div class="range-inputs-row">
+                <input id="inputMinDuration" type="number" step="5" min="5" max="300" placeholder="최소" class="filter-number-input">
+                <span class="range-separator">~</span>
+                <input id="inputMaxDuration" type="number" step="5" min="5" max="300" placeholder="최대" class="filter-number-input">
+                <span class="range-unit">분</span>
+              </div>
+            </div>
+
+            <!-- 이닝 수 (최소 / 최대) -->
+            <div class="filter-field-card">
+              <label class="filter-label">총 이닝 수 (INN)</label>
+              <div class="range-inputs-row">
+                <input id="inputMinInnings" type="number" step="1" min="1" max="150" placeholder="최소" class="filter-number-input">
+                <span class="range-separator">~</span>
+                <input id="inputMaxInnings" type="number" step="1" min="1" max="150" placeholder="최대" class="filter-number-input">
+                <span class="range-unit">이닝</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="advanced-panel-footer">
+            <span class="advanced-panel-hint">※ 최소/최대 조건을 입력하여 원하는 범위의 경기를 탐색할 수 있습니다.</span>
+            <div class="advanced-panel-actions">
+              <button id="btnApplyAdvanced" class="btn-filter-apply" type="button">상세 조건 적용</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 활성 필터 상태 요약 표시줄 -->
+        <div id="filterSummaryBar" class="filter-summary-bar" style="display: none;">
+          <div class="summary-left">
+            <span class="summary-label">검색 결과:</span>
+            <span id="filterTotalCount" class="summary-count">0</span>건
+            <div id="filterTagContainer" class="filter-tag-container"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 경기 리플레이 카드 목록 그리드 -->
+      <div id="replayGrid" class="replay-grid">
+        <div class="empty-state">
+          <p class="empty-text">리플레이 영상을 불러오는 중입니다...</p>
+        </div>
+      </div>
+
+      <!-- 유튜브 스타일 스크롤다운 로더 / 상태 인디케이터 -->
+      <div id="replayLoader" class="replay-loader" style="display: none;">
+        <div class="replay-loader-spinner"></div>
+        <span id="replayLoaderText" class="replay-loader-text">다음 영상을 불러오는 중...</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 실시간 영상 재생 모달 (유튜브 / 토렌트 모달 팝업 1:1 감성) -->
+  <div id="videoModal" class="cueuny-modal-overlay" style="display: none;">
+    <div class="cueuny-modal-dialog" role="dialog" aria-modal="true">
+      <div class="cueuny-modal-header">
+        <h3 class="cueuny-modal-heading">
+          <span class="icon-svg" aria-hidden="true" style="display:inline-flex; align-items:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="23 7 16 12 23 17 23 7" />
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+            </svg>
+          </span>
+          <div class="modal-title-group">
+            <span id="modalClubName" class="modal-club-name">당구클럽</span>
+            <span id="modalMatchMeta" class="modal-match-meta"></span>
+            <span id="modalInningBadge" class="modal-inning-badge" style="display: none;"></span>
+          </div>
+        </h3>
+        <button id="btnModalClose" class="cueuny-modal-close" type="button" aria-label="닫기">&times;</button>
+      </div>
+
+      <div class="video-container">
+        <video id="cueunyVideoPlayer" controls playsinline preload="metadata">
+          브라우저가 HTML5 비디오 재생을 지원하지 않습니다.
+        </video>
+      </div>
+
+      <div class="cueuny-modal-footer">
+        <div id="modalScoreboard" class="modal-scoreboard-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

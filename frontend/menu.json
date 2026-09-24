@@ -21,6 +21,11 @@
       "icon": "download"
     },
     {
+      "label": "당구 리플레이",
+      "href": "cueuny/",
+      "icon": "video"
+    },
+    {
       "label": "게임",
       "href": "games/",
       "icon": "gamepad"

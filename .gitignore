@@ -14,5 +14,6 @@ logs/
 
 # Torrent Temporary Downloads
 downloads/
-backend/downloads/
-*.torrent
+
+# Storage (영구 보관 미디어 파일 전체 깃 제외)
+storage/

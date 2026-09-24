@@ -23,7 +23,8 @@ try:
         get_cueuny_status,
         get_verified_completed_replays,
         get_cueuny_storage_dir,
-        get_replay_metadata
+        get_replay_metadata,
+        get_game_innings
     )
     from app.services.cueuny_scheduler import get_next_run_time
 except ImportError:
@@ -34,7 +35,8 @@ except ImportError:
         get_cueuny_status,
         get_verified_completed_replays,
         get_cueuny_storage_dir,
-        get_replay_metadata
+        get_replay_metadata,
+        get_game_innings
     )
     from backend.app.services.cueuny_scheduler import get_next_run_time
 
@@ -253,4 +255,19 @@ def api_cueuny_file(replay_seq: str):
             return RedirectResponse(url=mp4_url, status_code=307)
 
     raise HTTPException(status_code=404, detail="다운로드 가능한 영상 파일이 없습니다.")
+
+
+@router.get("/innings/{replay_seq}")
+def api_cueuny_innings(replay_seq: str):
+    """
+    특정 리플레이 영상의 이닝별 득점 및 타임코드(선공/후공 시작/종료 시점) 목록 조회
+    """
+    innings = get_game_innings(replay_seq)
+    return {
+        "success": True,
+        "replay_seq": replay_seq,
+        "items": innings,
+        "count": len(innings)
+    }
+
 

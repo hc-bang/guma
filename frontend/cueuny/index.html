@@ -321,13 +321,35 @@
         <button id="btnModalClose" class="cueuny-modal-close" type="button" aria-label="닫기">&times;</button>
       </div>
 
-      <div class="video-container">
+      <div class="video-container" id="videoContainer">
         <video id="cueunyVideoPlayer" controls playsinline preload="metadata">
           브라우저가 HTML5 비디오 재생을 지원하지 않습니다.
         </video>
+
+        <!-- 최대 화면(전체화면) 전용 TV 중계 스코어바 (평소에는 완전히 숨김) -->
+        <div id="fullscreenScoreOverlay" class="fullscreen-score-overlay">
+          <div class="fs-score-pill">
+            <span class="fs-live-dot"></span>
+            <span id="fsInning" class="fs-inning">1 INN</span>
+            <div class="fs-players">
+              <span id="fsPlayerA" class="fs-player">
+                <span id="fsTurnIconA" class="fs-turn-icon" style="display: none;">⚡</span>
+                <span id="fsNameA" class="fs-name">물주</span>
+                <span id="fsScoreA" class="fs-score">0</span>
+              </span>
+              <span class="fs-divider">:</span>
+              <span id="fsPlayerB" class="fs-player">
+                <span id="fsScoreB" class="fs-score">0</span>
+                <span id="fsNameB" class="fs-name">상대선수</span>
+                <span id="fsTurnIconB" class="fs-turn-icon" style="display: none;">⚡</span>
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="cueuny-modal-footer">
+        <!-- 영상 아래 실시간 라이브 스코어보드 (깔끔한 단일 뷰) -->
         <div id="modalScoreboard" class="modal-scoreboard-grid"></div>
       </div>
     </div>

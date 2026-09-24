@@ -284,6 +284,77 @@ def get_replay_metadata(identifier: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def fetch_game_innings(replay_seq: str) -> List[Dict[str, Any]]:
+    """
+    m.cueuny.com/api/game_inninglist 엔드포인트에서
+    해당 경기의 이닝별 득점 및 타임스탬프 상세 목록을 가져옵니다.
+    """
+    if not replay_seq:
+        return []
+
+    base_url = os.getenv("CUEUNY_BASE_URL", "http://m.cueuny.com").rstrip("/")
+    url = f"{base_url}/api/game_inninglist"
+    headers = get_request_headers()
+    headers["X-Requested-With"] = "XMLHttpRequest"
+
+    try:
+        resp = requests.post(url, headers=headers, data={"gmdtSeq": replay_seq, "cnt": 1000}, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            if isinstance(data, list):
+                return data
+    except Exception as e:
+        logger.warning(f"[CUEUNY] 이닝 정보 조회 실패 (seq: {replay_seq}): {e}")
+
+    return []
+
+
+def get_game_innings(identifier: str) -> List[Dict[str, Any]]:
+    """
+    특정 경기의 이닝별 상세 득점/시간 목록을 반환합니다.
+    로컬 사이드카 .json에 캐시되어 있으면 즉시 반환하고,
+    없을 경우 큐니 API에서 온디맨드로 조회하여 .json에 영구 저장합니다.
+    """
+    meta = get_replay_metadata(identifier)
+    if not meta:
+        return []
+
+    # 이미 메타데이터에 이닝 상세 정보가 있는 경우
+    if meta.get("innings_data"):
+        return meta["innings_data"]
+
+    replay_seq = meta.get("replay_seq") or identifier
+    innings = fetch_game_innings(replay_seq)
+    if innings:
+        meta["innings_data"] = innings
+        record_folder = meta.get("record_folder") or identifier
+        match_date = meta.get("match_date", "")
+        target_dir = get_target_storage_dir(match_date)
+        json_path = os.path.join(target_dir, f"{record_folder}.json")
+
+        if not os.path.isfile(json_path):
+            storage_root = get_cueuny_storage_dir()
+            for dirpath, _, filenames in os.walk(storage_root):
+                if f"{record_folder}.json" in filenames:
+                    json_path = os.path.join(dirpath, f"{record_folder}.json")
+                    break
+
+        try:
+            with open(json_path, "w", encoding="utf-8") as jf:
+                json.dump(meta, jf, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.warning(f"[CUEUNY] 이닝 정보 사이드카 저장 실패: {e}")
+
+        # 인메모리 캐시 갱신
+        with _cache_lock:
+            for it in _replays_cache:
+                if it.get("replay_seq") == replay_seq or it.get("record_folder") == record_folder:
+                    it["innings_data"] = innings
+                    break
+
+    return innings
+
+
 def fetch_and_sync_replays(game_type: str = "") -> Dict[str, Any]:
     """
     m.cueuny.com/park/mypark/replay 페이지를 조회하고,

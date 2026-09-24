@@ -449,9 +449,11 @@
 }
 
 .video-container {
+  position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   background: #000000;
+  overflow: hidden;
 }
 
 .video-container video {
@@ -468,16 +470,17 @@
   background: var(--card);
 }
 
-/* 모달 내부 스코어보드 그리드 */
+/* 모달 내부 실시간 라이브 스코어보드 그리드 */
 .modal-scoreboard-grid {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   background: var(--bg, rgba(0, 0, 0, 0.15));
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px 14px;
+  border-radius: 12px;
+  padding: 10px 16px;
+  transition: all 0.25s ease;
 }
 
 .modal-player-box {
@@ -485,12 +488,39 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
 }
 
 .modal-player-box.right {
   flex-direction: row-reverse;
+}
+
+/* 현재 샷(공격 턴) 진행 중인 선수 강조 */
+.modal-player-box.is-turn {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.15);
+}
+
+.modal-player-box.is-turn .modal-player-name {
+  color: #38bdf8;
+}
+
+.modal-turn-icon {
+  color: #facc15;
+  font-size: 13px;
+  filter: drop-shadow(0 0 4px #eab308);
+  animation: turnBounce 1s infinite alternate ease-in-out;
+}
+
+@keyframes turnBounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-2px); }
 }
 
 .modal-player-info {
@@ -505,7 +535,7 @@
 }
 
 .modal-player-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
@@ -513,11 +543,11 @@
   text-overflow: ellipsis;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .modal-player-box.winner .modal-player-name {
-  color: var(--accent, #3b82f6);
+  color: #22c55e;
 }
 
 .modal-player-stats {
@@ -528,16 +558,50 @@
   color: var(--text-muted);
 }
 
+.modal-score-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.modal-player-box.right .modal-score-wrap {
+  flex-direction: row-reverse;
+}
+
 .modal-player-score-badge {
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 26px;
+  font-weight: 900;
   color: var(--text);
   line-height: 1;
-  padding: 0 4px;
+  letter-spacing: -0.5px;
+  transition: color 0.15s ease;
+}
+
+.modal-player-box.is-turn .modal-player-score-badge {
+  color: #38bdf8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
 }
 
 .modal-player-box.winner .modal-player-score-badge {
-  color: var(--accent, #3b82f6);
+  color: #22c55e;
+}
+
+/* 이번 턴 득점 표시 뱃지 (+N) */
+.modal-run-badge {
+  font-size: 11px;
+  font-weight: 800;
+  background: #22c55e;
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1.2;
+  box-shadow: 0 1px 4px rgba(34, 197, 94, 0.35);
+  animation: runPop 0.25s ease-out;
+}
+
+@keyframes runPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .modal-vs-badge {
@@ -545,11 +609,49 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0 10px;
+  padding: 0 12px;
+  min-width: 80px;
+}
+
+.modal-live-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  margin-bottom: 3px;
+  letter-spacing: 0.5px;
+}
+
+.modal-live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 5px #ef4444;
+  animation: liveDotPulse 1.4s infinite ease-in-out;
+}
+
+@keyframes liveDotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.4; }
+}
+
+.modal-current-inning {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent, #3b82f6);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .modal-vs-text {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   color: var(--text-muted);
   letter-spacing: 0.5px;
@@ -1015,4 +1117,205 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+
+@media (max-width: 600px) {
+  .modal-scoreboard-grid {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .modal-player-score-badge {
+    font-size: 20px;
+  }
+  .modal-player-name {
+    font-size: 12px;
+    max-width: 70px;
+  }
+  .modal-vs-badge {
+    padding: 0 4px;
+    min-width: 60px;
+  }
+}
+
+/* ── 최대 화면(전체화면) 전용 TV 중계 스코어바 ───────────────────────── */
+/* 평상시(일반 화면)에는 절대 노출되지 않음 */
+.fullscreen-score-overlay {
+  display: none !important;
+}
+
+/* 전체화면 모드 시 비디오 컨테이너 전체화면 레이아웃 최적화 */
+.video-container:fullscreen,
+.video-container:-webkit-full-screen,
+.video-container.is-fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  background: #000000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.video-container:fullscreen video,
+.video-container:-webkit-full-screen video,
+.video-container.is-fullscreen video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* 전체화면 모드일 때만 비디오 상단에 세련된 TV 중계 스코어보드로 자동 표시 */
+:fullscreen .fullscreen-score-overlay,
+:-webkit-full-screen .fullscreen-score-overlay,
+.video-container:fullscreen .fullscreen-score-overlay,
+.video-container:-webkit-full-screen .fullscreen-score-overlay,
+.video-container.is-fullscreen .fullscreen-score-overlay {
+  display: flex !important;
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647 !important; /* 비디오 네이티브 컨트롤러보다 상위 */
+  pointer-events: none;
+  user-select: none;
+  animation: fsFadeIn 0.3s ease-out;
+}
+
+@keyframes fsFadeIn {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.fs-score-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+  padding: 6px 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.fs-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: liveDotPulse 1.4s infinite ease-in-out;
+}
+
+.fs-inning {
+  font-size: 13px;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.fs-players {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fs-player {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.fs-player.is-turn {
+  background: rgba(56, 189, 248, 0.22);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  border: 1px solid rgba(56, 189, 248, 0.6);
+}
+
+.fs-turn-icon {
+  font-size: 12px;
+  color: #facc15;
+  filter: drop-shadow(0 0 4px #eab308);
+  animation: turnBounce 1s infinite alternate ease-in-out;
+}
+
+.fs-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+  white-space: nowrap;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fs-player.is-turn .fs-name {
+  color: #ffffff;
+}
+
+.fs-score {
+  font-size: 18px;
+  font-weight: 900;
+  color: #ffffff;
+  min-width: 20px;
+  text-align: center;
+}
+
+.fs-player.is-turn .fs-score {
+  color: #38bdf8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+}
+
+.fs-divider {
+  font-size: 14px;
+  font-weight: 900;
+  color: #64748b;
+}
+
+/* 비디오 네이티브 전체화면(브라우저 자막 fallback) 스타일 */
+video::cue {
+  background: rgba(15, 23, 42, 0.88) !important;
+  color: #ffffff !important;
+  font-size: 16px !important;
+  font-family: inherit !important;
+  font-weight: 800 !important;
+  line-height: 1.5 !important;
+  border-radius: 6px !important;
+  padding: 4px 12px !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+}
+
+@media (max-width: 600px) {
+  :fullscreen .fullscreen-score-overlay,
+  :-webkit-full-screen .fullscreen-score-overlay,
+  .video-container.is-fullscreen .fullscreen-score-overlay {
+    top: 10px;
+  }
+  .fs-score-pill {
+    padding: 4px 10px;
+    gap: 6px;
+  }
+  .fs-name {
+    max-width: 55px;
+    font-size: 11px;
+  }
+  .fs-score {
+    font-size: 15px;
+  }
+  .fs-inning {
+    font-size: 11px;
+  }
+}
+
+
+
+
 

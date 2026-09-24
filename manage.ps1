@@ -1,4 +1,4 @@
-# Usage: .\manage.ps1
+﻿# Usage: .\manage.ps1
 
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

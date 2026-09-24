@@ -50,6 +50,24 @@
   const modalInningBadge = document.getElementById('modalInningBadge');
   const modalScoreboard = document.getElementById('modalScoreboard');
 
+  // 실시간 라이브 스코어보드 제어 상태
+  const videoContainer = document.getElementById('videoContainer');
+  const fullscreenScoreOverlay = document.getElementById('fullscreenScoreOverlay');
+  const fsInning = document.getElementById('fsInning');
+  const fsPlayerA = document.getElementById('fsPlayerA');
+  const fsPlayerB = document.getElementById('fsPlayerB');
+  const fsTurnIconA = document.getElementById('fsTurnIconA');
+  const fsTurnIconB = document.getElementById('fsTurnIconB');
+  const fsNameA = document.getElementById('fsNameA');
+  const fsNameB = document.getElementById('fsNameB');
+  const fsScoreA = document.getElementById('fsScoreA');
+  const fsScoreB = document.getElementById('fsScoreB');
+
+  let currentInningsData = [];
+  let currentMatchItem = null;
+  let playerFirstIsA = true;
+  let lastInningRequestId = 0;
+
   // 상세 필터 모달 요소
   const btnOpenFilter = document.getElementById('btnOpenFilter');
   const headerFilterBadge = document.getElementById('headerFilterBadge');
@@ -684,7 +702,9 @@
       }
     }
 
-    // 4. 하단 스코어보드 (몇 대 몇, 승패, 에버, 하이런)
+    currentMatchItem = item;
+
+    // 4. 하단 실시간 스코어보드 초기 구조 렌더링
     if (modalScoreboard) {
       const scoreA = pa.score || '0';
       const targetA = pa.target_score ? `/${pa.target_score}` : '';
@@ -700,33 +720,51 @@
       const resultClass = aWon ? 'win' : (bWon ? 'lose' : '');
 
       modalScoreboard.innerHTML = `
-        <div class="modal-player-box ${aWon ? 'winner' : ''}">
+        <div id="modalPlayerBoxA" class="modal-player-box ${aWon ? 'winner' : ''}">
           <div class="modal-player-info">
-            <span class="modal-player-name">${aWon ? '👑 ' : ''}${escapeHtml(nameA)}</span>
+            <span class="modal-player-name">
+              <span id="modalTurnIconA" class="modal-turn-icon" style="display: none;">⚡</span>
+              <span id="modalPlayerNameA">${escapeHtml(nameA)}</span>
+            </span>
             <div class="modal-player-stats">
-              <span>Avg ${escapeHtml(avgA)}</span>
+              <span id="modalPlayerAvgA">Avg ${escapeHtml(avgA)}</span>
               <span>·</span>
               <span>HR ${escapeHtml(hrA)}</span>
             </div>
           </div>
-          <span class="modal-player-score-badge">${escapeHtml(scoreA)}<small style="font-size:11px;opacity:0.7;">${escapeHtml(targetA)}</small></span>
+          <div class="modal-score-wrap">
+            <span id="modalPlayerScoreA" class="modal-player-score-badge">${escapeHtml(scoreA)}</span>
+            <span id="modalRunBadgeA" class="modal-run-badge" style="display: none;">+0</span>
+            <small style="font-size:11px;opacity:0.7;margin-left:2px;">${escapeHtml(targetA)}</small>
+          </div>
         </div>
 
         <div class="modal-vs-badge">
-          <span class="modal-vs-text">VS</span>
-          <span class="modal-result-pill ${resultClass}">${resultText}</span>
+          <div id="modalLivePill" class="modal-live-pill" style="display: none;">
+            <span class="modal-live-dot"></span>
+            <span id="modalLiveText">LIVE</span>
+          </div>
+          <span id="modalCenterInning" class="modal-current-inning">VS</span>
+          <span id="modalFinalResult" class="modal-result-pill ${resultClass}">${resultText}</span>
         </div>
 
-        <div class="modal-player-box right ${bWon ? 'winner' : ''}">
+        <div id="modalPlayerBoxB" class="modal-player-box right ${bWon ? 'winner' : ''}">
           <div class="modal-player-info">
-            <span class="modal-player-name">${bWon ? '👑 ' : ''}${escapeHtml(nameB)}</span>
+            <span class="modal-player-name">
+              <span id="modalPlayerNameB">${escapeHtml(nameB)}</span>
+              <span id="modalTurnIconB" class="modal-turn-icon" style="display: none;">⚡</span>
+            </span>
             <div class="modal-player-stats">
-              <span>Avg ${escapeHtml(avgB)}</span>
+              <span id="modalPlayerAvgB">Avg ${escapeHtml(avgB)}</span>
               <span>·</span>
               <span>HR ${escapeHtml(hrB)}</span>
             </div>
           </div>
-          <span class="modal-player-score-badge">${escapeHtml(scoreB)}<small style="font-size:11px;opacity:0.7;">${escapeHtml(targetB)}</small></span>
+          <div class="modal-score-wrap">
+            <span id="modalPlayerScoreB" class="modal-player-score-badge">${escapeHtml(scoreB)}</span>
+            <span id="modalRunBadgeB" class="modal-run-badge" style="display: none;">+0</span>
+            <small style="font-size:11px;opacity:0.7;margin-right:2px;">${escapeHtml(targetB)}</small>
+          </div>
         </div>
       `;
     }
@@ -738,11 +776,380 @@
     cueunyVideoPlayer.play().catch(e => {
       console.log('자동 재생 대기:', e);
     });
+
+    // 네이티브 자막 트랙 확보 (전체화면 대비)
+    ensureLiveTextTrack();
+
+    // 이닝별 상세 득점 로드 (영상 아래 스코어보드 & 전체화면 스코어바 실시간 연동)
+    loadInningsData(seq, item);
   }
 
+  // ── 이닝 상세 데이터 로드 & 영상 아래 스코어보드 실시간 동기화 ───────────
+  async function loadInningsData(seq, item) {
+    const reqId = ++lastInningRequestId;
+    currentInningsData = [];
+
+    try {
+      const res = await fetch(`${API_BASE}/api/cueuny/innings/${seq}`);
+      if (!res.ok || reqId !== lastInningRequestId) return;
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.items) || data.items.length === 0) {
+        return;
+      }
+
+      currentInningsData = data.items;
+
+      // 선공/후공 판별: player_a 점수와 마지막 이닝 f_point_sum / s_point_sum 대조
+      const lastInn = currentInningsData[currentInningsData.length - 1];
+      const paScore = parseInt(item.player_a && item.player_a.score, 10);
+      const pbScore = parseInt(item.player_b && item.player_b.score, 10);
+      const fSum = parseInt(lastInn.f_point_sum, 10);
+      const sSum = parseInt(lastInn.s_point_sum, 10);
+
+      if (!isNaN(paScore) && !isNaN(pbScore) && !isNaN(fSum) && !isNaN(sSum) && paScore !== pbScore) {
+        if (paScore === fSum && pbScore === sSum) {
+          playerFirstIsA = true;
+        } else if (paScore === sSum && pbScore === fSum) {
+          playerFirstIsA = false;
+        } else {
+          playerFirstIsA = true;
+        }
+      } else {
+        playerFirstIsA = true;
+      }
+
+      // 초기 1회 실시간 스코어보드 갱신
+      updateLiveScoreboard(cueunyVideoPlayer.currentTime);
+    } catch (e) {
+      console.warn('[CUEUNY] 이닝 정보 로드 대기:', e);
+    }
+  }
+
+  // ── 영상 재생 시각에 따른 영상 아래 스코어보드 실시간 동기화 ───────────────
+  // (사용자 요청: 공격을 진행하는 동안에는 이전 점수를 유지하다가, 공격을 마치고 다음 턴으로 넘어가는 순간 점수 반영)
+  function updateLiveScoreboard(currentTimeSec) {
+    if (!currentInningsData || currentInningsData.length === 0 || !modalScoreboard) return;
+
+    // 타임코드 변환 (1 타임코드 = 10초)
+    const timeCode = currentTimeSec / 10;
+    let activeInn = null;
+    let activeIdx = -1;
+    let turn = 'f'; // 'f': 선공 공격 중, 's': 후공 공격 중
+    let isFinished = false;
+
+    for (let i = 0; i < currentInningsData.length; i++) {
+      const inn = currentInningsData[i];
+      const fStart = inn.f_start_time || 0;
+      const fEnd = inn.f_end_s_start_time || fStart;
+      const sEnd = inn.s_end_time || fEnd;
+
+      if (timeCode >= fStart && timeCode < sEnd) {
+        activeInn = inn;
+        activeIdx = i;
+        turn = (timeCode < fEnd) ? 'f' : 's';
+        break;
+      }
+    }
+
+    const modalLivePill = document.getElementById('modalLivePill');
+    const modalLiveText = document.getElementById('modalLiveText');
+    const modalCenterInning = document.getElementById('modalCenterInning');
+    const modalFinalResult = document.getElementById('modalFinalResult');
+
+    const modalPlayerBoxA = document.getElementById('modalPlayerBoxA');
+    const modalPlayerBoxB = document.getElementById('modalPlayerBoxB');
+    const modalTurnIconA = document.getElementById('modalTurnIconA');
+    const modalTurnIconB = document.getElementById('modalTurnIconB');
+    const modalPlayerScoreA = document.getElementById('modalPlayerScoreA');
+    const modalPlayerScoreB = document.getElementById('modalPlayerScoreB');
+    const modalRunBadgeA = document.getElementById('modalRunBadgeA');
+    const modalRunBadgeB = document.getElementById('modalRunBadgeB');
+    const modalPlayerAvgA = document.getElementById('modalPlayerAvgA');
+    const modalPlayerAvgB = document.getElementById('modalPlayerAvgB');
+
+    if (!activeInn) {
+      if (timeCode < (currentInningsData[0].f_start_time || 0)) {
+        // 경기 시작 전 (정확히 0:0으로 시작!)
+        if (modalLivePill) {
+          modalLivePill.style.display = 'inline-flex';
+          if (modalLiveText) modalLiveText.textContent = 'READY';
+        }
+        if (modalCenterInning) modalCenterInning.textContent = '1 INN';
+        if (modalFinalResult) modalFinalResult.style.display = 'none';
+
+        if (modalPlayerScoreA) modalPlayerScoreA.textContent = '0';
+        if (modalPlayerScoreB) modalPlayerScoreB.textContent = '0';
+        if (modalRunBadgeA) modalRunBadgeA.style.display = 'none';
+        if (modalRunBadgeB) modalRunBadgeB.style.display = 'none';
+        if (modalTurnIconA) modalTurnIconA.style.display = 'none';
+        if (modalTurnIconB) modalTurnIconB.style.display = 'none';
+        if (modalPlayerBoxA) modalPlayerBoxA.classList.remove('is-turn');
+        if (modalPlayerBoxB) modalPlayerBoxB.classList.remove('is-turn');
+        return;
+      } else {
+        // 경기 종료 구간
+        isFinished = true;
+        activeIdx = currentInningsData.length - 1;
+        activeInn = currentInningsData[activeIdx];
+        turn = 's';
+      }
+    }
+
+    // 중앙 라이브 뱃지 & 이닝 표시
+    if (modalLivePill) {
+      modalLivePill.style.display = 'inline-flex';
+      if (modalLiveText) {
+        modalLiveText.textContent = isFinished ? 'FINISH' : 'LIVE';
+      }
+    }
+
+    if (modalCenterInning) {
+      modalCenterInning.textContent = isFinished ? '종료' : `${activeInn.inning} INN`;
+    }
+
+    if (modalFinalResult) {
+      modalFinalResult.style.display = isFinished ? 'inline-block' : 'none';
+    }
+
+    // 직전 이닝까지의 누적 점수
+    const prevInn = activeIdx > 0 ? currentInningsData[activeIdx - 1] : null;
+    const prevFScore = prevInn ? (prevInn.f_point_sum ?? 0) : 0;
+    const prevSScore = prevInn ? (prevInn.s_point_sum ?? 0) : 0;
+
+    let curFScore, curSScore;
+    let lastRunF = 0, lastRunS = 0;
+
+    if (isFinished) {
+      // 경기 종료 시: 양 선수 최종 득점 반영
+      curFScore = activeInn.f_point_sum ?? 0;
+      curSScore = activeInn.s_point_sum ?? 0;
+    } else if (turn === 'f') {
+      // [선공 공격 진행 중]:
+      // 선공은 아직 샷 진행 중이므로 이전 점수(prevFScore) 유지!
+      // 후공 역시 이전 이닝 점수(prevSScore) 유지!
+      curFScore = prevFScore;
+      curSScore = prevSScore;
+
+      // 직전 이닝 후공의 득점이 있었다면 뱃지 표시
+      if (prevInn && (prevInn.s_point ?? 0) > 0) {
+        lastRunS = prevInn.s_point;
+      }
+    } else {
+      // [후공 공격 진행 중 (선공 공격 종료)]:
+      // 선공이 공격을 마치고 자리로 들어갔으므로 -> 선공 점수가 이번 이닝 점수로 똭! 올라감
+      curFScore = activeInn.f_point_sum ?? (prevFScore + (activeInn.f_point ?? 0));
+      // 후공은 아직 샷 진행 중이므로 이전 점수(prevSScore) 유지!
+      curSScore = prevSScore;
+
+      // 선공이 이번 이닝에서 낸 득점 뱃지 표시
+      if ((activeInn.f_point ?? 0) > 0) {
+        lastRunF = activeInn.f_point;
+      }
+    }
+
+    const curScoreA = playerFirstIsA ? curFScore : curSScore;
+    const curScoreB = playerFirstIsA ? curSScore : curFScore;
+    const isTurnA = playerFirstIsA ? (turn === 'f') : (turn === 's');
+    const runA = playerFirstIsA ? lastRunF : lastRunS;
+    const runB = playerFirstIsA ? lastRunS : lastRunF;
+
+    // 점수 업데이트 (영상 아래 스코어보드)
+    if (modalPlayerScoreA) modalPlayerScoreA.textContent = String(curScoreA);
+    if (modalPlayerScoreB) modalPlayerScoreB.textContent = String(curScoreB);
+
+    // ── 최대 화면(전체화면) 전용 상단 TV 중계 스코어바 동시 업데이트 ──
+    if (fsInning) {
+      fsInning.textContent = isFinished ? '종료' : `${activeInn.inning} INN`;
+    }
+    if (fsScoreA) fsScoreA.textContent = String(curScoreA);
+    if (fsScoreB) fsScoreB.textContent = String(curScoreB);
+
+    if (currentMatchItem) {
+      if (fsNameA) fsNameA.textContent = cleanPlayerName(currentMatchItem.player_a, '물주');
+      if (fsNameB) fsNameB.textContent = cleanPlayerName(currentMatchItem.player_b, '상대선수');
+    }
+
+    if (fsPlayerA) fsPlayerA.classList.toggle('is-turn', !isFinished && isTurnA);
+    if (fsPlayerB) fsPlayerB.classList.toggle('is-turn', !isFinished && !isTurnA);
+    if (fsTurnIconA) fsTurnIconA.style.display = (!isFinished && isTurnA) ? 'inline-block' : 'none';
+    if (fsTurnIconB) fsTurnIconB.style.display = (!isFinished && !isTurnA) ? 'inline-block' : 'none';
+
+    // 실시간 에버리지 계산 (현재 점수 / 현재 이닝)
+    const currentInningNum = activeInn.inning || (activeIdx + 1);
+    if (currentInningNum > 0 && !isFinished) {
+      if (modalPlayerAvgA) {
+        const liveAvgA = (curScoreA / currentInningNum).toFixed(2);
+        modalPlayerAvgA.textContent = `Avg ${liveAvgA}`;
+      }
+      if (modalPlayerAvgB) {
+        const liveAvgB = (curScoreB / currentInningNum).toFixed(2);
+        modalPlayerAvgB.textContent = `Avg ${liveAvgB}`;
+      }
+    } else if (isFinished) {
+      if (modalPlayerAvgA && currentMatchItem && currentMatchItem.player_a) {
+        modalPlayerAvgA.textContent = `Avg ${currentMatchItem.player_a.avg || '-'}`;
+      }
+      if (modalPlayerAvgB && currentMatchItem && currentMatchItem.player_b) {
+        modalPlayerAvgB.textContent = `Avg ${currentMatchItem.player_b.avg || '-'}`;
+      }
+    }
+
+    // 공격 턴 및 득점 뱃지 표시
+    if (!isFinished) {
+      if (isTurnA) {
+        if (modalPlayerBoxA) modalPlayerBoxA.classList.add('is-turn');
+        if (modalPlayerBoxB) modalPlayerBoxB.classList.remove('is-turn');
+        if (modalTurnIconA) modalTurnIconA.style.display = 'inline-block';
+        if (modalTurnIconB) modalTurnIconB.style.display = 'none';
+
+        if (modalRunBadgeB) {
+          if (runB > 0) {
+            modalRunBadgeB.textContent = `+${runB}`;
+            modalRunBadgeB.style.display = 'inline-block';
+          } else {
+            modalRunBadgeB.style.display = 'none';
+          }
+        }
+        if (modalRunBadgeA) modalRunBadgeA.style.display = 'none';
+      } else {
+        if (modalPlayerBoxA) modalPlayerBoxA.classList.remove('is-turn');
+        if (modalPlayerBoxB) modalPlayerBoxB.classList.add('is-turn');
+        if (modalTurnIconA) modalTurnIconA.style.display = 'none';
+        if (modalTurnIconB) modalTurnIconB.style.display = 'inline-block';
+
+        if (modalRunBadgeA) {
+          if (runA > 0) {
+            modalRunBadgeA.textContent = `+${runA}`;
+            modalRunBadgeA.style.display = 'inline-block';
+          } else {
+            modalRunBadgeA.style.display = 'none';
+          }
+        }
+        if (modalRunBadgeB) modalRunBadgeB.style.display = 'none';
+      }
+    } else {
+      // 경기 종료 시 턴 표시 해제 및 최종 스탯 복구
+      if (modalPlayerBoxA) modalPlayerBoxA.classList.remove('is-turn');
+      if (modalPlayerBoxB) modalPlayerBoxB.classList.remove('is-turn');
+      if (modalTurnIconA) modalTurnIconA.style.display = 'none';
+      if (modalTurnIconB) modalTurnIconB.style.display = 'none';
+      if (modalRunBadgeA) modalRunBadgeA.style.display = 'none';
+      if (modalRunBadgeB) modalRunBadgeB.style.display = 'none';
+    }
+
+    // ── 네이티브 브라우저 자막(TextTrack) 갱신 (전체화면 이중 안전장치) ──
+    if (liveTextTrack) {
+      const nameA = currentMatchItem ? cleanPlayerName(currentMatchItem.player_a, '물주') : '물주';
+      const nameB = currentMatchItem ? cleanPlayerName(currentMatchItem.player_b, '상대선수') : '상대';
+      const turnA = (!isFinished && isTurnA) ? '⚡ ' : '';
+      const turnB = (!isFinished && !isTurnA) ? ' ⚡' : '';
+      const innLabel = isFinished ? '경기 종료' : `${activeInn.inning} INN`;
+      const cueText = `[ ${innLabel} ]  ${turnA}${nameA} ${curScoreA} : ${curScoreB} ${nameB}${turnB}`;
+
+      try {
+        while (liveTextTrack.cues && liveTextTrack.cues.length > 0) {
+          liveTextTrack.removeCue(liveTextTrack.cues[0]);
+        }
+        if (typeof VTTCue !== 'undefined') {
+          const cue = new VTTCue(0, 999999, cueText);
+          cue.line = -2;
+          liveTextTrack.addCue(cue);
+        }
+      } catch (e) {}
+    }
+  }
+
+  // 실시간 비디오 재생 위치 감지 (timeupdate)
+  cueunyVideoPlayer.addEventListener('timeupdate', () => {
+    updateLiveScoreboard(cueunyVideoPlayer.currentTime);
+  });
+
+  // ── 네이티브 자막 트랙 초기화 ─────────────────────────────────────────
+  let liveTextTrack = null;
+  function ensureLiveTextTrack() {
+    if (!liveTextTrack && cueunyVideoPlayer && cueunyVideoPlayer.addTextTrack) {
+      try {
+        liveTextTrack = cueunyVideoPlayer.addTextTrack('subtitles', '실시간 스코어', 'ko');
+        liveTextTrack.mode = 'hidden';
+      } catch (e) {
+        console.warn('TextTrack 초기화 대기:', e);
+      }
+    }
+  }
+
+  // ── 전체화면(최대 화면) 제어 및 스코어바 연동 ──────────────────────
+  function toggleFullscreenContainer() {
+    if (!videoContainer) return;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (videoContainer.requestFullscreen) {
+        videoContainer.requestFullscreen().catch(() => {});
+      } else if (videoContainer.webkitRequestFullscreen) {
+        videoContainer.webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    }
+  }
+
+  // 비디오 컨트롤러의 기본 [전체화면] 버튼 클릭 가로채기 -> 컨테이너 전체화면으로 전환
+  if (cueunyVideoPlayer) {
+    const origVideoRequestFs = cueunyVideoPlayer.requestFullscreen || cueunyVideoPlayer.webkitRequestFullscreen;
+    cueunyVideoPlayer.requestFullscreen = function (options) {
+      if (videoContainer && videoContainer.requestFullscreen) {
+        return videoContainer.requestFullscreen(options);
+      }
+      return origVideoRequestFs.call(cueunyVideoPlayer, options);
+    };
+
+    if (cueunyVideoPlayer.webkitRequestFullscreen) {
+      cueunyVideoPlayer.webkitRequestFullscreen = function () {
+        if (videoContainer && videoContainer.webkitRequestFullscreen) {
+          return videoContainer.webkitRequestFullscreen();
+        }
+        return origVideoRequestFs.call(cueunyVideoPlayer);
+      };
+    }
+
+    // 비디오 화면 더블클릭 시 스코어바가 포함된 컨테이너 전체화면 토글
+    cueunyVideoPlayer.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      toggleFullscreenContainer();
+    });
+  }
+
+  // 전체화면 상태 변경 감지
+  function handleFullscreenChange() {
+    const fsElem = document.fullscreenElement || document.webkitFullscreenElement;
+    const isFs = Boolean(fsElem);
+
+    // 만약 브라우저가 비디오 자체만 전체화면으로 띄운 경우 -> 컨테이너 전체화면으로 자동 전환
+    if (fsElem === cueunyVideoPlayer && videoContainer && videoContainer.requestFullscreen) {
+      videoContainer.requestFullscreen().catch(() => {});
+    }
+
+    if (videoContainer) {
+      videoContainer.classList.toggle('is-fullscreen', isFs);
+    }
+
+    // 전체화면일 때 네이티브 자막 트랙 활성화 (비디오 단독 전체화면에서도 무조건 점수 표시)
+    if (liveTextTrack) {
+      liveTextTrack.mode = isFs ? 'showing' : 'hidden';
+    }
+  }
+
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+
   function closeVideoModal() {
+    lastInningRequestId++;
     cueunyVideoPlayer.pause();
     cueunyVideoPlayer.src = '';
+    currentInningsData = [];
+    currentMatchItem = null;
     videoModal.style.display = 'none';
   }
 

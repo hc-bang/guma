@@ -36,7 +36,6 @@
   const sessionAlertTitle = document.getElementById('sessionAlertTitle');
   const sessionAlertDesc = document.getElementById('sessionAlertDesc');
 
-  const btnRefresh = document.getElementById('btnRefresh');
   const btnSync = document.getElementById('btnSync');
   const replayGrid = document.getElementById('replayGrid');
   const replayLoader = document.getElementById('replayLoader');
@@ -51,16 +50,21 @@
   const modalInningBadge = document.getElementById('modalInningBadge');
   const modalScoreboard = document.getElementById('modalScoreboard');
 
-  // 다차원 검색/필터 DOM 요소
+  // 상세 필터 모달 요소
+  const btnOpenFilter = document.getElementById('btnOpenFilter');
+  const headerFilterBadge = document.getElementById('headerFilterBadge');
+  const filterModal = document.getElementById('filterModal');
+  const btnFilterModalClose = document.getElementById('btnFilterModalClose');
+  const btnModalFilterReset = document.getElementById('btnModalFilterReset');
+  const btnModalFilterCancel = document.getElementById('btnModalFilterCancel');
+  const btnModalFilterApply = document.getElementById('btnModalFilterApply');
+
+  // 다차원 검색/필터 폼 요소
   const filterSearchInput = document.getElementById('filterSearchInput');
   const btnClearSearch = document.getElementById('btnClearSearch');
   const filterYearSelect = document.getElementById('filterYearSelect');
   const filterMonthSelect = document.getElementById('filterMonthSelect');
   const filterResultSelect = document.getElementById('filterResultSelect');
-  const btnToggleAdvanced = document.getElementById('btnToggleAdvanced');
-  const advancedFilterPanel = document.getElementById('advancedFilterPanel');
-  const advancedFilterBadge = document.getElementById('advancedFilterBadge');
-  const btnResetAllFilters = document.getElementById('btnResetAllFilters');
 
   const inputMinAvg = document.getElementById('inputMinAvg');
   const inputMaxAvg = document.getElementById('inputMaxAvg');
@@ -69,11 +73,12 @@
   const inputMaxDuration = document.getElementById('inputMaxDuration');
   const inputMinInnings = document.getElementById('inputMinInnings');
   const inputMaxInnings = document.getElementById('inputMaxInnings');
-  const btnApplyAdvanced = document.getElementById('btnApplyAdvanced');
 
+  // 활성 필터 요약 바 요소
   const filterSummaryBar = document.getElementById('filterSummaryBar');
   const filterTotalCount = document.getElementById('filterTotalCount');
   const filterTagContainer = document.getElementById('filterTagContainer');
+  const btnResetSummary = document.getElementById('btnResetSummary');
 
   // 페이징 및 상태 관리 변수 (10건씩 로드)
   const PAGE_LIMIT = 10;
@@ -361,13 +366,15 @@
       tags.push({ key: 'innings', label: `이닝 ${minI}~${maxI}INN` });
     }
 
-    // 상세 필터 버튼 뱃지
-    if (advancedFilterBadge) {
-      if (advancedCount > 0) {
-        advancedFilterBadge.textContent = String(advancedCount);
-        advancedFilterBadge.style.display = 'inline-flex';
+    // 헤더 상세필터 버튼 뱃지 및 활성 스타일
+    if (headerFilterBadge) {
+      if (activeFilterCount > 0) {
+        headerFilterBadge.textContent = String(activeFilterCount);
+        headerFilterBadge.style.display = 'inline-flex';
+        if (btnOpenFilter) btnOpenFilter.classList.add('active');
       } else {
-        advancedFilterBadge.style.display = 'none';
+        headerFilterBadge.style.display = 'none';
+        if (btnOpenFilter) btnOpenFilter.classList.remove('active');
       }
     }
 
@@ -744,29 +751,16 @@
     if (e.target === videoModal) closeVideoModal();
   });
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && videoModal.style.display !== 'none') {
-      closeVideoModal();
+    if (e.key === 'Escape') {
+      if (filterModal && filterModal.style.display !== 'none') {
+        closeFilterModal();
+      } else if (videoModal && videoModal.style.display !== 'none') {
+        closeVideoModal();
+      }
     }
   });
 
-  // ── 수동 새로고침 액션 (사용자가 명시적으로 누를 때만 목록 재조회) ─────
-  if (btnRefresh) {
-    btnRefresh.addEventListener('click', async () => {
-      btnRefresh.disabled = true;
-      const origHtml = btnRefresh.innerHTML;
-      btnRefresh.innerHTML = '<span class="progress-spinner"></span> 새로고침 중...';
 
-      try {
-        await loadStatus();
-        await loadMoreReplays(true, true); // 디스크 재스캔 및 인덱스 갱신 후 최신 10건 로드
-      } catch (err) {
-        console.warn('[CUEUNY] 새로고침 실패:', err);
-      } finally {
-        btnRefresh.disabled = false;
-        btnRefresh.innerHTML = origHtml;
-      }
-    });
-  }
 
   // ── 수동 영상 수집 액션 (누르면 최신 영상 확인 및 백그라운드 다운로드 진행) ──
   btnSync.addEventListener('click', async () => {
@@ -791,106 +785,56 @@
     }
   });
 
-  // ── 검색 및 다차원 필터 이벤트 리스너 ─────────────────────────────────
-  // 1. 실시간 통합 검색 (300ms 디바운스)
-  if (filterSearchInput) {
-    filterSearchInput.addEventListener('input', () => {
-      const val = filterSearchInput.value.trim();
-      if (btnClearSearch) {
-        btnClearSearch.style.display = val ? 'block' : 'none';
-      }
-      clearTimeout(searchDebounceTimer);
-      searchDebounceTimer = setTimeout(() => {
-        filterState.q = val;
-        loadMoreReplays(true);
-      }, 300);
-    });
+  // ── 상세 필터 모달 제어 ──────────────────────────────────────────────
+  function openFilterModal() {
+    // 1. 현재 filterState 값들을 모달 폼 필드에 동기화
+    if (filterSearchInput) {
+      filterSearchInput.value = filterState.q || '';
+      if (btnClearSearch) btnClearSearch.style.display = filterSearchInput.value ? 'block' : 'none';
+    }
+    if (filterYearSelect) filterYearSelect.value = filterState.year || 'all';
+    if (filterMonthSelect) filterMonthSelect.value = filterState.month || 'all';
+    if (filterResultSelect) filterResultSelect.value = filterState.result || 'all';
 
-    filterSearchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        clearTimeout(searchDebounceTimer);
-        filterState.q = filterSearchInput.value.trim();
-        loadMoreReplays(true);
-      }
-    });
+    if (inputMinAvg) inputMinAvg.value = filterState.min_avg !== null ? filterState.min_avg : '';
+    if (inputMaxAvg) inputMaxAvg.value = filterState.max_avg !== null ? filterState.max_avg : '';
+    if (inputMinHr) inputMinHr.value = filterState.min_hr !== null ? filterState.min_hr : '';
+    if (inputMinDuration) inputMinDuration.value = filterState.min_duration !== null ? filterState.min_duration : '';
+    if (inputMaxDuration) inputMaxDuration.value = filterState.max_duration !== null ? filterState.max_duration : '';
+    if (inputMinInnings) inputMinInnings.value = filterState.min_innings !== null ? filterState.min_innings : '';
+    if (inputMaxInnings) inputMaxInnings.value = filterState.max_innings !== null ? filterState.max_innings : '';
+
+    if (filterModal) filterModal.style.display = 'flex';
   }
 
-  // 검색어 초기화 (X) 버튼
-  if (btnClearSearch) {
-    btnClearSearch.addEventListener('click', () => {
-      filterSearchInput.value = '';
-      btnClearSearch.style.display = 'none';
-      filterState.q = '';
-      filterSearchInput.focus();
-      loadMoreReplays(true);
-    });
+  function closeFilterModal() {
+    if (filterModal) filterModal.style.display = 'none';
   }
 
-  // 2. 연도 필터 변경
-  if (filterYearSelect) {
-    filterYearSelect.addEventListener('change', () => {
-      filterState.year = filterYearSelect.value;
-      loadMoreReplays(true);
-    });
+  // 모달 폼 필드값 -> filterState에 커밋 적용
+  function applyFiltersFromModal() {
+    const pFloat = (el) => (el && el.value.trim() !== '' ? parseFloat(el.value.trim()) : null);
+    const pInt = (el) => (el && el.value.trim() !== '' ? parseInt(el.value.trim(), 10) : null);
+
+    filterState.q = filterSearchInput ? filterSearchInput.value.trim() : '';
+    filterState.year = filterYearSelect ? filterYearSelect.value : 'all';
+    filterState.month = filterMonthSelect ? filterMonthSelect.value : 'all';
+    filterState.result = filterResultSelect ? filterResultSelect.value : 'all';
+
+    filterState.min_avg = pFloat(inputMinAvg);
+    filterState.max_avg = pFloat(inputMaxAvg);
+    filterState.min_hr = pInt(inputMinHr);
+    filterState.min_duration = pInt(inputMinDuration);
+    filterState.max_duration = pInt(inputMaxDuration);
+    filterState.min_innings = pInt(inputMinInnings);
+    filterState.max_innings = pInt(inputMaxInnings);
+
+    closeFilterModal();
+    loadMoreReplays(true);
   }
 
-  // 3. 월 필터 변경
-  if (filterMonthSelect) {
-    filterMonthSelect.addEventListener('change', () => {
-      filterState.month = filterMonthSelect.value;
-      loadMoreReplays(true);
-    });
-  }
-
-  // 4. 승/패 결과 필터 변경
-  if (filterResultSelect) {
-    filterResultSelect.addEventListener('change', () => {
-      filterState.result = filterResultSelect.value;
-      loadMoreReplays(true);
-    });
-  }
-
-  // 5. 상세 필터 토글
-  if (btnToggleAdvanced && advancedFilterPanel) {
-    btnToggleAdvanced.addEventListener('click', () => {
-      const isVisible = advancedFilterPanel.style.display !== 'none';
-      advancedFilterPanel.style.display = isVisible ? 'none' : 'block';
-      btnToggleAdvanced.classList.toggle('active', !isVisible);
-    });
-  }
-
-  // 6. 상세 필터 적용
-  if (btnApplyAdvanced) {
-    btnApplyAdvanced.addEventListener('click', () => {
-      const pFloat = (el) => (el && el.value.trim() !== '' ? parseFloat(el.value.trim()) : null);
-      const pInt = (el) => (el && el.value.trim() !== '' ? parseInt(el.value.trim(), 10) : null);
-
-      filterState.min_avg = pFloat(inputMinAvg);
-      filterState.max_avg = pFloat(inputMaxAvg);
-      filterState.min_hr = pInt(inputMinHr);
-      filterState.min_duration = pInt(inputMinDuration);
-      filterState.max_duration = pInt(inputMaxDuration);
-      filterState.min_innings = pInt(inputMinInnings);
-      filterState.max_innings = pInt(inputMaxInnings);
-
-      loadMoreReplays(true);
-    });
-  }
-
-  // 7. 전체 필터 초기화
-  function resetAllFilters() {
-    filterState.q = '';
-    filterState.year = 'all';
-    filterState.month = 'all';
-    filterState.result = 'all';
-    filterState.min_avg = null;
-    filterState.max_avg = null;
-    filterState.min_hr = null;
-    filterState.min_duration = null;
-    filterState.max_duration = null;
-    filterState.min_innings = null;
-    filterState.max_innings = null;
-
+  // 모달 내 입력 필드만 초기화 (화면 적용 전 폼 리셋)
+  function resetFilterModalForm() {
     if (filterSearchInput) filterSearchInput.value = '';
     if (btnClearSearch) btnClearSearch.style.display = 'none';
     if (filterYearSelect) filterYearSelect.value = 'all';
@@ -904,56 +848,97 @@
     if (inputMaxDuration) inputMaxDuration.value = '';
     if (inputMinInnings) inputMinInnings.value = '';
     if (inputMaxInnings) inputMaxInnings.value = '';
+  }
 
-    if (advancedFilterPanel) advancedFilterPanel.style.display = 'none';
-    if (btnToggleAdvanced) btnToggleAdvanced.classList.remove('active');
+  // 필터 전체 초기화 및 즉시 조회 (전체 해제 버튼)
+  function resetAllFilters() {
+    filterState.q = '';
+    filterState.year = 'all';
+    filterState.month = 'all';
+    filterState.result = 'all';
+    filterState.min_avg = null;
+    filterState.max_avg = null;
+    filterState.min_hr = null;
+    filterState.min_duration = null;
+    filterState.max_duration = null;
+    filterState.min_innings = null;
+    filterState.max_innings = null;
 
+    resetFilterModalForm();
+    closeFilterModal();
     loadMoreReplays(true);
   }
 
-  if (btnResetAllFilters) {
-    btnResetAllFilters.addEventListener('click', resetAllFilters);
+  // ── 상세 필터 모달 이벤트 리스너 ─────────────────────────────────────
+  if (btnOpenFilter) {
+    btnOpenFilter.addEventListener('click', openFilterModal);
   }
 
-  // 8. 개별 필터 태그 칩 삭제 (&times;)
+  if (btnFilterModalClose) {
+    btnFilterModalClose.addEventListener('click', closeFilterModal);
+  }
+
+  if (btnModalFilterCancel) {
+    btnModalFilterCancel.addEventListener('click', closeFilterModal);
+  }
+
+  if (btnModalFilterReset) {
+    btnModalFilterReset.addEventListener('click', resetFilterModalForm);
+  }
+
+  if (btnModalFilterApply) {
+    btnModalFilterApply.addEventListener('click', applyFiltersFromModal);
+  }
+
+  if (btnResetSummary) {
+    btnResetSummary.addEventListener('click', resetAllFilters);
+  }
+
+  if (filterModal) {
+    filterModal.addEventListener('click', (e) => {
+      if (e.target === filterModal) closeFilterModal();
+    });
+  }
+
+  // 검색창 입력 및 엔터 감지
+  if (filterSearchInput) {
+    filterSearchInput.addEventListener('input', () => {
+      if (btnClearSearch) {
+        btnClearSearch.style.display = filterSearchInput.value.trim() ? 'block' : 'none';
+      }
+    });
+
+    filterSearchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        applyFiltersFromModal();
+      }
+    });
+  }
+
+  // 검색어 지우기 (X)
+  if (btnClearSearch) {
+    btnClearSearch.addEventListener('click', () => {
+      filterSearchInput.value = '';
+      btnClearSearch.style.display = 'none';
+      filterSearchInput.focus();
+    });
+  }
+
+  // ── 개별 필터 태그 칩 삭제 (&times;) ─────────────────────────────────
   if (filterTagContainer) {
     filterTagContainer.addEventListener('click', (e) => {
       const removeBtn = e.target.closest('.filter-tag-remove');
       if (!removeBtn) return;
       const key = removeBtn.getAttribute('data-key');
 
-      if (key === 'q') {
-        filterState.q = '';
-        if (filterSearchInput) filterSearchInput.value = '';
-        if (btnClearSearch) btnClearSearch.style.display = 'none';
-      } else if (key === 'year') {
-        filterState.year = 'all';
-        if (filterYearSelect) filterYearSelect.value = 'all';
-      } else if (key === 'month') {
-        filterState.month = 'all';
-        if (filterMonthSelect) filterMonthSelect.value = 'all';
-      } else if (key === 'result') {
-        filterState.result = 'all';
-        if (filterResultSelect) filterResultSelect.value = 'all';
-      } else if (key === 'avg') {
-        filterState.min_avg = null;
-        filterState.max_avg = null;
-        if (inputMinAvg) inputMinAvg.value = '';
-        if (inputMaxAvg) inputMaxAvg.value = '';
-      } else if (key === 'min_hr') {
-        filterState.min_hr = null;
-        if (inputMinHr) inputMinHr.value = '';
-      } else if (key === 'duration') {
-        filterState.min_duration = null;
-        filterState.max_duration = null;
-        if (inputMinDuration) inputMinDuration.value = '';
-        if (inputMaxDuration) inputMaxDuration.value = '';
-      } else if (key === 'innings') {
-        filterState.min_innings = null;
-        filterState.max_innings = null;
-        if (inputMinInnings) inputMinInnings.value = '';
-        if (inputMaxInnings) inputMaxInnings.value = '';
-      }
+      if (key === 'q') filterState.q = '';
+      else if (key === 'year') filterState.year = 'all';
+      else if (key === 'month') filterState.month = 'all';
+      else if (key === 'result') filterState.result = 'all';
+      else if (key === 'avg') { filterState.min_avg = null; filterState.max_avg = null; }
+      else if (key === 'min_hr') filterState.min_hr = null;
+      else if (key === 'duration') { filterState.min_duration = null; filterState.max_duration = null; }
+      else if (key === 'innings') { filterState.min_innings = null; filterState.max_innings = null; }
 
       loadMoreReplays(true);
     });

@@ -247,8 +247,9 @@
 
     try {
       const base = getEffectiveApiBase();
-      const resp = await fetch(`${base}/api/torrent/status`, {
-        signal: controller.signal
+      const resp = await fetch(`${base}/api/torrent/status?_t=${Date.now()}`, {
+        signal: controller.signal,
+        cache: 'no-store'
       });
       clearTimeout(timeoutId);
       if (!resp.ok) {
@@ -259,19 +260,19 @@
       const data = await resp.json();
       renderStatus(data);
 
-      // 진행 중인 작업 존재 여부에 따른 조건부 폴링 제어 (스마트 절전)
+      // 진행 중인 작업 존재 여부에 따른 적응형 스마트 폴링 (모바일/PC 완벽 동기화)
       const tasks = data.tasks || [];
       const hasActive = tasks.some(t => t.status === 'active' || t.status === 'waiting');
 
       if (hasActive) {
         // 실제 다운로드 진행 중: 1.5초 고속 갱신
         scheduleNextPoll(1500);
+      } else if (tasks.length > 0 || downloadingGids.size > 0 || actionStatusMap.size > 0) {
+        // 완료된 작업이 있거나 브라우저 파일 전송/삭제 진행 중: 2.5초 주기 유지 (기기 간 실시간 삭제/완료 동기화)
+        scheduleNextPoll(2500);
       } else {
-        // 유휴 상태 / 다운로드 완료: 폴링 타이머 완전 해제 (모바일 데이터 0 소모)
-        if (pollingTimer) {
-          clearTimeout(pollingTimer);
-          pollingTimer = null;
-        }
+        // 유휴 상태 (작업 0개): 6초 절전 폴링 (PC 등 타 기기 작업 추가 감지)
+        scheduleNextPoll(6000);
       }
     } catch (err) {
       clearTimeout(timeoutId);
@@ -637,8 +638,11 @@
     a.click();
     document.body.removeChild(a);
 
-    // 다운로드 시작 후 빠른 확인을 위해 폴링 가속
-    scheduleNextPoll(2000);
+    // 다운로드 시작 후 빠른 확인을 위해 폴링 가속 (모바일 브라우저 다단계 인터벌)
+    scheduleNextPoll(1200);
+    setTimeout(fetchStatus, 2500);
+    setTimeout(fetchStatus, 4500);
+    setTimeout(fetchStatus, 7000);
 
     // 안전 가드: 혹시 10분 이상 비정상 지연될 경우에만 예외적으로 잠금 해제
     setTimeout(() => {
@@ -869,11 +873,11 @@
     return `${h}시간 ${remM}분`;
   }
 
-  /* ── 6. 스마트 라이프사이클 (모바일 데이터 절약) ─────────────────────── */
+  /* ── 6. 스마트 라이프사이클 (모바일 데이터 절약 및 포커스 복귀 즉시 동기화) ── */
   // 1. 페이지 로드 시 즉시 1회 실행
   fetchStatus();
 
-  // 2. 화면 가시성 제어: 화면 꺼짐/백그라운드 전환 시 타이머 강제 해제, 복귀 시 즉시 1회 최신화
+  // 2. 화면 가시성 제어: 화면 꺼짐/백그라운드 전환 시 타이머 해제, 복귀 시 즉시 최신화
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       if (pollingTimer) {
@@ -885,7 +889,15 @@
     }
   });
 
-  // 3. 페이지 이탈 시 타이머 메모리 해제
+  // 3. 모바일 브라우저(삼성 인터넷 등) 포커스 복귀 및 뒤로가기 복귀 시 즉시 최신화
+  window.addEventListener('focus', () => {
+    fetchStatus();
+  });
+  window.addEventListener('pageshow', () => {
+    fetchStatus();
+  });
+
+  // 4. 페이지 이탈 시 타이머 메모리 해제
   window.addEventListener('beforeunload', () => {
     if (pollingTimer) clearTimeout(pollingTimer);
   });

@@ -7,6 +7,30 @@
 (function () {
   'use strict';
 
+  // API 기본 주소 해석 및 동적 터널 감지 (GitHub Pages 등 외부 연동 지원)
+  function getApiBase() {
+    if (window.GumaCore && typeof window.GumaCore.getApiBase === 'function') {
+      const base = window.GumaCore.getApiBase();
+      if (base) return base.replace(/\/$/, '');
+    }
+    return '';
+  }
+
+  let API_BASE = getApiBase();
+
+  // GitHub Pages 등 외부 접속 시 Cloudflare 터널 주소 자동 비동기 감지
+  if (window.GumaCore && typeof window.GumaCore.ensureApiBase === 'function') {
+    window.GumaCore.ensureApiBase().then(base => {
+      if (base) {
+        API_BASE = base.replace(/\/$/, '');
+        if (cachedMasterReplays.length === 0) {
+          loadStatus();
+          loadMoreReplays(true);
+        }
+      }
+    }).catch(e => console.warn('[CUEUNY] 터널 주소 자동 감지 대기:', e));
+  }
+
   // DOM 요소 참조
   const sessionAlertBanner = document.getElementById('sessionAlertBanner');
   const sessionAlertTitle = document.getElementById('sessionAlertTitle');
@@ -221,7 +245,7 @@
   // ── 상태 및 대시보드 로드 ───────────────────────────────────────────────
   async function loadStatus() {
     try {
-      const res = await fetch('/api/cueuny/status');
+      const res = await fetch(`${API_BASE}/api/cueuny/status`);
       if (!res.ok) return;
       const data = await res.json();
 
@@ -392,7 +416,7 @@
       // 1. 전체 마스터 인덱스 캐시 확보 (최초 1회 또는 새로고침 요청 시)
       if (cachedMasterReplays.length === 0 || refresh) {
         const refreshParam = refresh ? '&refresh=true' : '';
-        const fetchAllUrl = `/api/cueuny/list?limit=1000&offset=0${refreshParam}`;
+        const fetchAllUrl = `${API_BASE}/api/cueuny/list?limit=1000&offset=0${refreshParam}`;
         const resAll = await fetch(fetchAllUrl);
         if (resAll.ok) {
           const allData = await resAll.json();
@@ -422,12 +446,21 @@
         appendReplayCards(pagedItems);
       } else {
         // 검색 결과 0건
-        replayGrid.innerHTML = `
-          <div class="empty-state">
-            <p class="empty-text">검색 조건과 일치하는 경기 영상이 없습니다.</p>
-            <p class="empty-text" style="font-size:11px; margin-top:4px;">검색어를 확인하거나 필터 조건을 초기화해 보세요.</p>
-          </div>
-        `;
+        if (isFiltered) {
+          replayGrid.innerHTML = `
+            <div class="empty-state">
+              <p class="empty-text">검색 조건과 일치하는 경기 영상이 없습니다.</p>
+              <p class="empty-text" style="font-size:11px; margin-top:4px;">검색어를 확인하거나 필터 조건을 초기화해 보세요.</p>
+            </div>
+          `;
+        } else {
+          replayGrid.innerHTML = `
+            <div class="empty-state">
+              <p class="empty-text">보관된 영상이 없습니다.</p>
+              <p class="empty-text" style="font-size:11px; margin-top:4px;">상단의 '영상 수집' 버튼을 눌러 최신 영상을 가져오세요.</p>
+            </div>
+          `;
+        }
       }
 
       // 4. 필터 요약 UI 업데이트 (실제 필터링된 건수 기준)
@@ -564,7 +597,7 @@
               </svg>
               시청
             </button>
-            <a class="btn-card-action" href="/api/cueuny/file/${seq}" target="_blank" download="${escapeHtml(friendlyFilename)}">
+            <a class="btn-card-action" href="${API_BASE}/api/cueuny/file/${seq}" target="_blank" download="${escapeHtml(friendlyFilename)}">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
@@ -693,7 +726,7 @@
 
     // 비디오 소스 연결
     const seq = item.replay_seq || item.record_folder;
-    cueunyVideoPlayer.src = `/api/cueuny/video/${seq}`;
+    cueunyVideoPlayer.src = `${API_BASE}/api/cueuny/video/${seq}`;
     videoModal.style.display = 'flex';
     cueunyVideoPlayer.play().catch(e => {
       console.log('자동 재생 대기:', e);
@@ -742,7 +775,7 @@
     btnSync.innerHTML = '<span class="progress-spinner"></span> 수집 중...';
 
     try {
-      const res = await fetch('/api/cueuny/sync', { method: 'POST' });
+      const res = await fetch(`${API_BASE}/api/cueuny/sync`, { method: 'POST' });
       const data = await res.json();
       if (!data.success) {
         alert(data.error || '영상 수집 중 오류가 발생했습니다.');
@@ -928,6 +961,14 @@
 
   // ── 초기화 실행 ────────────────────────────────────────────────────────
   async function init() {
+    if (window.GumaCore && typeof window.GumaCore.ensureApiBase === 'function') {
+      try {
+        const base = await window.GumaCore.ensureApiBase();
+        if (base) API_BASE = base.replace(/\/$/, '');
+      } catch (e) {
+        console.warn('[CUEUNY] 터널 감지 예외:', e);
+      }
+    }
     await loadStatus();
     initInfiniteScroll();
     await loadMoreReplays(true); // 최초 10건 로드 (자동 폴링 없음)

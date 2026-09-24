@@ -9,16 +9,40 @@
 (function () {
   'use strict';
 
-  // API 기본 주소 해석
+  // API 기본 주소 해석 및 동적 터널 감지
   function getApiBase() {
-    if (window.GUMA_CORE && typeof window.GUMA_CORE.ensureApiBase === 'function') {
-      const base = window.GUMA_CORE.ensureApiBase();
+    if (window.GumaCore && typeof window.GumaCore.getApiBase === 'function') {
+      const base = window.GumaCore.getApiBase();
       if (base) return base.replace(/\/$/, '');
     }
     return '';
   }
 
-  const API_BASE = getApiBase();
+  let API_BASE = getApiBase();
+
+  // GitHub Pages 등 외부 접속 시 Cloudflare 터널 주소 자동 비동기 감지
+  if (window.GumaCore && typeof window.GumaCore.ensureApiBase === 'function') {
+    window.GumaCore.ensureApiBase().then(base => {
+      if (base) API_BASE = base.replace(/\/$/, '');
+    }).catch(e => console.warn('[Torrent] 터널 주소 자동 감지 대기:', e));
+  }
+
+  function getEffectiveApiBase() {
+    if (API_BASE && (!window.GumaCore || window.GumaCore.isLocal() || API_BASE !== window.location.origin)) {
+      return API_BASE;
+    }
+    return getApiBase();
+  }
+
+  function isBackendAvailable() {
+    if (window.GumaCore && !window.GumaCore.isLocal()) {
+      const base = getEffectiveApiBase();
+      if (!base || base === window.location.origin) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   // DOM 요소 참조
   const btnChooseFile = document.getElementById('btn-choose-file');
@@ -76,6 +100,11 @@
       return;
     }
 
+    if (!isBackendAvailable()) {
+      alert("현재 GitHub Pages 정적 웹사이트(hc-bang.github.io)로 접속되어 있습니다.\n\n토렌트 다운로더 백엔드를 이용하시려면:\n1. 서버 IP(예: http://서버IP/torrent/)로 직접 접속하시거나\n2. 서버 manage.sh에서 11번(Cloudflare 터널)을 가동해 주세요.");
+      return;
+    }
+
     // [0ms 즉각 반응] 파일마다 개별 낙관적(Optimistic) 카드 즉시 생성!
     if (emptyState) emptyState.style.display = 'none';
     const tempCardEl = document.createElement('div');
@@ -114,12 +143,16 @@
     formData.append('file', file);
 
     try {
-      const resp = await fetch(`${API_BASE}/api/torrent/upload`, {
+      const base = getEffectiveApiBase();
+      const resp = await fetch(`${base}/api/torrent/upload`, {
         method: 'POST',
         body: formData
       });
 
       if (!resp.ok) {
+        if (resp.status === 405) {
+          throw new Error('정적 사이트(GitHub Pages)에서는 백엔드 API를 지원하지 않습니다. 서버 IP(http://서버IP/torrent/)로 접속하거나 manage.sh 11번(Cloudflare 터널)을 가동해 주세요.');
+        }
         const errJson = await resp.json().catch(() => ({}));
         throw new Error(errJson.detail || `업로드 실패 (HTTP ${resp.status})`);
       }
@@ -203,13 +236,18 @@
   async function fetchStatus() {
     if (document.hidden) return;
     if (isFetchingStatus) return; // 이전 조회가 진행 중이면 중복 호출 방지
+    if (!isBackendAvailable()) {
+      scheduleNextPoll(5000);
+      return;
+    }
     isFetchingStatus = true;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const resp = await fetch(`${API_BASE}/api/torrent/status`, {
+      const base = getEffectiveApiBase();
+      const resp = await fetch(`${base}/api/torrent/status`, {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -590,7 +628,8 @@
     downloadingGids.add(gid);
     lockCardActions(gid, 'downloading');
 
-    const downloadUrl = `${API_BASE}/api/torrent/download/${gid}`;
+    const base = getEffectiveApiBase();
+    const downloadUrl = `${base}/api/torrent/download/${gid}`;
     const a = document.createElement('a');
     a.href = downloadUrl;
     a.setAttribute('download', '');
@@ -639,7 +678,8 @@
       }
 
       // 서버에 취소/삭제 비동기 처리 요청 (서버에서 0ms만에 'cancelling' / 'deleting' 상태 등록 및 백그라운드 스레드 기동)
-      const resp = await fetch(`${API_BASE}/api/torrent/cancel/${gid}`, {
+      const base = getEffectiveApiBase();
+      const resp = await fetch(`${base}/api/torrent/cancel/${gid}`, {
         method: 'POST'
       });
       if (!resp.ok) {

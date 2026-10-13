@@ -23,10 +23,8 @@
     window.GumaCore.ensureApiBase().then(base => {
       if (base) {
         API_BASE = base.replace(/\/$/, '');
-        if (cachedMasterReplays.length === 0) {
-          loadStatus();
-          loadMoreReplays(true);
-        }
+        loadStatus();
+        loadMoreReplays(true);
       }
     }).catch(e => console.warn('[CUEUNY] 터널 주소 자동 감지 대기:', e));
   }
@@ -40,6 +38,8 @@
   const replayGrid = document.getElementById('replayGrid');
   const replayLoader = document.getElementById('replayLoader');
   const replayLoaderText = document.getElementById('replayLoaderText');
+  const btnLoadMore = document.getElementById('btnLoadMore');
+  const btnLoadMoreText = document.getElementById('btnLoadMoreText');
 
   // 모달 요소
   const videoModal = document.getElementById('videoModal');
@@ -414,7 +414,7 @@
     }
   }
 
-  // ── 10건씩 페이징 로드 (스마트 캐시 & 실시간 다차원 필터링) ───────────
+  // ── 10건씩 순수 서버 페이징 로드 (유튜브 스타일 + 더보기 버튼) ───────────
   async function loadMoreReplays(reset = false, refresh = false) {
     if (isLoading) return;
     if (!hasMore && !reset) return;
@@ -425,6 +425,7 @@
       currentReplays = [];
       renderedSeqs.clear();
       replayGrid.innerHTML = '';
+      if (btnLoadMore) btnLoadMore.style.display = 'none';
     }
 
     isLoading = true;
@@ -436,41 +437,37 @@
       if (spinner) spinner.style.display = 'block';
       if (replayLoaderText) replayLoaderText.textContent = '영상을 불러오는 중...';
     }
+    if (btnLoadMore) {
+      btnLoadMore.disabled = true;
+      if (btnLoadMoreText) btnLoadMoreText.textContent = '불러오는 중...';
+    }
 
     try {
-      // 1. 전체 마스터 인덱스 캐시 확보 (최초 1회 또는 새로고침 요청 시)
-      if (cachedMasterReplays.length === 0 || refresh) {
-        const refreshParam = refresh ? '&refresh=true' : '';
-        const fetchAllUrl = `${API_BASE}/api/cueuny/list?limit=1000&offset=0${refreshParam}`;
-        const resAll = await fetch(fetchAllUrl);
-        if (resAll.ok) {
-          const allData = await resAll.json();
-          if (Array.isArray(allData.items)) {
-            cachedMasterReplays = allData.items;
-          }
-          if (!hasPopulatedYears && Array.isArray(allData.available_years) && allData.available_years.length > 0) {
-            populateYearOptions(allData.available_years);
-          }
-        }
+      // 1. 서버 페이징 쿼리 파라미터 구성 (limit=10, offset)
+      const qParams = buildFilterQueryString();
+      const refreshParam = refresh ? '&refresh=true' : '';
+      const fetchUrl = `${API_BASE}/api/cueuny/list?limit=${PAGE_LIMIT}&offset=${offset}${refreshParam}${qParams ? `&${qParams}` : ''}`;
+
+      const res = await fetch(fetchUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      const items = Array.isArray(data.items) ? data.items : [];
+      const total = typeof data.total === 'number' ? data.total : (offset + items.length);
+
+      hasMore = typeof data.has_more === 'boolean' ? data.has_more : (offset + items.length < total);
+      offset += items.length;
+
+      // 2. 사용 가능한 연도 드롭다운 최초 1회 생성
+      if (!hasPopulatedYears && Array.isArray(data.available_years) && data.available_years.length > 0) {
+        populateYearOptions(data.available_years);
       }
 
-      // 2. 클라이언트 사이드 즉각 필터링 수행
-      const isFiltered = hasActiveFilters(filterState);
-      let targetList = isFiltered
-        ? cachedMasterReplays.filter(it => matchesFilter(it, filterState))
-        : cachedMasterReplays;
-
-      const totalMatched = targetList.length;
-      const pagedItems = targetList.slice(offset, offset + PAGE_LIMIT);
-
-      hasMore = (offset + PAGE_LIMIT) < totalMatched;
-      offset += pagedItems.length;
-
       // 3. 카드 렌더링
-      if (pagedItems.length > 0 || currentReplays.length > 0) {
-        appendReplayCards(pagedItems);
+      if (items.length > 0 || currentReplays.length > 0) {
+        appendReplayCards(items);
       } else {
-        // 검색 결과 0건
+        const isFiltered = hasActiveFilters(filterState);
         if (isFiltered) {
           replayGrid.innerHTML = `
             <div class="empty-state">
@@ -488,22 +485,36 @@
         }
       }
 
-      // 4. 필터 요약 UI 업데이트 (실제 필터링된 건수 기준)
-      updateActiveFilterUI(totalMatched);
+      // 4. 필터 요약 UI 업데이트 (서버 total 건수 기준)
+      updateActiveFilterUI(total);
 
-      // 5. 로더 UI 상태 갱신
+      // 5. 더보기 버튼 및 로더 상태 갱신
+      if (btnLoadMore) {
+        btnLoadMore.disabled = false;
+        if (hasMore) {
+          btnLoadMore.style.display = 'inline-flex';
+          if (btnLoadMoreText) {
+            const remain = Math.max(0, total - currentReplays.length);
+            const nextCount = Math.min(PAGE_LIMIT, remain);
+            btnLoadMoreText.textContent = `더보기 (${nextCount}개 더 불러오기 · 남은 영상 ${remain}개)`;
+          }
+        } else {
+          btnLoadMore.style.display = 'none';
+        }
+      }
+
       if (replayLoader) {
         const spinner = replayLoader.querySelector('.replay-loader-spinner');
         if (!hasMore) {
-          if (currentReplays.length >= PAGE_LIMIT) {
+          if (currentReplays.length > 0) {
             if (spinner) spinner.style.display = 'none';
-            if (replayLoaderText) replayLoaderText.textContent = '모든 보관 영상을 불러왔습니다.';
+            if (replayLoaderText) replayLoaderText.textContent = `모든 보관 영상(${total}건)을 불러왔습니다.`;
             replayLoader.style.display = 'flex';
           } else {
             replayLoader.style.display = 'none';
           }
         } else {
-          replayLoader.style.display = 'flex';
+          replayLoader.style.display = 'none';
         }
       }
     } catch (err) {
@@ -516,6 +527,10 @@
         `;
       }
       if (replayLoader) replayLoader.style.display = 'none';
+      if (btnLoadMore) {
+        btnLoadMore.disabled = false;
+        btnLoadMore.style.display = 'none';
+      }
     } finally {
       isLoading = false;
     }
@@ -646,29 +661,15 @@
     });
   }
 
-  // ── 스크롤 다운 무한 로딩 감지 (유튜브와 동일) ───────────────────────────
+  // ── 더보기 버튼 전담 연동 (유튜브 스타일 수동 클릭) ────────────────────
   function initInfiniteScroll() {
-    // 1. 윈도우 스크롤 이벤트 감지
-    window.addEventListener('scroll', () => {
-      if (isLoading || !hasMore) return;
-      const scrollY = window.scrollY || window.pageYOffset;
-      const viewportHeight = window.innerHeight;
-      const totalHeight = document.documentElement.scrollHeight;
-
-      // 하단 300px 이내 접근 시 자동으로 다음 10건 로드
-      if (scrollY + viewportHeight >= totalHeight - 300) {
-        loadMoreReplays(false);
-      }
-    }, { passive: true });
-
-    // 2. 모던 IntersectionObserver 감지 (이중 안전장치)
-    if ('IntersectionObserver' in window && replayLoader) {
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && !isLoading && hasMore) {
+    if (btnLoadMore) {
+      btnLoadMore.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!isLoading && hasMore) {
           loadMoreReplays(false);
         }
-      }, { rootMargin: '200px' });
-      observer.observe(replayLoader);
+      });
     }
   }
 
@@ -1274,6 +1275,20 @@
     resetFilterModalForm();
     closeFilterModal();
     loadMoreReplays(true);
+  }
+
+  // ── 상단 영상 수집(동기화) 버튼 이벤트 ─────────────────────────────
+  if (btnSync) {
+    btnSync.addEventListener('click', async () => {
+      btnSync.disabled = true;
+      try {
+        await fetch(`${API_BASE}/api/cueuny/sync`, { method: 'POST' });
+      } catch (e) {
+        console.warn('동기화 트리거 오류:', e);
+      }
+      await loadMoreReplays(true, true);
+      btnSync.disabled = false;
+    });
   }
 
   // ── 상세 필터 모달 이벤트 리스너 ─────────────────────────────────────

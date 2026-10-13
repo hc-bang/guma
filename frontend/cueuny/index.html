@@ -13,7 +13,7 @@
     rel="stylesheet">
   <link rel="stylesheet" href="../style.css">
   <link rel="stylesheet" href="../config/config.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261013_2">
 </head>
 
 <body>
@@ -164,10 +164,21 @@
         </div>
       </div>
 
-      <!-- 유튜브 스타일 스크롤다운 로더 / 상태 인디케이터 -->
-      <div id="replayLoader" class="replay-loader" style="display: none;">
-        <div class="replay-loader-spinner"></div>
-        <span id="replayLoaderText" class="replay-loader-text">다음 영상을 불러오는 중...</span>
+      <!-- 유튜브 스타일 더보기 버튼 및 로더 영역 -->
+      <div class="replay-load-more-wrap">
+        <button id="btnLoadMore" class="btn-load-more" type="button" style="display: none;" aria-label="리플레이 영상 더 불러오기">
+          <span class="icon-svg" aria-hidden="true" style="display:inline-flex; align-items:center;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </span>
+          <span id="btnLoadMoreText">더보기 (다음 10개 불러오기)</span>
+        </button>
+
+        <div id="replayLoader" class="replay-loader" style="display: none;">
+          <div class="replay-loader-spinner"></div>
+          <span id="replayLoaderText" class="replay-loader-text">다음 영상을 불러오는 중...</span>
+        </div>
       </div>
     </div>
 
@@ -355,7 +366,7 @@
     </div>
   </div>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=20261013_2"></script>
 </body>
 
 </html>

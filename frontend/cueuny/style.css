@@ -1315,7 +1315,66 @@ video::cue {
   }
 }
 
+/* ── 더보기 버튼 및 로더 스타일 (유튜브 스타일) ── */
+.replay-load-more-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 32px 0 28px;
+  gap: 12px;
+}
 
+.btn-load-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--panel, #1e293b);
+  border: 1px solid var(--border, #334155);
+  border-radius: 9999px;
+  padding: 11px 26px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text, #f1f5f9);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  user-select: none;
+}
 
+.btn-load-more:hover {
+  background: var(--btn-hover, #334155);
+  border-color: var(--accent, #38bdf8);
+  color: var(--accent, #38bdf8);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.25);
+}
 
+.btn-load-more:active {
+  transform: translateY(0);
+}
 
+.replay-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.replay-loader-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(148, 163, 184, 0.25);
+  border-top-color: var(--accent, #38bdf8);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

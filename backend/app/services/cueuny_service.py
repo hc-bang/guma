@@ -56,6 +56,7 @@ _cache_lock = threading.Lock()
 _replays_cache: List[Dict[str, Any]] = []
 _replays_cache_by_seq: Dict[str, Dict[str, Any]] = {}
 _cache_initialized = False
+_cache_file_mtime = 0.0
 
 
 def get_cueuny_storage_dir() -> str:
@@ -125,18 +126,38 @@ def _normalize_item_players(item_data: Dict[str, Any]) -> Dict[str, Any]:
     return item_data
 
 
+def _sort_replays_by_date(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    리플레이 목록을 경기 일시(match_date) 최신순(내림차순: 최신 경기가 맨 위)으로 엄격히 정렬합니다.
+    match_date가 같거나 비정형일 경우 record_folder나 replay_seq의 타임스탬프를 보조 키로 활용합니다.
+    """
+    def _sort_key(item: Dict[str, Any]) -> tuple:
+        md = str(item.get("match_date", "")).strip()
+        folder = str(item.get("record_folder", "")).strip()
+        folder_time = ""
+        if "_" in folder:
+            parts = folder.split("_")
+            if len(parts) >= 3 and len(parts[-1]) >= 12 and parts[-1].isdigit():
+                folder_time = f"20{parts[-1]}"
+        return (md, folder_time)
+
+    items.sort(key=_sort_key, reverse=True)
+    return items
+
+
 def load_or_rebuild_index(force_rebuild: bool = False) -> List[Dict[str, Any]]:
     """
     마스터 인덱스(storage/cueuny/index.json)를 로드하거나 재구축하여
     인메모리 캐시를 최신 상태로 유지합니다. (수만 건이어도 메모리 접근 1ms)
     """
-    global _replays_cache, _replays_cache_by_seq, _cache_initialized
+    global _replays_cache, _replays_cache_by_seq, _cache_initialized, _cache_file_mtime
 
     storage_root = get_cueuny_storage_dir()
     index_file = os.path.join(storage_root, "index.json")
 
     with _cache_lock:
-        if not force_rebuild and _cache_initialized and os.path.isfile(index_file):
+        current_mtime = os.path.getmtime(index_file) if os.path.isfile(index_file) else 0.0
+        if not force_rebuild and _cache_initialized and os.path.isfile(index_file) and _cache_file_mtime == current_mtime:
             return _replays_cache
 
         # 1. 인덱스 파일이 존재하고 재구축 강제가 아닐 때 빠른 로드
@@ -145,6 +166,7 @@ def load_or_rebuild_index(force_rebuild: bool = False) -> List[Dict[str, Any]]:
                 with open(index_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, list):
+                        _sort_replays_by_date(data)
                         _replays_cache = data
                         _replays_cache_by_seq = {}
                         for item in _replays_cache:
@@ -155,6 +177,7 @@ def load_or_rebuild_index(force_rebuild: bool = False) -> List[Dict[str, Any]]:
                             if folder:
                                 _replays_cache_by_seq[folder] = item
                         _cache_initialized = True
+                        _cache_file_mtime = current_mtime
                         return _replays_cache
             except Exception as e:
                 logger.warning(f"[CUEUNY] index.json 로드 실패, 전체 디스크 스캔으로 재구축합니다: {e}")
@@ -233,8 +256,8 @@ def load_or_rebuild_index(force_rebuild: bool = False) -> List[Dict[str, Any]]:
                     seq_map[seq] = item_data
                     verified_items.append(item_data)
 
-        # 경기 날짜 역순 정렬
-        verified_items.sort(key=lambda x: str(x.get("match_date", "")), reverse=True)
+        # 경기 날짜 역순(최신순) 정렬
+        _sort_replays_by_date(verified_items)
 
         _replays_cache = verified_items
         _replays_cache_by_seq = {}
@@ -256,6 +279,7 @@ def load_or_rebuild_index(force_rebuild: bool = False) -> List[Dict[str, Any]]:
             if os.path.exists(index_file):
                 os.remove(index_file)
             os.rename(temp_index, index_file)
+            _cache_file_mtime = os.path.getmtime(index_file) if os.path.isfile(index_file) else 0.0
         except Exception as e:
             logger.error(f"[CUEUNY] index.json 저장 실패: {e}")
 
@@ -661,11 +685,12 @@ def download_single_replay(target: Any) -> bool:
         except Exception as je:
             logger.warning(f"[CUEUNY] 사이드카 JSON 저장 실패: {je}")
 
-        # 마스터 인덱스 및 인메모리 캐시 실시간 갱신 (1ms 반영)
+        # 마스터 인덱스 및 인메모리 캐시 실시간 갱신 (항상 최신순 정렬 보장)
         with _cache_lock:
-            # 기존 캐시에서 동일 항목이 있으면 제거 후 최상단 삽입
+            # 기존 캐시에서 동일 항목 제거 후 추가 및 최신순 정렬
             _replays_cache[:] = [item for item in _replays_cache if item.get("replay_seq") != replay_seq and item.get("record_folder") != folder_name]
-            _replays_cache.insert(0, replay_copy)
+            _replays_cache.append(replay_copy)
+            _sort_replays_by_date(_replays_cache)
             _replays_cache_by_seq[replay_seq] = replay_copy
             _replays_cache_by_seq[folder_name] = replay_copy
 
@@ -807,8 +832,7 @@ def get_verified_completed_replays(
     서버 스토리지에 온전히 존재하는 영상 목록을 다차원 검색/필터링하여 최신순 페이징 반환합니다.
     (인메모리 캐시에서 직접 필터링하므로 수만 건 기준 0.001초 이내 초고속 필터링 보장)
     """
-    if force_refresh or not _cache_initialized:
-        load_or_rebuild_index(force_rebuild=force_refresh)
+    load_or_rebuild_index(force_rebuild=force_refresh)
 
     # 1. 사용 가능한 연도 및 구장 목록 추출 (프론트 드롭다운 옵션용)
     all_years = sorted(
@@ -831,7 +855,8 @@ def get_verified_completed_replays(
         )
     )
 
-    # 2. 다차원 조건 필터링
+    # 2. 다차원 조건 필터링 (항상 최신순 정렬 보장)
+    _sort_replays_by_date(_replays_cache)
     filtered = _replays_cache
 
     # 2-1. 통합 검색어 (상대 선수명, 구장명, 날짜 등)

@@ -170,6 +170,20 @@ def load_or_rebuild_index(force_rebuild: bool = False) -> List[Dict[str, Any]]:
                         _replays_cache = data
                         _replays_cache_by_seq = {}
                         for item in _replays_cache:
+                            # 타 OS 절대경로 불일치 자동 치환 보정 (Windows C:\... <-> Linux)
+                            lp = item.get("local_path")
+                            if lp and not os.path.isfile(lp):
+                                norm = str(lp).replace("\\", "/")
+                                rel = None
+                                if "cueuny/" in norm:
+                                    rel = norm.split("cueuny/", 1)[1]
+                                elif "storage/" in norm:
+                                    rel = norm.split("storage/", 1)[1]
+                                if rel:
+                                    cand = os.path.normpath(os.path.join(storage_root, rel))
+                                    if os.path.isfile(cand):
+                                        item["local_path"] = cand
+
                             seq = item.get("replay_seq")
                             folder = item.get("record_folder")
                             if seq:

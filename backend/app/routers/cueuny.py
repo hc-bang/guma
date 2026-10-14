@@ -131,9 +131,13 @@ def api_cueuny_video(replay_seq: str):
     """
     HTML5 비디오 플레이어를 위한 영상 스트리밍 엔드포인트
     1. 로컬 storage/cueuny/에 파일이 존재하면 로컬 파일(206 Partial Content Range 지원) 반환
-    2. 로컬 파일이 아직 없으면 메타데이터의 원본 HTTP 영상 URL로 즉시 307 Temporary Redirect
+       - Windows/Linux 간 절대 경로 불일치 자동 보정
+       - 연도/월 하위 디렉터리 재귀 탐색 폴백 지원
+    2. 로컬 파일이 아직 없으면 메타데이터의 원본 HTTP 영상 URL로 307 Temporary Redirect
     """
     storage_dir = get_cueuny_storage_dir()
+
+    # 1. storage_dir 직하위 우선 확인
     for candidate_name in [f"{replay_seq}.mp4", replay_seq]:
         cand_path = os.path.join(storage_dir, candidate_name)
         if os.path.isfile(cand_path) and os.path.getsize(cand_path) > 1024 * 1024:
@@ -143,19 +147,62 @@ def api_cueuny_video(replay_seq: str):
                 filename=os.path.basename(cand_path)
             )
 
+    # 2. 메타데이터 기반 로컬 파일 확인 및 타 OS 절대경로 불일치 보정
     meta = get_replay_metadata(replay_seq)
+    found_local_path = None
+
     if meta:
-        local_path = meta.get("local_path")
-        if local_path and os.path.isfile(local_path):
+        raw_local = meta.get("local_path")
+        if raw_local and os.path.isfile(raw_local) and os.path.getsize(raw_local) > 1024 * 1024:
+            found_local_path = raw_local
+        elif raw_local:
+            # 타 OS(예: Windows C:\... <-> Linux /home/ivy/...) 경로 불일치 보정
+            norm = raw_local.replace("\\", "/")
+            rel = None
+            if "cueuny/" in norm:
+                rel = norm.split("cueuny/", 1)[1]
+            elif "storage/" in norm:
+                rel = norm.split("storage/", 1)[1]
+
+            if rel:
+                cand = os.path.normpath(os.path.join(storage_dir, rel))
+                if os.path.isfile(cand) and os.path.getsize(cand) > 1024 * 1024:
+                    found_local_path = cand
+
+        # record_folder 기반 연/월 하위 폴더 재귀 탐색 폴백
+        if not found_local_path:
+            folder = meta.get("record_folder") or replay_seq
+            target_fname = f"{folder}.mp4" if not folder.endswith(".mp4") else folder
+            for dirpath, _, filenames in os.walk(storage_dir):
+                if target_fname in filenames:
+                    cand = os.path.join(dirpath, target_fname)
+                    if os.path.getsize(cand) > 1024 * 1024:
+                        found_local_path = cand
+                        break
+
+        if found_local_path:
+            meta["local_path"] = found_local_path
             return FileResponse(
-                path=local_path,
+                path=found_local_path,
                 media_type="video/mp4",
-                filename=os.path.basename(local_path)
+                filename=os.path.basename(found_local_path)
             )
 
         mp4_url = meta.get("mp4_url")
         if mp4_url:
             return RedirectResponse(url=mp4_url, status_code=307)
+
+    # 3. 메타데이터가 없거나 파일이 안 맞더라도 replay_seq 파일명으로 전체 스토리지 재귀 탐색
+    target_fname = f"{replay_seq}.mp4" if not replay_seq.endswith(".mp4") else replay_seq
+    for dirpath, _, filenames in os.walk(storage_dir):
+        if target_fname in filenames:
+            cand = os.path.join(dirpath, target_fname)
+            if os.path.getsize(cand) > 1024 * 1024:
+                return FileResponse(
+                    path=cand,
+                    media_type="video/mp4",
+                    filename=os.path.basename(cand)
+                )
 
     raise HTTPException(status_code=404, detail="재생 가능한 영상 파일 또는 주소가 없습니다.")
 

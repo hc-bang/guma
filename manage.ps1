@@ -159,39 +159,28 @@ function Start-UnifiedServer {
 }
 
 function Stop-UnifiedServer {
-    Write-Host "[INFO] GUMA™ 통합 서버(포트 $PORT)를 점검하고 종료합니다..." -ForegroundColor Cyan
+    Write-Host "[INFO] 서버를 점검하고 안전하게 종료합니다..." -ForegroundColor Cyan
     $stopped = 0
 
-    # 1. server.pid 프로세스 트리 종료
+    # 1. 내 프로젝트의 server.pid 파일에 기록된 특정 PID만 정밀 종료
     $pidFile = Join-Path $LOG_DIR "server.pid"
     if (Test-Path $pidFile) {
         $savedPid = (Get-Content $pidFile -Raw -ErrorAction SilentlyContinue)
         $pIdNum = 0
         if ($savedPid -and [int]::TryParse($savedPid.Trim(), [ref]$pIdNum) -and $pIdNum -gt 4) {
-            cmd.exe /c "taskkill /F /PID $pIdNum /T" 2>$null | Out-Null
-            $stopped++
+            if (Get-Process -Id $pIdNum -ErrorAction SilentlyContinue) {
+                cmd.exe /c "taskkill /F /PID $pIdNum /T" 2>$null | Out-Null
+                $stopped++
+                Start-Sleep -Milliseconds 500
+            }
         }
         Remove-Item -Path $pidFile -Force -ErrorAction SilentlyContinue
     }
 
-    # 2. 포트 점유 프로세스 종료
-    $conns = Get-NetTCPConnection -LocalPort $PORT -State Listen -ErrorAction SilentlyContinue
-    if ($conns) {
-        $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique
-        foreach ($procId in $pids) {
-            if ($procId -gt 4) {
-                cmd.exe /c "taskkill /F /PID $procId /T" 2>$null | Out-Null
-                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-                Write-Host "  ✔ 포트 $PORT 서버 프로세스 종료 완료 (PID: $procId)" -ForegroundColor Green
-                $stopped++
-            }
-        }
-    }
-
-    # 3. uvicorn 관련 프로세스 정리 (Get-CimInstance로 CommandLine 정밀 감지)
+    # 2. 내 디렉터리 경로($PSScriptRoot)에 속한 프로세스만 안전하게 확인 및 정리 (타 프로젝트 간섭 방지)
     try {
         Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" -ErrorAction SilentlyContinue | Where-Object {
-            $_.CommandLine -like "*backend.main:app*" -or $_.CommandLine -like "*uvicorn*"
+            $_.CommandLine -like "*$PSScriptRoot*" -and ($_.CommandLine -like "*backend.main:app*" -or $_.CommandLine -like "*uvicorn*")
         } | ForEach-Object {
             cmd.exe /c "taskkill /F /PID $($_.ProcessId) /T" 2>$null | Out-Null
             Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
@@ -199,23 +188,26 @@ function Stop-UnifiedServer {
         }
     } catch {}
 
-    # 4. aria2c 다운로드 엔진 프로세스 정리
-    Get-Process -Name aria2c -ErrorAction SilentlyContinue | ForEach-Object {
-        cmd.exe /c "taskkill /F /PID $($_.Id) /T" 2>$null | Out-Null
-        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-        Write-Host "  ✔ aria2c 엔진 프로세스 종료 완료 (PID: $($_.Id))" -ForegroundColor Green
-        $stopped++
-    }
+    # 3. 내 디렉터리 경로($PSScriptRoot)에 속한 aria2c 엔진 프로세스만 정리
+    try {
+        Get-CimInstance Win32_Process -Filter "Name = 'aria2c.exe'" -ErrorAction SilentlyContinue | Where-Object {
+            $_.CommandLine -like "*$PSScriptRoot*"
+        } | ForEach-Object {
+            cmd.exe /c "taskkill /F /PID $($_.ProcessId) /T" 2>$null | Out-Null
+            Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+            $stopped++
+        }
+    } catch {}
 
     # 프로세스 파일 핸들 릴리즈 대기 후 임시 잔여 파일 청소
     Start-Sleep -Milliseconds 400
     Clean-GarbageFiles
 
-    Start-Sleep -Milliseconds 200
+    Start-Sleep -Milliseconds 500
     if ($stopped -gt 0) {
-        Write-Host "[INFO] 서버가 안전하게 종료되었으며 잔여 임시 파일이 정리되었습니다. (포트 $PORT 해제)" -ForegroundColor Green
+        Write-Host "[INFO] 서버가 안전하게 종료되었습니다." -ForegroundColor Green
     } else {
-        Write-Host "[INFO] 현재 실행 중인 서버가 없습니다. (잔여 임시 파일 정리 완료)" -ForegroundColor Yellow
+        Write-Host "[INFO] 현재 실행 중인 서버가 없습니다." -ForegroundColor Yellow
     }
 }
 

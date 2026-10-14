@@ -142,53 +142,35 @@ start_unified_server() {
 }
 
 stop_unified_server() {
-    echo -e "\033[1;36m[INFO] GUMA™ 통합 서버(포트 $PORT)를 점검하고 종료합니다...\033[0m"
+    echo -e "\033[1;36m[INFO] 서버를 점검하고 안전하게 종료합니다...\033[0m"
     local stopped=0
 
-    # 1. PID 파일 기반 종료
+    # 1. 내 프로젝트의 server.pid 파일에 기록된 특정 PID만 정밀 종료
     if [ -f "$LOG_DIR/server.pid" ]; then
         local saved_pid
         saved_pid=$(cat "$LOG_DIR/server.pid" 2>/dev/null)
         if [ -n "$saved_pid" ]; then
-            kill "$saved_pid" 2>/dev/null && stopped=$((stopped + 1))
+            if kill -0 "$saved_pid" 2>/dev/null; then
+                kill "$saved_pid" 2>/dev/null && stopped=$((stopped + 1))
+                sleep 0.5
+            fi
         fi
         rm -f "$LOG_DIR/server.pid"
     fi
 
-    # 2. uvicorn 백엔드 프로세스 종료
-    pkill -f "uvicorn backend.main:app" 2>/dev/null && stopped=$((stopped + 1))
-
-    # 3. aria2c 다운로드 엔진 데몬 종료
-    pkill -f "aria2c" 2>/dev/null && stopped=$((stopped + 1))
-
-    # 3. 포트 점유 프로세스 강제 종료 (fuser 또는 lsof)
-    if command -v fuser >/dev/null 2>&1; then
-        fuser -k -9 "${PORT}/tcp" >/dev/null 2>&1 && stopped=$((stopped + 1))
-    fi
-    if command -v lsof >/dev/null 2>&1; then
-        local port_pids
-        port_pids=$(lsof -t -i :"$PORT" 2>/dev/null)
-        if [ -n "$port_pids" ]; then
-            echo "$port_pids" | xargs kill -9 2>/dev/null && stopped=$((stopped + 1))
-        fi
+    # 2. 내 디렉터리 경로($SCRIPT_DIR)에 속한 프로세스만 안전하게 확인 및 정리 (타 프로젝트 간섭 방지)
+    local my_pids
+    my_pids=$(pgrep -f "$SCRIPT_DIR.*uvicorn" 2>/dev/null)
+    if [ -n "$my_pids" ]; then
+        echo "$my_pids" | xargs -r kill 2>/dev/null
+        stopped=$((stopped + 1))
     fi
 
-    # 프로세스 파일 핸들 릴리즈 대기 후 임시 잔여 파일 청소
-    sleep 0.4
-    clean_garbage_files
-
-    # 포트 해제 대기 (최대 3초)
-    for i in {1..6}; do
-        if ! ss -tulpn 2>/dev/null | grep -q ":$PORT "; then
-            break
-        fi
-        sleep 0.5
-    done
-
-    if ! ss -tulpn 2>/dev/null | grep -q ":$PORT "; then
-        echo -e "\033[1;32m[INFO] 서버가 안전하게 종료되었으며 잔여 임시 파일이 정리되었습니다. (포트 $PORT 해제)\033[0m"
+    sleep 0.5
+    if [ $stopped -gt 0 ]; then
+        echo -e "\033[1;32m[INFO] 서버가 안전하게 종료되었습니다.\033[0m"
     else
-        echo -e "\033[1;31m[WARN] 포트 $PORT 해제에 실패했습니다. root 권한('sudo ./manage.sh')으로 종료해 주세요.\033[0m"
+        echo -e "\033[1;33m[INFO] 현재 실행 중인 서버가 없습니다.\033[0m"
     fi
 }
 

@@ -226,32 +226,27 @@ def load_or_rebuild_index(force_rebuild: bool = False) -> List[Dict[str, Any]]:
                     except Exception:
                         pass
 
+                # 메타데이터(.json)가 없는 영상은 유효하지 않은 파일로 간주하여 목록에서 제외
                 if not item_data:
-                    mtime = os.path.getmtime(mp4_path)
-                    mdate_str = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
-                    item_data = {
-                        "replay_seq": stem,
-                        "record_folder": stem,
-                        "club_name": "당구클럽",
-                        "match_date": mdate_str,
-                        "player_a": {"name": "물주☆(25)", "score": "-", "target_score": "25"},
-                        "player_b": {"name": "상대선수", "score": "-", "target_score": "-"}
-                    }
+                    logger.debug(f"[CUEUNY] 메타데이터(.json)가 없어 인덱스에서 제외됨: {mp4_path}")
+                    continue
 
-                # 연도/월별 폴더로 자동 마이그레이션 (루트에 있는 파일 정리)
-                target_folder = get_target_storage_dir(item_data.get("match_date"))
-                if os.path.normpath(dirpath) != os.path.normpath(target_folder):
-                    try:
-                        new_mp4_path = os.path.join(target_folder, fname)
-                        new_json_path = os.path.join(target_folder, f"{stem}.json")
-                        if not os.path.exists(new_mp4_path):
-                            shutil.move(mp4_path, new_mp4_path)
-                            mp4_path = new_mp4_path
-                        if os.path.isfile(json_path) and not os.path.exists(new_json_path):
-                            shutil.move(json_path, new_json_path)
-                            json_path = new_json_path
-                    except Exception as me:
-                        logger.warning(f"[CUEUNY] 파일 연/월 폴더 이동 실패 ({fname}): {me}")
+                # 연도/월별 폴더로 자동 마이그레이션 (스토리지 루트에 직접 놓인 파일만 분류 이동)
+                # 이미 YYYY/MM 하위 폴더에 있는 파일은 사용자의 수동 정리를 존중하여 강제 재이동하지 않음
+                if os.path.normpath(dirpath) == os.path.normpath(storage_root):
+                    target_folder = get_target_storage_dir(item_data.get("match_date"))
+                    if os.path.normpath(dirpath) != os.path.normpath(target_folder):
+                        try:
+                            new_mp4_path = os.path.join(target_folder, fname)
+                            new_json_path = os.path.join(target_folder, f"{stem}.json")
+                            if not os.path.exists(new_mp4_path):
+                                shutil.move(mp4_path, new_mp4_path)
+                                mp4_path = new_mp4_path
+                            if os.path.isfile(json_path) and not os.path.exists(new_json_path):
+                                shutil.move(json_path, new_json_path)
+                                json_path = new_json_path
+                        except Exception as me:
+                            logger.warning(f"[CUEUNY] 파일 연/월 폴더 이동 실패 ({fname}): {me}")
 
                 item_data["local_path"] = mp4_path
                 item_data["file_size"] = size

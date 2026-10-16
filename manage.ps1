@@ -5,7 +5,7 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 $env:PYTHONIOENCODING = "utf-8"
 $env:PYTHONUTF8 = "1"
 
-$PORT = "80"
+$PORT = "4954"
 $VENV_PYTHON = ".\.venv\Scripts\python.exe"
 $LOG_DIR = ".\logs"
 
@@ -151,7 +151,7 @@ function Start-UnifiedServer {
         Write-Host "=================================================" -ForegroundColor Green
         Write-Host "✔ GUMA™ 단일 통합 서버 백그라운드 실행 완료" -ForegroundColor Green
         Write-Host "  - 서비스 상태 : 정상 가동 중 (포트 $PORT)" -ForegroundColor White
-        Write-Host "  - 로컬 웹 주소: http://localhost" -ForegroundColor White
+        Write-Host "  - 로컬 웹 주소: http://localhost:$PORT" -ForegroundColor White
         Write-Host "=================================================" -ForegroundColor Green
     } else {
         Write-Host "[WARN] 서버 프로세스를 시작했으나 포트 $PORT 응답 대기 중입니다. 3번 메뉴로 상태를 확인하세요." -ForegroundColor Yellow
@@ -221,7 +221,7 @@ function Check-UnifiedServer {
         $pids = ($conn | Select-Object -ExpandProperty OwningProcess -Unique) -join ", "
         Write-Host "✔ 통합 웹 서버 (Port $PORT):" -ForegroundColor Green
         Write-Host "  - 상태         : 정상 가동 중 (RUNNING, Background)" -ForegroundColor Green
-        Write-Host "  - 접속 주소    : http://localhost" -ForegroundColor White
+        Write-Host "  - 접속 주소    : http://localhost:$PORT" -ForegroundColor White
         Write-Host "  - 프로세스 PID : $pids" -ForegroundColor Gray
     } else {
         Write-Host "✖ 통합 웹 서버 (Port $PORT):" -ForegroundColor Red

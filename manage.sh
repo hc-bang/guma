@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # GUMA™ Unified Server Management Script (Ubuntu / Linux)
-# Usage: ./manage.sh (or: sudo ./manage.sh for Port 80 binding)
+# Usage: ./manage.sh
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PORT="80"
+PORT="4954"
 export PYTHONIOENCODING="utf-8"
 export PYTHONUTF8="1"
 VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python"
@@ -133,7 +133,7 @@ start_unified_server() {
         echo -e "\033[1;32m=================================================\033[0m"
         echo -e "\033[1;32m✔ GUMA™ 단일 통합 서버 백그라운드 실행 완료\033[0m"
         echo -e "  - 서비스 상태 : 정상 가동 중 (포트 $PORT)"
-        echo -e "  - 로컬 웹 주소: http://localhost"
+        echo -e "  - 로컬 웹 주소: http://localhost:$PORT"
         echo -e "\033[1;32m=================================================\033[0m"
     else
         echo -e "\033[1;31m[ERROR] 서버 시작에 실패했습니다. (포트 $PORT 미감지)\033[0m"
@@ -182,7 +182,7 @@ check_unified_server() {
     if ss -tulpn 2>/dev/null | grep -q ":$PORT "; then
         echo -e "\033[1;32m✔ 통합 웹 서버 (Port $PORT):\033[0m"
         echo -e "  - 상태         : \033[1;32m정상 가동 중 (RUNNING, Background)\033[0m"
-        echo -e "  - 로컬 접속주소: http://localhost"
+        echo -e "  - 로컬 접속주소: http://localhost:$PORT"
     else
         echo -e "\033[1;31m✖ 통합 웹 서버 (Port $PORT):\033[0m"
         echo -e "  - 상태         : \033[1;31m중지됨 (STOPPED)\033[0m"

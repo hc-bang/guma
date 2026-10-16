@@ -37,6 +37,7 @@ function Sync-GitCredentials {
 # 환경 변수 로드 및 Git 자격증명 자동 동기화
 Load-Env
 Sync-GitCredentials
+if ($env:PORT) { $PORT = $env:PORT }
 
 function Ensure-LogDir {
     if (-not (Test-Path $LOG_DIR)) {

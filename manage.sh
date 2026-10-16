@@ -54,7 +54,7 @@ ensure_log_dir() {
 
 check_port_root() {
     if [ "$PORT" -lt 1024 ] && [ "$EUID" -ne 0 ]; then
-        echo -e "\033[1;33m[WARN] 포트 80은 1024 이하의 시스템 포트이므로 일반 사용자 권한에서 바인딩 실패할 수 있습니다.\033[0m"
+        echo -e "\033[1;33m[WARN] 포트 $PORT은 1024 이하의 시스템 포트이므로 일반 사용자 권한에서 바인딩 실패할 수 있습니다.\033[0m"
         echo -e "\033[1;33m       실행 시 'sudo ./manage.sh' 로 실행하는 것을 권장합니다.\033[0m"
     fi
 }
